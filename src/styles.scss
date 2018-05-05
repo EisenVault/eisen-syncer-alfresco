@@ -1,1 +1,50 @@
-/* You can add global styles to this file, and also import other style files */
+// Imports
+@import "mixin";
+
+/* VARIABLES*/
+$body-bg: #fafafc;
+$box-bg: #ffffff;
+$nav-bg: #31384a;
+$nav-hover-bg: #3f4455;
+$btn-primary-bg: #cc2f36;
+$btn-default-bg: #e9ebee;
+$btn-default-color: #4c5157;
+$btn-bg: #d73953;
+$box-shadow-color: #888888;
+$input-prepend-bg: #e9ebee;
+
+body {
+  background-color: $body-bg;
+}
+
+.left-nav {
+  background-color: $nav-bg;
+  height: 100vh;
+
+  img {
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
+}
+
+.centered {
+  float: none;
+  margin: auto;
+}
+
+button.btn-primary {
+  background-color: $btn-primary-bg;
+  border: 1px solid $body-bg;
+  color: $body-bg;
+  width: auto;
+  height: rem(40px);
+}
+
+button.btn-default {
+  @extend button.btn-primary;
+  background-color: $btn-default-bg;
+  color: $btn-default-color;
+}
