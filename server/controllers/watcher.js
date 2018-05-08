@@ -1,5 +1,37 @@
 const watch = require("watch");
 const fs = require("fs");
+const syncer = require("../helpers/syncer");
+const remote = require("../helpers/remote");
+
+// Upload a file to an instance
+exports.upload = async (request, response) => {
+  await syncer.upload({
+    accountId: 10,
+    sourcePath: "",
+    destinationNodeId: "",
+    uploadDirectory: "",
+    overwrite: true
+  });
+
+  return response.status(200).json({ upload: true });
+};
+
+// Download a node from an instance
+exports.download = async (request, response) => {
+  // await syncer.download({
+  //   destinationPath: "",
+  //   sourceNodeId: ""
+  // });
+
+  let x = await remote.getChildren({
+    accountId: 1,
+    parentNodeId: "340f2ecd-9ed4-4990-896b-e5c109905f67"
+  });
+
+  console.log(x);
+
+  return response.status(200).json({ download: true });
+};
 
 // Add a new watcher
 exports.add = (request, response) => {

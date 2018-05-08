@@ -7,7 +7,8 @@ exports.getAll = async () => {
 
 exports.getOne = async id => {
   return await db
-    .select("instance_url")
+    .select("*")
+    .first()
     .from("accounts")
     .where("id", id);
 };
