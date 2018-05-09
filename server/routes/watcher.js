@@ -2,14 +2,17 @@ const express = require("express");
 const router = express.Router();
 
 // Middlewares
-const watcherMiddleware = require("../middlewares/watcher");
+const watcherDownloadMiddleware = require("../middlewares/watchers/download");
+const watcherAddMiddleware = require("../middlewares/watchers/add");
+const watcherDeleteMiddleware = require("../middlewares/watchers/delete");
+const watcherUploadMiddleware = require("../middlewares/watchers/upload");
 
 // Controllers
 const watcherController = require("../controllers/watcher");
 
-router.get("/download", watcherController.download);
+router.get("/download", watcherDownloadMiddleware, watcherController.download);
 router.post("/upload", watcherController.upload);
-router.post("/", watcherMiddleware, watcherController.add);
-router.delete("/", watcherMiddleware, watcherController.remove);
+router.post("/", watcherAddMiddleware, watcherController.add);
+router.delete("/", watcherDeleteMiddleware, watcherController.remove);
 
 module.exports = router;

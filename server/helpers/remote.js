@@ -8,14 +8,13 @@ const accountModel = require("../models/account");
  *
  * @param object params
  * {
- *  accountId: '',
+ *  account: Account<Object>,
  *  parentNodeId: ''
  * }
  */
 exports.getChildren = async params => {
-  let accountId = params.accountId;
+  let account = params.account;
   let parentNodeId = params.parentNodeId;
-  let account = await accountModel.getOne(accountId);
 
   if (!account) {
     throw new Error("Account not found");
@@ -35,7 +34,7 @@ exports.getChildren = async params => {
 
   try {
     let response = await request(options);
-    return response;
+    return JSON.parse(response);
   } catch (error) {
     throw new Error(error);
   }

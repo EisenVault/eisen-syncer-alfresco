@@ -3,6 +3,8 @@ const path = require("path");
 const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
+const remote = require("./remote");
+const nodeModel = require("../models/node");
 
 /**
  *
@@ -60,17 +62,15 @@ exports.upload = async params => {
  *
  * @param object params
  * {
- *  accountId: '',
- *  destinationPath: '',
+ *  account: Account<Object>,
  *  sourceNodeId: '',
+ *  destinationPath: '',
  * }
  */
 exports.download = async params => {
-  let accountId = params.accountId;
+  let account = params.account;
   let sourceNodeId = params.sourceNodeId;
   let destinationPath = params.destinationPath;
-
-  let account = await accountModel.getOne(accountId);
 
   var options = {
     method: "GET",
@@ -91,5 +91,104 @@ exports.download = async params => {
     return params;
   } catch (error) {
     throw new Error(error);
+  }
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: Account<Object>,
+ *  sourceNodeId: '',
+ *  destinationPath: '',
+ * }
+ */
+exports.recursive = async params => {
+  let account = params.account;
+  let sourceNodeId = params.sourceNodeId;
+  let destinationPath = params.destinationPath;
+
+  // Declare a container that will hold all node ids that are fetched from the server
+  let serverNodeList = [];
+
+  try {
+    // Get all the child items of the given nodeid
+    let childrens = await remote.getChildren({
+      account: account,
+      parentNodeId: sourceNodeId
+    });
+
+    for (let child of childrens.list.entries) {
+      let currentDirectory = path.join(destinationPath, child.entry.name);
+      let sourceNodeId = child.entry.id;
+
+      // Get the modified date of the file/folder
+      fileModifiedDate = new Date().getTime();
+      if (fs.existsSync(currentDirectory)) {
+        let fileStat = fs.statSync(currentDirectory);
+        let fileModifiedDate = Date.parse(fileStat.mtime) / 1000;
+      }
+
+      // Push the node id to the global container
+      serverNodeList.push(currentDirectory);
+
+      // Check if the modified date of the file/folder is greater than the modified date in the DB, then proceed with updating/downloading the file/folder
+      let existingNode = await nodeModel.getOne({
+        accountId: account.id,
+        nodeId: sourceNodeId,
+        localPath: currentDirectory,
+        fileUpdateAt: fileModifiedDate
+      });
+
+      if (existingNode) {
+        console.log("Ignoring: " + currentDirectory);
+        // If the file/folder modified date is same as the one we have on our records then we will ignore this and no action will be taken.
+        continue;
+      }
+      console.log("UPDATING: " + currentDirectory);
+      // Add the file information to the DB
+      await nodeModel.add({
+        accountId: account.id,
+        nodeId: sourceNodeId,
+        fileName: child.entry.name,
+        localPath: currentDirectory,
+        fileUpdateAt: fileModifiedDate,
+        isFolder: child.entry.isFolder,
+        isFile: child.entry.isFile
+      });
+
+      if (child.entry.isFolder == true) {
+        // If the child is a folder, create the folder first
+        if (!fs.existsSync(destinationPath + "/" + child.entry.name)) {
+          fs.mkdirSync(currentDirectory);
+        }
+
+        this.recursive({
+          account: account,
+          sourceNodeId: sourceNodeId,
+          destinationPath: currentDirectory
+        });
+      } else if (child.entry.isFile == true) {
+        // If its a file, download it in the current directory
+        await this.download({
+          account: account,
+          sourceNodeId: sourceNodeId,
+          destinationPath: currentDirectory
+        });
+      }
+    }
+
+    // Looks like that the iteration of the current folder is complete,
+    // lets check if all node matches the one we have on records,
+    // else we will consider the remote file/folder was deleted and we will have to delete the same on our local
+    let missingFiles = await nodeModel.getMissingFiles({
+      accountId: account.id,
+      nodeList: serverNodeList
+    });
+
+    console.log('missingFiles', missingFiles);
+    console.log('serverNodeList', serverNodeList);
+  } catch (error) {
+    console.log("ERROR OCCURRED: ", error);
   }
 };

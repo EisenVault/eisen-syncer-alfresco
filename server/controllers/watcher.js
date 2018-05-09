@@ -1,36 +1,43 @@
 const watch = require("watch");
 const fs = require("fs");
+const _ = require("lodash");
 const syncer = require("../helpers/syncer");
 const remote = require("../helpers/remote");
+const accountModel = require("../models/account");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
   await syncer.upload({
-    accountId: 10,
-    sourcePath: "",
-    destinationNodeId: "",
-    uploadDirectory: "",
-    overwrite: true
+    accountId: request.body.account_id,
+    sourcePath: request.body.source_path,
+    destinationNodeId: request.body.destination_node_id,
+    uploadDirectory: request.body.upload_directory,
+    overwrite: request.body.overwrite
   });
 
   return response.status(200).json({ upload: true });
 };
 
-// Download a node from an instance
+// Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  // await syncer.download({
-  //   destinationPath: "",
-  //   sourceNodeId: ""
-  // });
+  let accountId = request.query.account_id;
+  let parentNodeId = request.query.parent_node_id;
 
-  let x = await remote.getChildren({
-    accountId: 1,
-    parentNodeId: "340f2ecd-9ed4-4990-896b-e5c109905f67"
-  });
+  let account = await accountModel.getOne(accountId);
 
-  console.log(x);
+  try {
+    await syncer.recursive({
+      account: account,
+      sourceNodeId: parentNodeId,
+      destinationPath: account.sync_path
+    });
 
-  return response.status(200).json({ download: true });
+    return response.status(200).json({ success: true });
+  } catch (error) {
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to download" });
+  }
 };
 
 // Add a new watcher
