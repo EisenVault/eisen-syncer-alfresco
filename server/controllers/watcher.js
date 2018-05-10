@@ -7,15 +7,23 @@ const accountModel = require("../models/account");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-  await syncer.upload({
-    accountId: request.body.account_id,
-    sourcePath: request.body.source_path,
-    destinationNodeId: request.body.destination_node_id,
-    uploadDirectory: request.body.upload_directory,
-    overwrite: request.body.overwrite
-  });
+  let account = await accountModel.getOne(request.body.account_id);
+  let rootNodeId = request.body.root_node_id;
+  let overwrite = request.body.overwrite;
 
-  return response.status(200).json({ upload: true });
+  try {
+    await syncer.recursiveUpload({
+      account: account,
+      rootNodeId: rootNodeId,
+      overwrite: overwrite
+    });
+
+    return response.status(200).json({ success: true });
+  } catch (error) {
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to upload", error: error });
+  }
 };
 
 // Download nodes and its children from a remote instance
@@ -26,7 +34,7 @@ exports.download = async (request, response) => {
   let account = await accountModel.getOne(accountId);
 
   try {
-    await syncer.recursive({
+    await syncer.recursiveDownload({
       account: account,
       sourceNodeId: parentNodeId,
       destinationPath: account.sync_path

@@ -11,7 +11,7 @@ const watcherUploadMiddleware = require("../middlewares/watchers/upload");
 const watcherController = require("../controllers/watcher");
 
 router.get("/download", watcherDownloadMiddleware, watcherController.download);
-router.post("/upload", watcherController.upload);
+router.post("/upload", watcherUploadMiddleware, watcherController.upload);
 router.post("/", watcherAddMiddleware, watcherController.add);
 router.delete("/", watcherDeleteMiddleware, watcherController.remove);
 
