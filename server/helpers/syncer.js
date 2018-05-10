@@ -205,15 +205,19 @@ _upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
   let destinationNodeId = params.destinationNodeId;
-  let uploadDirectory = params.uploadDirectory || "";
+  // let uploadDirectory = params.uploadDirectory || "";
   let overwrite = params.overwrite;
 
   if (!account) {
     throw new Error("Account not found");
   }
 
+  let uploadDirectory = path.dirname(filePath);
+  uploadDirectory = uploadDirectory.replace(account.sync_path, "").substring(1);
+
   // If its a directory, send a request to create the directory.
   if (fs.statSync(filePath).isDirectory()) {
+
     let options = {
       resolveWithFullResponse: true,
       method: "POST",
@@ -229,7 +233,8 @@ _upload = async params => {
       },
       body: JSON.stringify({
         name: path.basename(params.filePath),
-        nodeType: "cm:folder"
+        nodeType: "cm:folder",
+        relativePath: uploadDirectory
       })
     };
 
