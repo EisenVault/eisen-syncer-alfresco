@@ -11,14 +11,5 @@ module.exports = (request, response, next) => {
     });
   }
 
-  if (
-    _.isNil(request.query.parent_node_id) ||
-    _.isEmpty(request.query.parent_node_id)
-  ) {
-    return response.status(400).json({
-      error: "parent_node_id is mandatory"
-    });
-  }
-
   next();
 };

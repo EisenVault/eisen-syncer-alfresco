@@ -4,19 +4,23 @@ const _ = require("lodash");
 const syncer = require("../helpers/syncer");
 const remote = require("../helpers/remote");
 const accountModel = require("../models/account");
+const watchFolderModel = require("../models/watch-folder");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
   let account = await accountModel.getOne(request.body.account_id);
-  let rootNodeId = request.body.root_node_id;
-  let overwrite = request.body.overwrite;
 
   try {
-    await syncer.recursiveUpload({
-      account: account,
-      rootNodeId: rootNodeId,
-      overwrite: overwrite
-    });
+    let nodes = await watchFolderModel.getNodes(account);
+
+    for (let node of nodes) {
+      // Recursively upload all new files to the server
+      await syncer.recursiveUpload({
+        account: account,
+        rootNodeId: node.node_id,
+        overwrite: account.overwrite || 0
+      });
+    }
 
     return response.status(200).json({ success: true });
   } catch (error) {
@@ -28,17 +32,17 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  let accountId = request.query.account_id;
-  let parentNodeId = request.query.parent_node_id;
-
-  let account = await accountModel.getOne(accountId);
+  let account = await accountModel.getOne(request.query.account_id);
+  let nodes = await watchFolderModel.getNodes(account);
 
   try {
-    await syncer.recursiveDownload({
-      account: account,
-      sourceNodeId: parentNodeId,
-      destinationPath: account.sync_path
-    });
+    for (let node of nodes) {
+      await syncer.recursiveDownload({
+        account: account,
+        sourceNodeId: node.node_id,
+        destinationPath: account.sync_path
+      });
+    }
 
     return response.status(200).json({ success: true });
   } catch (error) {

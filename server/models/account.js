@@ -10,7 +10,8 @@ exports.getOne = async id => {
     .select("*")
     .first()
     .from("accounts")
-    .where("id", id);
+    .where("id", id)
+    .where("sync_on", 1);
 };
 
 exports.addInstance = async request => {

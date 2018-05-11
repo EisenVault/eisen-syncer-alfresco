@@ -13,8 +13,8 @@ const glob = require("glob");
  * @param object params
  * {
  *  account: Account<Object>,
- *  sourceNodeId: '',
- *  destinationPath: '',
+ *  sourceNodeId: <String>,
+ *  destinationPath: <String>,
  * }
  */
 exports.recursiveDownload = async params => {
@@ -42,6 +42,13 @@ exports.recursiveDownload = async params => {
       // Push the node id to the global container
       serverNodeList.push(child.entry.id);
 
+      // Check if the node already exists in the DB records.
+      let recordExists = await nodeModel.getOne({
+        account: account,
+        nodeId: child.entry.id,
+        fileUpdateAt: _getFileModifiedTime(currentDirectory)
+      });
+
       // Add the file information to the DB. If the node is already present and the last modified time of file is different in the DB then update the last modified time
       await nodeModel.add({
         account: account,
@@ -65,12 +72,16 @@ exports.recursiveDownload = async params => {
           destinationPath: currentDirectory
         });
       } else if (child.entry.isFile == true) {
-        // If its a file, download it in the current directory
-        await _download({
-          account: account,
-          sourceNodeId: sourceNodeId,
-          destinationPath: currentDirectory
-        });
+        // If its a file, check if the file already exists in the DB, if not then download it in the current directory
+        if (_.isEmpty(recordExists)) {
+          console.log("downloading: ", currentDirectory);
+
+          await _download({
+            account: account,
+            sourceNodeId: sourceNodeId,
+            destinationPath: currentDirectory
+          });
+        }
       }
     }
 
@@ -116,7 +127,7 @@ _deleteFolderRecursive = function(path) {
       var curPath = path + "/" + file;
       if (fs.lstatSync(curPath).isDirectory()) {
         // recurse
-        deleteFolderRecursive(curPath);
+        _deleteFolderRecursive(curPath);
       } else {
         // delete file
         fs.unlinkSync(curPath);
@@ -144,18 +155,48 @@ exports.recursiveUpload = async params => {
     glob(src + "/**/*", callback);
   };
 
-  getDirectories(rootFolder, async function(error, localFilePathList) {
+  getDirectories(rootFolder, async (error, localFilePathList) => {
     if (error) {
       console.log("Error occured during listing files/folders", error);
     } else {
-      // Get the list of files/folders that are newly created on local
+      // Get the list of all nodes that are locally deleted.
+      let deletedNodes = await nodeModel.getDeletedNodeList({
+        account: account,
+        localFilePathList: localFilePathList
+      });
+
+      // Recursively delete all files from the server that are deleted on local
+      for (let deletedNodeId of deletedNodes) {
+        try {
+          let deletedResponse = await _deleteServerNode({
+            account: account,
+            deletedNodeId: deletedNodeId
+          });
+
+          // If the node was successfully deleted from the server, we will remove it from the DB as well
+          if (deletedResponse == 204) {
+            nodeModel.delete({
+              account: account,
+              nodeId: deletedNodeId
+            });
+          }
+        } catch (error) {
+          // Looks like the file was deleted from the server and local, lets delete the record in that case
+          nodeModel.delete({
+            account: account,
+            nodeId: deletedNodeId
+          });
+        }
+      }
+
+      // Next, get the list of files that are newly created on local
       let newFileList = await nodeModel.getNewFileList({
         account: account,
         localFilePathList: localFilePathList
       });
 
-      // Upload the new files/folders to the server
       for (let localFilePath of newFileList) {
+        // Get the nodeid of the folder from the DB so that we can upload the current file/folder inside its target folder
         let folderNodeId = await nodeModel.getFolderNodeId({
           account: account,
           rootNodeId: rootNodeId,
@@ -163,10 +204,11 @@ exports.recursiveUpload = async params => {
         });
 
         try {
+          // Upload the new files to the server
           let serverResponseNodeId = await _upload({
             account: account,
             filePath: localFilePath,
-            destinationNodeId: folderNodeId,
+            rootNodeId: rootNodeId,
             overwrite: overwrite
           });
 
@@ -179,11 +221,14 @@ exports.recursiveUpload = async params => {
               filePath: localFilePath,
               fileUpdateAt: _getFileModifiedTime(localFilePath),
               isFolder: fs.statSync(localFilePath).isDirectory(),
-              isFile: fs.statSync(localFilePath).isDirectory()
+              isFile: fs.statSync(localFilePath).isFile()
             });
           }
         } catch (error) {
-          console.log(error);
+          // When uploading duplicate folders, the api complains with a 409 http status code, but we can safely ignore this error
+          if (error.statusCode != 409) {
+            console.log(error);
+          }
         }
       }
     }
@@ -194,37 +239,42 @@ exports.recursiveUpload = async params => {
  *
  * @param object params
  * {
- *  account: '',
- *  filePath: '',
- *  destinationNodeId: '',
- *  uploadDirectory: '',
- *  overwrite: true/false
+ *  account: <Object>,
+ *  filePath: <String>,
+ *  rootNodeId: <String>,
+ *  uploadDirectory: <String>,
+ *  overwrite: <Boolean>
  * }
  */
 _upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
-  let destinationNodeId = params.destinationNodeId;
-  // let uploadDirectory = params.uploadDirectory || "";
+  let rootNodeId = params.rootNodeId;
   let overwrite = params.overwrite;
+  let options = false;
 
   if (!account) {
     throw new Error("Account not found");
   }
 
-  let uploadDirectory = path.dirname(filePath);
-  uploadDirectory = uploadDirectory.replace(account.sync_path, "").substring(1);
-
   // If its a directory, send a request to create the directory.
   if (fs.statSync(filePath).isDirectory()) {
+    let directoryName = path.basename(params.filePath);
+    let relativePath = params.filePath.replace(account.sync_path + "/", "");
+    relativePath = relativePath.substring(
+      0,
+      relativePath.length - directoryName.length - 1
+    );
 
-    let options = {
+    console.log("Uploading", filePath);
+
+    options = {
       resolveWithFullResponse: true,
       method: "POST",
       url:
         account.instance_url +
         "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-        destinationNodeId +
+        rootNodeId +
         "/children",
       headers: {
         "content-type": "application/json",
@@ -232,45 +282,100 @@ _upload = async params => {
           "Basic " + btoa(account.username + ":" + account.password)
       },
       body: JSON.stringify({
-        name: path.basename(params.filePath),
+        name: directoryName,
         nodeType: "cm:folder",
-        relativePath: uploadDirectory
+        relativePath: relativePath
       })
     };
 
     let response = await request(options);
+    response = JSON.parse(response.body);
 
-    if (_.has("id", response.body.entry)) {
-      return response.body.entry.id;
+    if (response.entry.id) {
+      return response.entry.id;
     }
 
     return false;
   }
 
-  let options = {
-    resolveWithFullResponse: true,
-    method: "POST",
-    url: account.instance_url + "/alfresco/service/api/upload",
-    headers: {
-      authorization: "Basic " + btoa(account.username + ":" + account.password)
-    },
-    formData: {
-      filedata: {
-        value: fs.createReadStream(filePath),
-        options: {}
+  // If its a file, send a request to upload the file.
+  if (fs.statSync(filePath).isFile()) {
+    let uploadDirectory = path.dirname(filePath);
+    uploadDirectory = uploadDirectory
+      .replace(account.sync_path, "")
+      .substring(1);
+
+    console.log("Uploading", filePath);
+
+    options = {
+      resolveWithFullResponse: true,
+      method: "POST",
+      url: account.instance_url + "/alfresco/service/api/upload",
+      headers: {
+        authorization:
+          "Basic " + btoa(account.username + ":" + account.password)
       },
-      filename: path.basename(params.filePath),
-      destination: "workspace://SpacesStore/" + destinationNodeId,
-      uploadDirectory: uploadDirectory,
-      overwrite: overwrite
-    }
-  };
+      formData: {
+        filedata: {
+          value: fs.createReadStream(filePath),
+          options: {}
+        },
+        filename: path.basename(params.filePath),
+        destination: "workspace://SpacesStore/" + rootNodeId,
+        uploadDirectory: uploadDirectory,
+        overwrite: overwrite
+      }
+    };
+  }
+
+  if (_.isEmpty(options)) {
+    return false;
+  }
 
   try {
     let response = await request(options);
     response = JSON.parse(response.body);
     let refId = response.nodeRef.split("workspace://SpacesStore/");
-    return refId[1];
+
+    if (refId[1]) {
+      return refId[1];
+    }
+
+    return false;
+  } catch (error) {
+    console.log(error);
+
+    // throw new Error(error);
+  }
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  deletedNodeId: <String>,
+ * }
+ */
+_deleteServerNode = async params => {
+  let account = params.account;
+  let deletedNodeId = params.deletedNodeId;
+
+  var options = {
+    resolveWithFullResponse: true,
+    method: "DELETE",
+    url:
+      account.instance_url +
+      "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
+      deletedNodeId,
+    headers: {
+      authorization: "Basic " + btoa(account.username + ":" + account.password)
+    }
+  };
+
+  try {
+    let response = await request(options);
+    return response.statusCode;
   } catch (error) {
     throw new Error(error);
   }
@@ -301,6 +406,8 @@ _download = async params => {
       authorization: "Basic " + btoa(account.username + ":" + account.password)
     }
   };
+
+  console.log("Downloading", destinationPath);
 
   try {
     let response = await request(options).pipe(

@@ -123,6 +123,7 @@ exports.getNewFileList = async params => {
   let existingRecords = await db
     .whereIn("file_path", localFilePathList)
     .where("account_id", account.id)
+    .where("is_file", 1)
     .from("nodes");
 
   let dbFilePathList = [];
@@ -132,6 +133,33 @@ exports.getNewFileList = async params => {
   }
 
   return _.difference(localFilePathList, dbFilePathList);
+};
+
+/**
+ * This method will return a list of files that are deleted on the local machine.
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  localFilePathList: <Array>
+ * }
+ */
+exports.getDeletedNodeList = async params => {
+  let account = params.account;
+  let localFilePathList = params.localFilePathList;
+
+  let existingRecords = await db
+    .whereNotIn("file_path", localFilePathList)
+    .where("account_id", account.id)
+    .from("nodes");
+
+  let dbFilePathList = [];
+  // Iterate through all the records and prepare a list of files that exists in the DB
+  for (let record of existingRecords) {
+    dbFilePathList.push(record.node_id);
+  }
+
+  return dbFilePathList;
 };
 
 /**
@@ -145,9 +173,8 @@ exports.getNewFileList = async params => {
  */
 exports.getFolderNodeId = async params => {
   let account = params.account;
-  let rootNodeId = params.rootNodeId;
   let localFilePath = params.localFilePath;
-  let nodeId = rootNodeId;
+  let nodeId = params.rootNodeId;
 
   let record = await db
     .first("node_id")
