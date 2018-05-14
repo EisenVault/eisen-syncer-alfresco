@@ -7,25 +7,28 @@ exports.getAll = async (request, response) => {
 };
 
 exports.getOne = async (request, response) => {
-  console.log(request.params.id);
-
   return response
     .status(200)
     .json(await accountModel.getOne(request.params.id));
 };
 
-exports.addInstance = async (request, response) => {
-  let accountId = await accountModel.addInstance(request);
+exports.addAccount = async (request, response) => {
+  let accountId = await accountModel.addAccount(request);
 
   return response.status(200).json({
     account_id: accountId[0]
   });
 };
 
-exports.updateInstance = async (request, response) => {
-  return response.status(200).json(await accountModel.getAll());
+exports.updateAccount = async (request, response) => {
+  let accountId = await accountModel.updateAccount(request.params.id, request);
+  return response.status(200).json({
+    account_id: accountId[0]
+  });
 };
 
-exports.deleteInstance = async (request, response) => {
-  return response.status(200).json(await accountModel.getAll());
+exports.deleteAccount = async (request, response) => {
+  return response
+    .status(200)
+    .json(await accountModel.deleteAccount(request.params.id));
 };

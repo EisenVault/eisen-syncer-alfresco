@@ -3,7 +3,6 @@ import { Routes, RouterModule } from "@angular/router";
 
 import { InstanceInfoComponent } from "./accounts/instance-info/instance-info.component";
 import { RemoteFolderComponent } from "./accounts/remote-folder/remote-folder.component";
-import { CustomizeFolderComponent } from "./accounts/customize-folder/customize-folder.component";
 import { FinalizeComponent } from "./accounts/finalize/finalize.component";
 
 const routes: Routes = [
@@ -12,15 +11,11 @@ const routes: Routes = [
     component: InstanceInfoComponent
   },
   {
-    path: "account-remote-folder",
+    path: "account-remote-folder/:accountId",
     component: RemoteFolderComponent
   },
   {
-    path: "account-customize-folder",
-    component: CustomizeFolderComponent
-  },
-  {
-    path: "account-finalize",
+    path: "account-finalize/:accountId",
     component: FinalizeComponent
   }
 ];

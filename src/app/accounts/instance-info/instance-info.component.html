@@ -14,37 +14,91 @@
               <i class="fas fa-globe"></i>
             </span>
           </div>
-          <input type="text" class="form-control" value="https://" placeholder="Instance URL" aria-label="url" aria-describedby="basic-addon1">
+          <input type="text" class="form-control" value="https://" placeholder="Instance URL" aria-label="url" aria-describedby="basic-addon1"
+            [(ngModel)]="instance_url" name="instance_url">
         </div>
+        <div class="font-italic text-danger" *ngIf="errors.instance_url">{{ errors.instance_url.join('') }}</div>
         <small id="emailHelp" class="form-text text-muted">This is where your documents are hosted</small>
       </div>
 
-      <div class="form-group">
-        <label for="username">Username</label>
-        <div class="input-group mb-3">
-          <div class="input-group-prepend">
-            <span class="input-group-text" id="basic-addon1">
-              <i class="fas fa-user"></i>
-            </span>
+      <div class="row">
+        <div class="col">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">
+                  <i class="fas fa-user"></i>
+                </span>
+              </div>
+              <input type="text" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1" [(ngModel)]="username"
+                name="username">
+            </div>
+            <div class="text-danger" *ngIf="errors.username">{{ errors.username.join('') }}</div>
+            <small id="emailHelp" class="form-text text-muted">Your instance username</small>
           </div>
-          <input type="text" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
         </div>
-        <small id="emailHelp" class="form-text text-muted">Your instance username</small>
+        <div class="col">
+          <div class="form-group">
+            <label for="exampleInputEmail1">Password</label>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">
+                  <i class="fas fa-key"></i>
+                </span>
+              </div>
+              <input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1"
+                [(ngModel)]="password" name="password">
+            </div>
+            <div class="text-danger" *ngIf="errors.password">{{ errors.password.join('') }}</div>
+            <small id="emailHelp" class="form-text text-muted">The secret password of your account</small>
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
-        <label for="exampleInputEmail1">Password</label>
+        <label for="localpath">Set Sync Path</label>
         <div class="input-group mb-3">
           <div class="input-group-prepend">
             <span class="input-group-text" id="basic-addon1">
-              <i class="fas fa-key"></i>
+              <i class="fas fa-folder"></i>
             </span>
           </div>
-          <input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1">
+          <input type="text" class="form-control" placeholder="Local path" aria-label="Username" aria-describedby="basic-addon1" [(ngModel)]="sync_path"
+            name="sync_path">
+          <button type="submit" class="btn btn-default">Browse</button>
         </div>
-        <small id="emailHelp" class="form-text text-muted">The secret password of your account</small>
+        <div class="text-danger" *ngIf="errors.sync_path">{{ errors.sync_path.join('') }}</div>
+        <small id="emailHelp" class="form-text text-muted">Select the local path where the account will be synced.</small>
       </div>
-      <button type="button" class="btn btn-primary">Continue</button>
+
+
+      <div class="form-row">
+        <div class="col">
+          <div class="form-check form-check-inline">
+            <div class="form-group">
+              <input class="form-check-input" type="checkbox" id="syncing" value="1" checked [(ngModel)]="sync_on" name="sync_on">
+              <label class="form-check-label" for="syncing">Turn on Auto Syncing</label>
+              <small id="emailHelp" class="form-text text-muted">Selecting this option will auto-sync your account at startup.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="form-check form-check-inline">
+            <div class="form-group">
+              <input class="form-check-input" type="checkbox" id="overwrite" value="1" [(ngModel)]="overwrite" name="overwrite">
+              <label class="form-check-label" for="overwrite">Overwrite uploads</label>
+              <small id="emailHelp" class="form-text text-muted">Overwrite duplicate files during uploading</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <button type="button" class="btn btn-success float-right" (click)="addAccount()">Continue</button>
+      </div>
+
     </form>
   </div>
 </div>

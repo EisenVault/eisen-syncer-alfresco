@@ -1,15 +1,38 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from "@angular/core";
+import { Router, ActivatedRoute, ParamMap } from "@angular/router";
 
 @Component({
-  selector: 'app-remote-folder',
-  templateUrl: './remote-folder.component.html',
-  styleUrls: ['./remote-folder.component.scss']
+  selector: "app-remote-folder",
+  templateUrl: "./remote-folder.component.html",
+  styleUrls: ["./remote-folder.component.scss"]
 })
 export class RemoteFolderComponent implements OnInit {
+  public accountId;
 
-  constructor() { }
+  constructor(private _router: Router, private _route: ActivatedRoute) {}
 
   ngOnInit() {
+    this._route.paramMap.subscribe(params => {
+      this.accountId = params.get("accountId");
+    console.log( 'this.accountId1111', this.accountId );
+      
+    });
+
+    console.log( 'this.accountId222', this._route.snapshot.params['accountId'] );
+    
+
   }
 
+  goBack() {
+    this._route.paramMap.subscribe(params => {
+      this.accountId = params.get("accountId");
+    console.log( 'this.accountId1111', this.accountId );
+      
+    });
+
+    console.log( 'this.accountId222', this._route.snapshot.params['accountId'] );
+    
+
+    this._router.navigate(["", 50]);
+  }
 }

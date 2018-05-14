@@ -1,13 +1,13 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http';
+import { FormsModule } from "@angular/forms";
 
 import { AccountService } from "./services/account.service";
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
-import { CustomizeFolderComponent } from './accounts/customize-folder/customize-folder.component';
 import { FinalizeComponent } from './accounts/finalize/finalize.component';
 import { RemoteFolderComponent } from './accounts/remote-folder/remote-folder.component';
 import { InstanceInfoComponent } from './accounts/instance-info/instance-info.component';
@@ -15,7 +15,6 @@ import { InstanceInfoComponent } from './accounts/instance-info/instance-info.co
 @NgModule({
   declarations: [
     AppComponent,
-    CustomizeFolderComponent,
     FinalizeComponent,
     RemoteFolderComponent,
     InstanceInfoComponent
@@ -23,7 +22,8 @@ import { InstanceInfoComponent } from './accounts/instance-info/instance-info.co
   imports: [
     BrowserModule,
     AppRoutingModule,
-    HttpClientModule
+    HttpClientModule,
+    FormsModule
   ],
   providers: [AccountService],
   bootstrap: [AppComponent]

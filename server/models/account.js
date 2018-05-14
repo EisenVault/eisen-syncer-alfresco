@@ -2,24 +2,58 @@ const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
 exports.getAll = async () => {
-  return await db.select("instance_url").from("accounts");
+  return await db
+    .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
+    .from("accounts");
 };
 
 exports.getOne = async id => {
   return await db
-    .select("*")
+    .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
     .first()
     .from("accounts")
     .where("id", id)
     .where("sync_on", 1);
 };
 
-exports.addInstance = async request => {
+
+exports.findByInstance = async (instance_url, username) => {
+  return await db
+    .select("instance_url")
+    .first()
+    .from("accounts")
+    .where("instance_url", instance_url)
+    .where("username", username);
+};
+
+exports.addAccount = async request => {
   return await db
     .insert({
       instance_url: request.body.instance_url,
       username: request.body.username,
-      password: crypt.encrypt(request.body.password)
+      password: crypt.encrypt(request.body.password),
+      sync_path: request.body.sync_path,
+      sync_on: request.body.sync_on,
+      overwrite: request.body.overwrite
     })
     .into("accounts");
+};
+
+exports.updateAccount = async (accountId, request) => {
+  return await db("accounts")
+    .update({
+      instance_url: request.body.instance_url,
+      username: request.body.username,
+      password: crypt.encrypt(request.body.password),
+      sync_path: request.body.sync_path,
+      sync_on: request.body.sync_on,
+      overwrite: request.body.overwrite
+    })
+    .where("id", accountId);
+};
+
+exports.deleteAccount = async accountId => {
+  return await db("accounts")
+    .delete()
+    .where("id", accountId);
 };
