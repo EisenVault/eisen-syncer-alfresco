@@ -15,7 +15,7 @@ exports.getOne = async (request, response) => {
 exports.addAccount = async (request, response) => {
   let accountId = await accountModel.addAccount(request);
 
-  return response.status(200).json({
+  return response.status(201).json({
     account_id: accountId[0]
   });
 };

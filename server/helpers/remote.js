@@ -3,6 +3,7 @@ const path = require("path");
 const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
+const errorLogModel = require('../models/log-error');
 
 /**
  *
@@ -36,6 +37,7 @@ exports.getChildren = async params => {
     let response = await request(options);
     return JSON.parse(response);
   } catch (error) {
+    errorLogModel.add(account.id, error);
     throw new Error(error);
   }
 };

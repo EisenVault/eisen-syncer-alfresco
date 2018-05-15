@@ -9,8 +9,12 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // Pull in the routes
+app.use("/logs/events", require("./routes/logs/event"));
+app.use("/logs/errors", require("./routes/logs/error"));
+app.use("/settings", require("./routes/setting"));
 app.use("/accounts", require("./routes/account"));
-app.use("/watcher", require("./routes/watcher"));
+app.use("/watch-nodes", require("./routes/watch-node"));
+app.use("/syncer", require("./routes/syncer"));
 
 app.listen(PORT, () => {
   console.log("server running on " + PORT);

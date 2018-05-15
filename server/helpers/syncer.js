@@ -7,6 +7,8 @@ const accountModel = require("../models/account");
 const remote = require("./remote");
 const nodeModel = require("../models/node");
 const glob = require("glob");
+const errorLogModel = require("../models/log-error");
+const eventLogModel = require("../models/log-event");
 
 /**
  *
@@ -74,8 +76,6 @@ exports.recursiveDownload = async params => {
       } else if (child.entry.isFile == true) {
         // If its a file, check if the file already exists in the DB, if not then download it in the current directory
         if (_.isEmpty(recordExists)) {
-          console.log("downloading: ", currentDirectory);
-
           await _download({
             account: account,
             sourceNodeId: sourceNodeId,
@@ -100,9 +100,21 @@ exports.recursiveDownload = async params => {
           if (file.is_folder == 1) {
             // Delete the folder
             _deleteFolderRecursive(file.file_path);
+            // Add an event log
+            eventLogModel.add(
+              account.id,
+              "DELETE_FOLDER",
+              `Deleted Folder: ${file.file_path}`
+            );
           } else {
             // Delete the file
             fs.unlinkSync(file.file_path);
+            // Add an event log
+            eventLogModel.add(
+              account.id,
+              "DELETE_FILE",
+              `Deleted File: ${file.file_path}`
+            );
           }
         }
 
@@ -114,6 +126,7 @@ exports.recursiveDownload = async params => {
       }
     }
   } catch (error) {
+    errorLogModel.add(account.id, error);
     console.log("ERROR OCCURRED: ", error);
   }
 };
@@ -157,6 +170,11 @@ exports.recursiveUpload = async params => {
 
   getDirectories(rootFolder, async (error, localFilePathList) => {
     if (error) {
+      // Add an error log
+      errorLogModel.add(
+        account.id,
+        "Error occured during listing files/folders. " + error
+      );
       console.log("Error occured during listing files/folders", error);
     } else {
       // Get the list of all nodes that are locally deleted.
@@ -228,6 +246,8 @@ exports.recursiveUpload = async params => {
           // When uploading duplicate folders, the api complains with a 409 http status code, but we can safely ignore this error
           if (error.statusCode != 409) {
             console.log(error);
+          } else {
+            errorLogModel.add(account.id, error);
           }
         }
       }
@@ -266,8 +286,6 @@ _upload = async params => {
       relativePath.length - directoryName.length - 1
     );
 
-    console.log("Uploading", filePath);
-
     options = {
       resolveWithFullResponse: true,
       method: "POST",
@@ -288,11 +306,22 @@ _upload = async params => {
       })
     };
 
-    let response = await request(options);
-    response = JSON.parse(response.body);
+    try {
+      let response = await request(options);
+      response = JSON.parse(response.body);
 
-    if (response.entry.id) {
-      return response.entry.id;
+      if (response.entry.id) {
+        // Add an event log
+        eventLogModel.add(
+          account.id,
+          "UPLOAD_FOLDER",
+          `Uploaded Folder: ${filePath} to ${account.instance_url}`
+        );
+        return response.entry.id;
+      }
+    } catch (error) {
+      // Add an error log
+      errorLogModel.add(account.id, error);
     }
 
     return false;
@@ -338,14 +367,20 @@ _upload = async params => {
     let refId = response.nodeRef.split("workspace://SpacesStore/");
 
     if (refId[1]) {
+      // Add an event log
+      eventLogModel.add(
+        account.id,
+        "UPLOAD_FILE",
+        `Uploaded File: ${filePath} to ${account.instance_url}`
+      );
       return refId[1];
     }
 
     return false;
   } catch (error) {
+    errorLogModel.add(account.id, error);
     console.log(error);
-
-    // throw new Error(error);
+    throw new Error(error);
   }
 };
 
@@ -375,8 +410,16 @@ _deleteServerNode = async params => {
 
   try {
     let response = await request(options);
+    // Add an event log
+    eventLogModel.add(
+      account.id,
+      "DELETE_NODE",
+      `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
+    );
+
     return response.statusCode;
   } catch (error) {
+    errorLogModel.add(account.id, error);
     throw new Error(error);
   }
 };
@@ -407,14 +450,20 @@ _download = async params => {
     }
   };
 
-  console.log("Downloading", destinationPath);
-
   try {
     let response = await request(options).pipe(
       fs.createWriteStream(destinationPath)
     );
+
+    // Add an event log
+    eventLogModel.add(
+      account.id,
+      "DOWNLOAD_FILE",
+      `Downloading File: ${destinationPath} from ${account.instance_url}`
+    );
     return params;
   } catch (error) {
+    errorLogModel.add(account.id, error);
     throw new Error(error);
   }
 };

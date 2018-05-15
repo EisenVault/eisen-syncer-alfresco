@@ -22,6 +22,7 @@ export class InstanceInfoComponent implements OnInit {
   ngOnInit() {}
 
   addAccount() {
+ 
     this._accountService
       .addAccount({
         instance_url: this.instance_url,

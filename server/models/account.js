@@ -16,7 +16,6 @@ exports.getOne = async id => {
     .where("sync_on", 1);
 };
 
-
 exports.findByInstance = async (instance_url, username) => {
   return await db
     .select("instance_url")
@@ -34,7 +33,9 @@ exports.addAccount = async request => {
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
       sync_on: request.body.sync_on,
-      overwrite: request.body.overwrite
+      overwrite: request.body.overwrite,
+      created_at: new Date().getTime(),
+      updated_at: new Date().getTime()
     })
     .into("accounts");
 };
@@ -47,7 +48,8 @@ exports.updateAccount = async (accountId, request) => {
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
       sync_on: request.body.sync_on,
-      overwrite: request.body.overwrite
+      overwrite: request.body.overwrite,
+      updated_at: new Date().getTime()
     })
     .where("id", accountId);
 };
