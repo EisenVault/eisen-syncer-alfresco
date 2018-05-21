@@ -9,20 +9,25 @@ import { AccountService } from "../../services/account.service";
 })
 export class InstanceInfoComponent implements OnInit {
   public response;
-  public errors = {};
-  public instance_url = 'https://www.edms.cf';
-  public username = 'admin@soubhik';
-  public password = 'admin';
-  public sync_path = '/var/www/html';
-  public sync_on = true;
-  public overwrite  = true;
+  private loading: boolean = false;
+  public errors: any = {};
+  public instance_url: string = "https://www.edms.cf";
+  public username: string = "admin@soubhik";
+  public password: string = "admin";
+  public sync_path: string = "/var/www/html";
+  public sync_on: boolean = true;
+  public overwrite: boolean = true;
+  public file: string = "";
 
-  constructor(private _accountService: AccountService, private _router: Router) {}
+  constructor(
+    private _accountService: AccountService,
+    private _router: Router
+  ) {}
 
   ngOnInit() {}
 
   addAccount() {
- 
+    this.loading = true;
     this._accountService
       .addAccount({
         instance_url: this.instance_url,
@@ -34,11 +39,13 @@ export class InstanceInfoComponent implements OnInit {
       })
       .subscribe(
         response => {
-          if (response.status == 200) {
+          this.loading = false;
+          if (response.status == 201) {
             this._router.navigate(["account-remote-folder", 200]);
           }
         },
         error => {
+          this.loading = false;
           if (error.status == 400) {
             for (let e of error.error.errors) {
               for (let errorField in e) {
@@ -50,5 +57,19 @@ export class InstanceInfoComponent implements OnInit {
           }
         }
       );
+  }
+
+  onBrowse() {
+    let file = <HTMLScriptElement>document.getElementById("file");
+    file.click();
+
+    file.addEventListener(
+      "change",
+      () =>
+        (this.sync_path = (document.getElementById(
+          "file"
+        ) as any).files[0].path),
+      false
+    );
   }
 }

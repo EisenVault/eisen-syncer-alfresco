@@ -14,7 +14,7 @@ app.on("ready", () => {
   // Create main window
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 650,
     title: "Eisen Syncer - Syncing files made simple"
   });
 

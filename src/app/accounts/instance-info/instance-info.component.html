@@ -47,8 +47,6 @@
                   <i class="fas fa-key"></i>
                 </span>
               </div>
-              <input type="file" id="file_input" webkitdirectory="" directory="">
-
               <input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1"
                 [(ngModel)]="password" name="password">
             </div>
@@ -66,9 +64,10 @@
               <i class="fas fa-folder"></i>
             </span>
           </div>
-          <input type="text" class="form-control" placeholder="Local path" aria-label="Username" aria-describedby="basic-addon1" [(ngModel)]="sync_path"
+          <input type="file" [(ngModel)]="file" name="file" id="file" webkitdirectory="" directory="" class="hide">
+          <input type="text" class="form-control" placeholder="Local path" aria-label="Username" readonly aria-describedby="basic-addon1" [(ngModel)]="sync_path"
             name="sync_path">
-          <button type="submit" class="btn btn-default">Browse</button>
+          <button type="submit" class="btn btn-default" (click)="onBrowse()">Browse</button>
         </div>
         <div class="text-danger" *ngIf="errors.sync_path">{{ errors.sync_path.join('') }}</div>
         <small id="emailHelp" class="form-text text-muted">Select the local path where the account will be synced.</small>
@@ -98,7 +97,10 @@
       </div>
 
       <div class="mt-5">
-        <button type="button" class="btn btn-success float-right" (click)="addAccount()">Continue</button>
+        <button type="button" class="btn btn-success float-right" (click)="addAccount()" [disabled]="loading">
+          <img src="/assets/imgs/spinner.gif" alt="" *ngIf="loading">
+          Continue
+        </button>
       </div>
 
     </form>

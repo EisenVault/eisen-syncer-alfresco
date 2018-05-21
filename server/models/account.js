@@ -18,7 +18,7 @@ exports.getOne = async id => {
 
 exports.findByInstance = async (instance_url, username) => {
   return await db
-    .select("instance_url")
+    .select("*")
     .first()
     .from("accounts")
     .where("instance_url", instance_url)

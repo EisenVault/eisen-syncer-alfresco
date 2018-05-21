@@ -13,6 +13,19 @@ exports.getOne = async (request, response) => {
 };
 
 exports.addAccount = async (request, response) => {
+  // Before adding the new account lets check if the account already exsits
+  let account = await accountModel.findByInstance(
+    request.body.instance_url,
+    request.body.username
+  );
+
+  if (account) {
+    return response.status(201).json({
+      account_id: account.id
+    });
+  }
+
+  // If its a new account add it to the DB
   let accountId = await accountModel.addAccount(request);
 
   return response.status(201).json({

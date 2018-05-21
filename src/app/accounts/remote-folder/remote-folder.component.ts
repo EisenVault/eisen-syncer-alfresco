@@ -12,27 +12,16 @@ export class RemoteFolderComponent implements OnInit {
   constructor(private _router: Router, private _route: ActivatedRoute) {}
 
   ngOnInit() {
-    this._route.paramMap.subscribe(params => {
-      this.accountId = params.get("accountId");
-    console.log( 'this.accountId1111', this.accountId );
-      
-    });
+    // this._route.paramMap.subscribe(params => {
+    //   this.accountId = params.get("accountId");     
+    // });
 
-    console.log( 'this.accountId222', this._route.snapshot.params['accountId'] );
+    // console.log( 'this.accountId222', this._route.snapshot.params['accountId'] );
     
 
   }
 
   goBack() {
-    this._route.paramMap.subscribe(params => {
-      this.accountId = params.get("accountId");
-    console.log( 'this.accountId1111', this.accountId );
-      
-    });
-
-    console.log( 'this.accountId222', this._route.snapshot.params['accountId'] );
-    
-
-    this._router.navigate(["", 50]);
+    this._router.navigate(["home"]);
   }
 }
