@@ -3,36 +3,34 @@
     <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
   </div>
   <div class="col-md-9 centered">
-    <h3>Which remote folder do you want to sync?</h3>
+    <h3>{{ heading }}</h3>
+    <button *ngIf="showNodes" class="btn btn-default" (click)="loadSites()">Back to Sites</button>
     <hr>
-    <div class="list-group">
-      <a href="#" class="list-group-item list-group-item-action flex-column align-items-start active">
-        <div class="d-flex w-100 justify-content-between">
-          <h5 class="mb-1">List group item heading</h5>
-        </div>
-        <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-        <small>Donec id elit non mi porta.</small>
-      </a>
-      <a href="#" class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-          <h5 class="mb-1">List group item heading</h5>
-        </div>
-        <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-        <small class="text-muted">Donec id elit non mi porta.</small>
-      </a>
-      <a href="#" class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-          <h5 class="mb-1">List group item heading</h5>
-        </div>
-        <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-        <small class="text-muted">Donec id elit non mi porta.</small>
-      </a>
+    <div *ngIf="showSites">
+      <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
+        <a class="list-group-item list-group-item-action flex-column align-items-start">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ site.entry.title }}</h5>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <div *ngIf="showNodes">
+      <div class="list-group pointer" *ngFor="let node of nodes">
+        <a class="list-group-item list-group-item-action flex-column align-items-start">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1"><input type="checkbox" value="{{node.entry.id}}" (click)="selectedNodes.push(node.entry.id)"> 
+             &nbsp;<span (click)="loadNodes(node.entry.id)">{{ node.entry.name || 'No folders' }}</span> 
+            </h5>
+          </div>
+        </a>
+      </div>
     </div>
 
     <div class="mt-5">
         <button type="button" class="btn btn-danger" (click)="goBack()">Back</button>
-        <button type="button" class="btn btn-success float-right" (click)="addAccount()">Continue</button>
-        
+        <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="selectedNodes.length == 0">Finish</button>
     </div>
   </div>
 </div>

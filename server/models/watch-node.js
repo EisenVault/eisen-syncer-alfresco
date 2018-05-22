@@ -7,11 +7,14 @@ exports.getNodes = async accountId => {
     .where("account_id", accountId);
 };
 
-exports.add = async (account_id, node_id) => {
+exports.add = async (accountId, nodeId) => {
+
+  this.delete(accountId);
+
   return await db
     .insert({
-      account_id: account_id,
-      node_id: node_id
+      account_id: accountId,
+      node_id: nodeId
     })
     .into("watch_folders");
 };

@@ -1,5 +1,5 @@
 const { db } = require("../config/db");
-const MIN_THRESHOLD = 5;
+const MIN_THRESHOLD = 200;
 
 exports.getAll = async () => {
   return await db.select("*").from("log_errors");
@@ -19,11 +19,11 @@ exports.getCount = async () => {
     .first();
 };
 
-exports.add = async (accountId, description) => {
+exports.add = async (accountId, description) => { 
   let eventId = await db
     .insert({
       account_id: accountId,
-      description: description,
+      description: String(description),
       created_at: new Date().getTime()
     })
     .into("log_errors");

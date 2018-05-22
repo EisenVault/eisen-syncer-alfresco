@@ -7,7 +7,7 @@ import { FinalizeComponent } from "./accounts/finalize/finalize.component";
 
 const routes: Routes = [
   {
-    path: "home",
+    path: "",
     component: InstanceInfoComponent
   },
   {

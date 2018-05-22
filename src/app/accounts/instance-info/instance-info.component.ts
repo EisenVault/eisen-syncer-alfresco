@@ -41,7 +41,7 @@ export class InstanceInfoComponent implements OnInit {
         response => {
           this.loading = false;
           if (response.status == 201) {
-            this._router.navigate(["account-remote-folder", 200]);
+            this._router.navigate(["account-remote-folder", (<any>response).body.account_id]);
           }
         },
         error => {

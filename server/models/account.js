@@ -16,6 +16,15 @@ exports.getOne = async id => {
     .where("sync_on", 1);
 };
 
+exports.getOneByAccountId = async id => {
+  return await db
+    .select("*")
+    .first()
+    .from("accounts")
+    .where("id", id)
+    .where("sync_on", 1);
+};
+
 exports.findByInstance = async (instance_url, username) => {
   return await db
     .select("*")
