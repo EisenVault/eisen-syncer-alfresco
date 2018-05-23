@@ -1,5 +1,5 @@
 import { Component, OnInit } from "@angular/core";
-import { Router } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { AccountService } from "../../services/account.service";
 
 @Component({
@@ -9,22 +9,39 @@ import { AccountService } from "../../services/account.service";
 })
 export class InstanceInfoComponent implements OnInit {
   public response;
-  private loading: boolean = false;
+  public loading: boolean = false;
   public errors: any = {};
-  public instance_url: string = "https://www.edms.cf";
-  public username: string = "admin@soubhik";
-  public password: string = "admin";
-  public sync_path: string = "/var/www/html";
+  public instance_url: string = "";
+  public username: string = "";
+  public password: string = "";
+  public sync_path: string = "";
   public sync_on: boolean = true;
-  public overwrite: boolean = true;
+  public overwrite: boolean = false;
   public file: string = "";
 
   constructor(
     private _accountService: AccountService,
-    private _router: Router
+    private _router: Router,
+    private _activatedRoute: ActivatedRoute
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this._activatedRoute.queryParams.subscribe(params => {
+      let accountId = params["accountId"];
+
+      if (accountId) {
+        this._accountService.getAccount(accountId).subscribe(response => {
+          if (response) {
+            this.instance_url = (<any>response).instance_url;
+            this.username = (<any>response).username;
+            this.sync_on = (<any>response).sync_on;
+            this.sync_path = (<any>response).sync_path;
+            this.overwrite = (<any>response).overwrite;
+          }
+        });
+      }
+    });
+  }
 
   addAccount() {
     this.loading = true;
@@ -41,7 +58,10 @@ export class InstanceInfoComponent implements OnInit {
         response => {
           this.loading = false;
           if (response.status == 201) {
-            this._router.navigate(["account-remote-folder", (<any>response).body.account_id]);
+            this._router.navigate([
+              "account-remote-folder",
+              (<any>response).body.account_id
+            ]);
           }
         },
         error => {

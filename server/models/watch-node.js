@@ -8,9 +8,6 @@ exports.getNodes = async accountId => {
 };
 
 exports.add = async (accountId, nodeId) => {
-
-  this.delete(accountId);
-
   return await db
     .insert({
       account_id: accountId,

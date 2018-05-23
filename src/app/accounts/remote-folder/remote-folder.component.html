@@ -3,9 +3,22 @@
     <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
   </div>
   <div class="col-md-9 centered">
-    <h3>{{ heading }}</h3>
-    <button *ngIf="showNodes" class="btn btn-default" (click)="loadSites()">Back to Sites</button>
+    <h3>Which remote folder do you want to sync?</h3>
+    <div class="row">
+      <div class="col-md-6">
+        <button *ngIf="showNodes && parentNodes.length >= 2" class="btn btn-default btn-sm" (click)="loadNodes(parentNodes[1])">Level Up
+          <i class="fas fa-level-up-alt"></i>
+        </button>
+      </div>
+      <div class="col-md-6">
+        <button *ngIf="showNodes" class="btn btn-default btn-sm float-right" (click)="loadSites()">Back to Sites</button>
+      </div>
+    </div>
+
     <hr>
+    <div class="alert alert-info" *ngIf="sites.length == 0 && nodes.length == 0">
+      <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
+    </div>
     <div *ngIf="showSites">
       <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
         <a class="list-group-item list-group-item-action flex-column align-items-start">
@@ -20,17 +33,27 @@
       <div class="list-group pointer" *ngFor="let node of nodes">
         <a class="list-group-item list-group-item-action flex-column align-items-start">
           <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1"><input type="checkbox" value="{{node.entry.id}}" (click)="selectedNodes.push(node.entry.id)"> 
-             &nbsp;<span (click)="loadNodes(node.entry.id)">{{ node.entry.name || 'No folders' }}</span> 
+            <h5 class="mb-1">
+              <input type="checkbox" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
+              <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
             </h5>
           </div>
         </a>
       </div>
+      <div class="alert alert-danger" *ngIf="nodes.length == 0">
+        No folders here...
+      </div>
     </div>
 
     <div class="mt-5">
-        <button type="button" class="btn btn-danger" (click)="goBack()">Back</button>
-        <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="selectedNodes.length == 0">Finish</button>
+      <button type="button" class="btn btn-danger" (click)="goBack()">
+        <i class="fas fa-cogs"></i>
+        Back to Account Settings
+      </button>
+      <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="selectedNodes.length == 0">
+        <i class="fas fa-check-circle"></i> 
+        Finish
+      </button>
     </div>
   </div>
 </div>

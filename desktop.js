@@ -9,6 +9,8 @@ process.env.NODE_ENV = "dev";
 
 let mainWindow, tray;
 
+let forceQuit = false;
+
 // Listen for app to be ready
 app.on("ready", () => {
   // Create main window
@@ -27,17 +29,68 @@ app.on("ready", () => {
       label: "Syncing changes"
     },
     {
-      label: "Add a remote folder"
+      label: "Add a remote folder",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/"
+          })
+        );
+        mainWindow.show();
+      }
+    },
+    {
+      label: "Manage Accounts",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/account/manage"
+          })
+        );
+        mainWindow.show();
+      }
     },
     { type: "separator" },
     {
-      label: "View Log"
+      label: "View Error Logs",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/logs/error"
+          })
+        );
+        mainWindow.show();
+      }
     },
     {
-      label: "About " + app.getName()
+      label: "About " + app.getName(),
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/about"
+          })
+        );
+        mainWindow.show();
+      }
     },
     {
-      role: "quit"
+      label: "Exit",
+      click() {
+        forceQuit = true;
+        app.quit();
+      }
     }
   ];
 
@@ -54,9 +107,20 @@ app.on("ready", () => {
     })
   );
 
-  // Quit app when closed
-  mainWindow.on("closed", () => {
+  mainWindow.on("close", function(e) {
+    if (!forceQuit) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
+  mainWindow.on("closed", function() {
+    mainWindow = null;
     app.quit();
+  });
+
+  app.on("activate-with-no-open-windows", function() {
+    mainWindow.show();
   });
 
   //   Buld the menu from template
@@ -77,7 +141,7 @@ const mainMenuTemplate = [
         }
       },
       {
-        label: "Quit",
+        label: "Quit " + app.getName(),
         accelerator: process.platform == "darwin" ? "Command+Q" : "Ctrl+Q",
         click() {
           app.quit();

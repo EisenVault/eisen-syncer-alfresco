@@ -8,6 +8,9 @@ exports.getAll = async (request, response) => {
 };
 
 exports.add = async (request, response) => {
+  // Delete old records first
+  watchNodeModel.delete(request.body.account_id);
+
   // Add new nodes
   for (let node of request.body.nodes) {
     let record = await watchNodeModel.add(request.body.account_id, node);

@@ -1,10 +1,7 @@
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { environment } from "../../environments/environment";
-
-interface account {
-  status: Number
-}
+import { Account } from "../models/account";
 
 @Injectable({
   providedIn: "root"
@@ -12,8 +9,12 @@ interface account {
 export class AccountService {
   constructor(private _http: HttpClient) {}
 
+  getAccount(accountId) {
+    return this._http.get(environment.apiUrl + "/accounts/" + accountId);
+  }
+
   addAccount(params) {
-    return this._http.post<account>(
+    return this._http.post<Account>(
       environment.apiUrl + "/accounts",
       {
         instance_url: params.instance_url,

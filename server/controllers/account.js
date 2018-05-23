@@ -20,9 +20,8 @@ exports.addAccount = async (request, response) => {
   );
 
   if (account) {
-    return response.status(201).json({
-      account_id: account.id
-    });
+    // If the account already exists, delete it so that we can add the fresh data
+    accountModel.deleteAccount(account.id);
   }
 
   // If its a new account add it to the DB

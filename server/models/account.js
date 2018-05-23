@@ -2,12 +2,14 @@ const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
 exports.getAll = async () => {
+  console.log( 'all' );
+  
   return await db
     .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
     .from("accounts");
 };
 
-exports.getOne = async id => {
+exports.getOne = async id => { 
   return await db
     .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
     .first()
