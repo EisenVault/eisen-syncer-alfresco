@@ -5,6 +5,10 @@ exports.getAll = async (request, response) => {
   return response.status(200).json(await errorLogModel.getAll());
 };
 
+exports.getAllByAccountId = async (request, response) => {
+  return response.status(200).json(await errorLogModel.getAllByAccountId(request.params.account_id));
+};
+
 exports.getOne = async (request, response) => {
   return response
     .status(200)

@@ -31,6 +31,10 @@ const routes: Routes = [
     component: ErrorComponent
   },
   {
+    path: "logs/event",
+    component: EventComponent
+  },
+  {
     path: "about",
     component: AboutComponent
   }

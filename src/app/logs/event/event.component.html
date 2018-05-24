@@ -1,3 +1,37 @@
-<p>
-  event works!
-</p>
+<div class="row">
+  <div class="col-md-3 left-nav">
+    <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
+  </div>
+  <div class="col-md-9 centered">
+    <h3>Event Logs</h3>
+    <hr>
+    <div class="mt-5">
+      <table class="table table-bordered" width="600">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Created At</th>
+            <th scope="col">Instance URL</th>
+            <th scope="col">Username</th>
+            <th scope="col">Action Type</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let log of logs">
+            <td>{{ log.created_at | date:'full' }}</td>
+            <td>{{ log.instance_url }}</td>
+            <td>{{ log.username }}</td>
+            <td>
+              <a href="javascript:void(0)" [class]="getBadgeClass(log.type)">
+                {{ log.type }}
+              </a>
+            </td>
+            <td>{{ log.description }}</td>
+          </tr>
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+</div>

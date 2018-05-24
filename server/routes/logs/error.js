@@ -8,7 +8,7 @@ const errorLogAddMiddleware = require("../../middlewares/logs/error");
 const errorController = require("../../controllers/logs/error");
 
 router.get("/", errorController.getAll);
-router.get("/:id", errorController.getOne);
+router.get("/:account_id", errorController.getAllByAccountId);
 router.post("/", errorLogAddMiddleware, errorController.add);
 
 module.exports = router;

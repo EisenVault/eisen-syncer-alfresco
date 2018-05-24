@@ -1,3 +1,31 @@
-<p>
-  error works!
-</p>
+<div class="row">
+    <div class="col-md-3 left-nav">
+      <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
+    </div>
+    <div class="col-md-9 centered">
+      <h3>Error Logs</h3>
+      <hr>
+      <div class="mt-5">
+        <table class="table table-bordered">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col">Created At</th>
+              <th scope="col">Instance URL</th>
+              <th scope="col">Username</th>
+              <th scope="col">Error</th>
+            </tr>
+          </thead>
+  
+          <tbody>
+            <tr *ngFor="let log of logs">
+              <td>{{ log.created_at | date:'full' }}</td>
+              <td>{{ log.instance_url }}</td>
+              <td>{{ log.username }}</td>
+              <td>{{ log.description | cleanString }}</td>
+            </tr>
+          </tbody>
+  
+        </table>
+      </div>
+    </div>
+  </div>

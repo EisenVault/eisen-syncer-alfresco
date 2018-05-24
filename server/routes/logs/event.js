@@ -8,7 +8,7 @@ const eventLogAddMiddleware = require("../../middlewares/logs/event");
 const eventController = require("../../controllers/logs/event");
 
 router.get("/", eventController.getAll);
-router.get("/:id", eventController.getOne);
+router.get("/:account_id", eventController.getAllByAccountId);
 router.post("/", eventLogAddMiddleware, eventController.add);
 
 module.exports = router;
