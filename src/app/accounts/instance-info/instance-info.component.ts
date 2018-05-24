@@ -14,7 +14,7 @@ export class InstanceInfoComponent implements OnInit {
   public instance_url: string = "";
   public username: string = "";
   public password: string = "";
-  public sync_path: string = "";
+  public sync_path: string = "...";
   public sync_on: boolean = true;
   public overwrite: boolean = false;
   public file: string = "";
@@ -45,6 +45,7 @@ export class InstanceInfoComponent implements OnInit {
 
   addAccount() {
     this.loading = true;
+    this.errors = {};
     this._accountService
       .addAccount({
         instance_url: this.instance_url,

@@ -20,6 +20,7 @@
       <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
     </div>
     <div *ngIf="showSites">
+      <h6>Select a Site</h6>
       <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
         <a class="list-group-item list-group-item-action flex-column align-items-start">
           <div class="d-flex w-100 justify-content-between">
@@ -30,6 +31,7 @@
     </div>
 
     <div *ngIf="showNodes">
+      <h6>Select a Folder</h6>
       <div class="list-group pointer" *ngFor="let node of nodes">
         <a class="list-group-item list-group-item-action flex-column align-items-start">
           <div class="d-flex w-100 justify-content-between">
@@ -51,7 +53,7 @@
         Back to Account Settings
       </button>
       <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="selectedNodes.length == 0">
-        <i class="fas fa-check-circle"></i> 
+        <i class="fas fa-check-circle"></i>
         Finish
       </button>
     </div>

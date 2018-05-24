@@ -2,6 +2,7 @@ import { Component, OnInit } from "@angular/core";
 import { Router, ActivatedRoute, ParamMap } from "@angular/router";
 import { SiteService } from "../../services/site.service";
 import { NodeService } from "../../services/node.service";
+import { ParentNodeService } from "../../services/parent-node.service";
 import { WatchNodeService } from "../../services/watch-node.service";
 
 @Component({
@@ -11,19 +12,20 @@ import { WatchNodeService } from "../../services/watch-node.service";
 })
 export class RemoteFolderComponent implements OnInit {
   public accountId;
-  public parentNodes: string[] = [];
   public sites = [];
   public nodes = [];
   public showSites: boolean = true;
   public showNodes: boolean = false;
   public selectedNodes: string[] = [];
+  public parentNodeId: string = "";
 
   constructor(
     private _router: Router,
     private _route: ActivatedRoute,
     private _siteService: SiteService,
     private _nodeService: NodeService,
-    private _watchNodeService: WatchNodeService
+    private _watchNodeService: WatchNodeService,
+    private _parentNodeService: ParentNodeService
   ) {}
 
   ngOnInit() {
@@ -44,20 +46,28 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadNodes(nodeId) {
-    if (nodeId != undefined) {
-      this.parentNodes.unshift(nodeId);
-      this.parentNodes.splice(2);
-    }
-
     this.selectedNodes = [];
     this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
       this.nodes = (<any>response).list.entries;
-      this.parentNodes.unshift(
-        this.nodes.length > 0 ? this.nodes[0].entry.parentId : ""
-      );
       this.showSites = false;
       this.showNodes = true;
     });
+  }
+
+  loadParent() {
+    if (this.selectedNodes.length > 0) {
+      let nodeId = this.selectedNodes[0];
+
+      this._parentNodeService
+        .getParents(this.accountId, nodeId)
+        .subscribe(response => {
+          console.log( response );
+          
+          // for (let parent of test.entries) {
+          //   this.parentNodeId = parent.entry.id;
+          // }
+        });
+    }
   }
 
   addToList(e, nodeId) {

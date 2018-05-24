@@ -9,6 +9,7 @@ import { SiteService } from "./services/site.service";
 import { NodeService } from "./services/node.service";
 import { WatchNodeService } from "./services/watch-node.service";
 import { LogService } from "./services/log.service";
+import { ParentNodeService } from "./services/parent-node.service";
 
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
@@ -46,7 +47,8 @@ import { SharedModule } from "./shared/shared.module";
     SiteService,
     NodeService,
     WatchNodeService,
-    LogService
+    LogService,
+    ParentNodeService
   ],
   bootstrap: [AppComponent]
 })
