@@ -1,15 +1,16 @@
 const validator = require("validator");
 const _ = require("lodash");
+const http = require("request-promise-native");
 
 module.exports = async (request, response, next) => {
   let errors = [];
 
   if (
-    _.isNil(request.body.value) ||
-    validator.isEmpty(String(request.body.value))
+    _.isNil(request.body.sync_on) ||
+    validator.isEmpty(String(request.body.sync_on))
   ) {
     errors.push({
-      value: ["Value field is mandatory"]
+      sync_on: ["Auto Sync cannot be empty"]
     });
   }
 

@@ -9,6 +9,10 @@ import { Account } from "../models/account";
 export class AccountService {
   constructor(private _http: HttpClient) {}
 
+  getAccounts() {
+    return this._http.get(environment.apiUrl + "/accounts");
+  }
+
   getAccount(accountId) {
     return this._http.get(environment.apiUrl + "/accounts/" + accountId);
   }
@@ -21,12 +25,41 @@ export class AccountService {
         username: params.username,
         password: params.password,
         sync_path: params.sync_path,
+        sync_frequency: params.sync_frequency,
         sync_on: params.sync_on,
         overwrite: params.overwrite
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
         responseType: "json"
+      }
+    );
+  }
+
+  updateAccount(params) {
+    return this._http.put<Account>(
+      environment.apiUrl + "/accounts/" + params.accountId,
+      {
+        instance_url: params.instance_url,
+        username: params.username,
+        password: params.password,
+        sync_path: params.sync_path,
+        sync_frequency: params.sync_frequency,
+        sync_on: params.sync_on,
+        overwrite: params.overwrite
+      },
+      {
+        observe: "response" as "body", // to display the full response & as 'body' for type cast
+        responseType: "json"
+      }
+    );
+  }
+
+  updateSync(accountId, sync) {
+    return this._http.put(
+      environment.apiUrl + "/accounts/" + accountId + "/sync",
+      {
+        sync_on: sync
       }
     );
   }

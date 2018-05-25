@@ -2,20 +2,32 @@ const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
 exports.getAll = async () => {
-  console.log( 'all' );
-  
   return await db
-    .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
+    .select(
+      "id",
+      "instance_url",
+      "username",
+      "sync_path",
+      "sync_on",
+      "sync_frequency",
+      "overwrite"
+    )
     .from("accounts");
 };
 
-exports.getOne = async id => { 
+exports.getOne = async id => {
   return await db
-    .select("instance_url", "username", "sync_path", "sync_on", "overwrite")
+    .select(
+      "instance_url",
+      "username",
+      "sync_path",
+      "sync_on",
+      "sync_frequency",
+      "overwrite"
+    )
     .first()
     .from("accounts")
-    .where("id", id)
-    .where("sync_on", 1);
+    .where("id", id);
 };
 
 exports.getOneByAccountId = async id => {
@@ -23,8 +35,7 @@ exports.getOneByAccountId = async id => {
     .select("*")
     .first()
     .from("accounts")
-    .where("id", id)
-    .where("sync_on", 1);
+    .where("id", id);
 };
 
 exports.findByInstance = async (instance_url, username) => {
@@ -44,6 +55,7 @@ exports.addAccount = async request => {
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
       sync_on: request.body.sync_on,
+      sync_frequency: request.body.sync_frequency,
       overwrite: request.body.overwrite,
       created_at: new Date().getTime(),
       updated_at: new Date().getTime()
@@ -59,8 +71,26 @@ exports.updateAccount = async (accountId, request) => {
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
       sync_on: request.body.sync_on,
+      sync_frequency: request.body.sync_frequency,
       overwrite: request.body.overwrite,
       updated_at: new Date().getTime()
+    })
+    .where("id", accountId);
+};
+
+exports.updateSync = async (accountId, request) => {
+  return await db("accounts")
+    .update({
+      sync_on: request.body.sync_on,
+      updated_at: new Date().getTime()
+    })
+    .where("id", accountId);
+};
+
+exports.updateSyncTime = async accountId => {
+  return await db("accounts")
+    .update({
+      last_synced_at: new Date().getTime()
     })
     .where("id", accountId);
 };

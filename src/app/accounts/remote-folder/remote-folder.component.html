@@ -3,10 +3,18 @@
     <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
   </div>
   <div class="col-md-9 centered">
-    <h3>Which remote folder do you want to sync?</h3>
+    <h3>Which remote folder do you want to sync?
+      <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/account/manage">
+        <i class="fas fa-user-cog"></i>
+        Manage Accounts
+      </a>
+    </h3>
+
+    <div class="clearfix">&nbsp;</div>
+
     <div class="row">
       <div class="col-md-6">
-        <button *ngIf="showNodes && parentNodes.length >= 2" class="btn btn-default btn-sm" (click)="loadNodes(parentNodes[1])">Level Up
+        <button *ngIf="showLevelUp" class="btn btn-default btn-sm" (click)="loadNodes(parentNodeId)">Level Up
           <i class="fas fa-level-up-alt"></i>
         </button>
       </div>
@@ -49,13 +57,14 @@
 
     <div class="mt-5">
       <button type="button" class="btn btn-danger" (click)="goBack()">
-        <i class="fas fa-cogs"></i>
+        <i class="fas fa-chevron-circle-left"></i>
         Back to Account Settings
       </button>
       <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="selectedNodes.length == 0">
         <i class="fas fa-check-circle"></i>
         Finish
       </button>
+
     </div>
   </div>
 </div>

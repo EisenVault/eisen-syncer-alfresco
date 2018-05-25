@@ -8,6 +8,7 @@ import { ManageComponent } from "./accounts/manage/manage.component";
 import { ErrorComponent } from "./logs/error/error.component";
 import { EventComponent } from "./logs/event/event.component";
 import { AboutComponent } from "./about/about.component";
+import { SettingsComponent } from "./settings/settings.component";
 
 const routes: Routes = [
   {
@@ -37,6 +38,10 @@ const routes: Routes = [
   {
     path: "about",
     component: AboutComponent
+  },
+  {
+    path: "settings",
+    component: SettingsComponent
   }
 ];
 

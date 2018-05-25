@@ -16,6 +16,7 @@ export class RemoteFolderComponent implements OnInit {
   public nodes = [];
   public showSites: boolean = true;
   public showNodes: boolean = false;
+  public showLevelUp: boolean = false;
   public selectedNodes: string[] = [];
   public parentNodeId: string = "";
 
@@ -48,24 +49,30 @@ export class RemoteFolderComponent implements OnInit {
   loadNodes(nodeId) {
     this.selectedNodes = [];
     this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
+      this.showLevelUp = true;
       this.nodes = (<any>response).list.entries;
+      this._setParentId();
       this.showSites = false;
       this.showNodes = true;
+
+      for (let item of (<any>response).list.entries) {
+        if (item.entry.name == "documentLibrary") {
+          return (this.showLevelUp = false);
+        }
+      }
     });
   }
 
-  loadParent() {
-    if (this.selectedNodes.length > 0) {
-      let nodeId = this.selectedNodes[0];
+  _setParentId() {
+    if (this.nodes.length > 0) {
+      let nodeId = this.nodes[0].entry.id;
 
       this._parentNodeService
         .getParents(this.accountId, nodeId)
         .subscribe(response => {
-          console.log( response );
-          
-          // for (let parent of test.entries) {
-          //   this.parentNodeId = parent.entry.id;
-          // }
+          if ((<any>response).list.entries.length > 0) {
+            this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
+          }
         });
     }
   }

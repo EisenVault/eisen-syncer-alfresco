@@ -42,6 +42,15 @@ module.exports = async (request, response, next) => {
   }
 
   if (
+    _.isNil(request.body.sync_frequency) ||
+    validator.isEmpty(String(request.body.sync_frequency))
+  ) {
+    errors.push({
+      sync_frequency: ["Sync Frequency cannot be empty"]
+    });
+  }
+
+  if (
     !validator.isEmpty(request.body.instance_url) &&
     !validator.isEmpty(request.body.username) &&
     !validator.isEmpty(request.body.password)

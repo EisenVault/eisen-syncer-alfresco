@@ -10,6 +10,7 @@ import { NodeService } from "./services/node.service";
 import { WatchNodeService } from "./services/watch-node.service";
 import { LogService } from "./services/log.service";
 import { ParentNodeService } from "./services/parent-node.service";
+import { SettingService } from "./services/setting.service";
 
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
@@ -22,6 +23,7 @@ import { EventComponent } from "./logs/event/event.component";
 import { ErrorComponent } from "./logs/error/error.component";
 import { ManageComponent } from "./accounts/manage/manage.component";
 import { SharedModule } from "./shared/shared.module";
+import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
   declarations: [
@@ -32,7 +34,8 @@ import { SharedModule } from "./shared/shared.module";
     AboutComponent,
     EventComponent,
     ErrorComponent,
-    ManageComponent
+    ManageComponent,
+    SettingsComponent
   ],
   imports: [
     BrowserModule,
@@ -48,6 +51,7 @@ import { SharedModule } from "./shared/shared.module";
     NodeService,
     WatchNodeService,
     LogService,
+    SettingService,
     ParentNodeService
   ],
   bootstrap: [AppComponent]

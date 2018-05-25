@@ -1,3 +1,51 @@
-<p>
-  manage works!
-</p>
+<div class="row">
+  <div class="col-md-3 left-nav">
+    <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
+  </div>
+  <div class="col-md-9 centered">
+    <h3>
+      Manage Accounts
+      <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/settings">
+        <i class="fas fa-cogs"></i>
+        Manage Settings
+      </a>
+    </h3>
+    <hr>
+    <div class="mt-5">
+      <div class="alert alert-success" role="alert" *ngIf="isSaved">
+        Account settings saved successfully!
+      </div>
+      <table class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Instance URL</th>
+            <th scope="col">Username</th>
+            <th scope="col">Sync Path</th>
+            <th scope="col">Auto Sync</th>
+            <th scope="col">Status</th>
+            <th scope="col">Manage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let account of accounts">
+            <td>{{ account.instance_url }}</td>
+            <td>{{ account.username }}</td>
+            <td>{{ account.sync_path }}</td>
+            <td>
+              <input type="checkbox" name="id" value="true" [checked]="account.sync_on" (click)="update($event, account.id)">
+            </td>
+            <td>
+              <span class="badge badge-success">Synced</span>
+            </td>
+            <td>
+              <button type="button" class="btn btn-outline-info" (click)="goToManageAccount(account.id)">
+                <i class="fas fa-edit"></i>
+                Edit
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

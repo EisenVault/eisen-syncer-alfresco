@@ -11,10 +11,12 @@ export class InstanceInfoComponent implements OnInit {
   public response;
   public loading: boolean = false;
   public errors: any = {};
+  public accountId: number = 0;
   public instance_url: string = "";
   public username: string = "";
   public password: string = "";
   public sync_path: string = "...";
+  public sync_frequency: number = 2;
   public sync_on: boolean = true;
   public overwrite: boolean = false;
   public file: string = "";
@@ -27,15 +29,15 @@ export class InstanceInfoComponent implements OnInit {
 
   ngOnInit() {
     this._activatedRoute.queryParams.subscribe(params => {
-      let accountId = params["accountId"];
-
-      if (accountId) {
-        this._accountService.getAccount(accountId).subscribe(response => {
+      this.accountId = params["accountId"];
+      if (this.accountId) {
+        this._accountService.getAccount(this.accountId).subscribe(response => {
           if (response) {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
             this.sync_on = (<any>response).sync_on;
             this.sync_path = (<any>response).sync_path;
+            this.sync_frequency = (<any>response).sync_frequency;
             this.overwrite = (<any>response).overwrite;
           }
         });
@@ -44,6 +46,11 @@ export class InstanceInfoComponent implements OnInit {
   }
 
   addAccount() {
+    // Update the account if it already exists
+    if (this.accountId > 0) {
+      return this.updateAccount();
+    }
+
     this.loading = true;
     this.errors = {};
     this._accountService
@@ -52,6 +59,7 @@ export class InstanceInfoComponent implements OnInit {
         username: this.username,
         password: this.password,
         sync_path: this.sync_path,
+        sync_frequency: this.sync_frequency,
         sync_on: this.sync_on,
         overwrite: this.overwrite
       })
@@ -59,6 +67,45 @@ export class InstanceInfoComponent implements OnInit {
         response => {
           this.loading = false;
           if (response.status == 201) {
+            this._router.navigate([
+              "account-remote-folder",
+              (<any>response).body.account_id
+            ]);
+          }
+        },
+        error => {
+          this.loading = false;
+          if (error.status == 400) {
+            for (let e of error.error.errors) {
+              for (let errorField in e) {
+                this.errors[errorField] = e[errorField];
+              }
+            }
+          } else {
+            throw error;
+          }
+        }
+      );
+  }
+
+  updateAccount() {
+    this.loading = true;
+    this.errors = {};
+    this._accountService
+      .updateAccount({
+        accountId: this.accountId,
+        instance_url: this.instance_url,
+        username: this.username,
+        password: this.password,
+        sync_path: this.sync_path,
+        sync_frequency: this.sync_frequency,
+        sync_on: this.sync_on,
+        overwrite: this.overwrite
+      })
+      .subscribe(
+        response => {
+          this.loading = false;
+          if (response.status == 200) {
             this._router.navigate([
               "account-remote-folder",
               (<any>response).body.account_id
