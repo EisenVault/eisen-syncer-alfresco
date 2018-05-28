@@ -4,8 +4,6 @@ const validator = require("validator");
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
-  console.log( 'getAllCalled' );
-  
   return response.status(200).json(await accountModel.getAll(syncEnabled));
 };
 

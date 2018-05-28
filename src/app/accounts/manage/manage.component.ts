@@ -1,6 +1,7 @@
 import { Component, OnInit } from "@angular/core";
 import { AccountService } from "../../services/account.service";
 import { Router } from "@angular/router";
+import { THROW_IF_NOT_FOUND } from "@angular/core/src/di/injector";
 
 @Component({
   selector: "app-manage",
@@ -20,11 +21,29 @@ export class ManageComponent implements OnInit {
       .getAccounts()
       .subscribe(accounts => (this.accounts = accounts));
 
+    // Refresh the account data every 10 seconds to see if any sync is still in progress
     setInterval(() => {
-      this._accountService
-        .getAccounts()
-        .subscribe(accounts => (this.accounts = accounts));
-    }, 5000);
+      this._accountService.getAccounts().subscribe(accounts => {
+        this.accounts = accounts;
+
+        for (let account of accounts) {
+          let lastSyncInMinutes = this.differenceInMinutes(
+            account.last_synced_at
+          );
+          console.log("lastSyncInMinutes", lastSyncInMinutes);
+          console.log("account.sync_frequency", account.sync_frequency);
+          console.log("account.sync_enabled ", account.sync_enabled);
+
+          if (
+            account.sync_enabled == 1 &&
+            lastSyncInMinutes < account.sync_frequency
+          ) {
+
+            // Fire the upload and then the download api...
+          }
+        }
+      });
+    }, 10000);
   }
 
   update(e, accountId) {
@@ -44,7 +63,7 @@ export class ManageComponent implements OnInit {
 
   isSynced(time) {
     let now = Date.now();
-    let difference = (now - time) / 60;
+    let difference = Math.round((now - time) / 60);
 
     // If the last sync date/time was more than 30 seconds then assume the syncing was completed.
     if (difference > 30) {
@@ -52,5 +71,10 @@ export class ManageComponent implements OnInit {
     }
 
     return false;
+  }
+
+  differenceInMinutes(time) {
+    let now = Date.now();
+    return Math.round((now - time) / 1000 / 60);
   }
 }
