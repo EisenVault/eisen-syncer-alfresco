@@ -19,6 +19,12 @@ export class ManageComponent implements OnInit {
     this._accountService
       .getAccounts()
       .subscribe(accounts => (this.accounts = accounts));
+
+    setInterval(() => {
+      this._accountService
+        .getAccounts()
+        .subscribe(accounts => (this.accounts = accounts));
+    }, 5000);
   }
 
   update(e, accountId) {
@@ -34,5 +40,17 @@ export class ManageComponent implements OnInit {
 
   goToManageAccount(accountId) {
     this._router.navigate([""], { queryParams: { accountId: accountId } });
+  }
+
+  isSynced(time) {
+    let now = Date.now();
+    let difference = (now - time) / 60;
+
+    // If the last sync date/time was more than 30 seconds then assume the syncing was completed.
+    if (difference > 30) {
+      return true;
+    }
+
+    return false;
   }
 }

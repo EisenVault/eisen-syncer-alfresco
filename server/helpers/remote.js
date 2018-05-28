@@ -1,9 +1,10 @@
 const fs = require("fs");
 const path = require("path");
+const crypt = require("../config/crypt");
 const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
-const errorLogModel = require('../models/log-error');
+const errorLogModel = require("../models/log-error");
 
 /**
  *
@@ -29,7 +30,7 @@ exports.getChildren = async params => {
       parentNodeId +
       "/children",
     headers: {
-      authorization: "Basic " + btoa(account.username + ":" + account.password)
+      authorization: "Basic " + btoa(account.username + ":" + crypt.decrypt(account.password))
     }
   };
 
@@ -38,6 +39,6 @@ exports.getChildren = async params => {
     return JSON.parse(response);
   } catch (error) {
     errorLogModel.add(account.id, error);
-    throw new Error(error);
+    console.log(error);
   }
 };

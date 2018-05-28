@@ -3,13 +3,26 @@
     <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
   </div>
   <div class="col-md-9 centered">
-    <h3>
-      Manage Accounts
-      <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/settings">
-        <i class="fas fa-cogs"></i>
-        Manage Settings
-      </a>
-    </h3>
+
+    <div class="d-flex">
+      <div class="mr-auto p-2">
+        <h3>
+          Manage Accounts</h3>
+      </div>
+      <div class="p-2">
+        <a class="btn btn-outline-success" href="#" role="button" routerLink="/account-new">
+          <i class="fas fa-user-plus"></i>
+          New Account
+        </a>
+      </div>
+      <div class="p-2">
+        <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/settings">
+          <i class="fas fa-cogs"></i>
+          Manage Settings
+        </a>
+      </div>
+    </div>
+
     <hr>
     <div class="mt-5">
       <div class="alert alert-success" role="alert" *ngIf="isSaved">
@@ -35,7 +48,12 @@
               <input type="checkbox" name="id" value="true" [checked]="account.sync_on" (click)="update($event, account.id)">
             </td>
             <td>
-              <span class="badge badge-success">Synced</span>
+              <div *ngIf="isSynced(account.last_synced_at); else syncing">
+                <span class="badge badge-success">Synced</span>
+              </div>
+              <ng-template #syncing>
+                <img src="/assets/imgs/spinner.gif" alt="">
+              </ng-template>
             </td>
             <td>
               <button type="button" class="btn btn-outline-info" (click)="goToManageAccount(account.id)">

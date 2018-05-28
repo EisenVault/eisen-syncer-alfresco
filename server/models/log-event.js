@@ -8,7 +8,7 @@ exports.getAll = async () => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_on",
+      "accounts.sync_enabled",
       "accounts.overwrite"
     )
     .from("log_events")
@@ -23,7 +23,7 @@ exports.getAllByAccountId = async accountId => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_on",
+      "accounts.sync_enabled",
       "accounts.overwrite"
     )
     .from("log_events")
@@ -39,7 +39,7 @@ exports.getOne = async id => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_on",
+      "accounts.sync_enabled",
       "accounts.overwrite"
     )
     .first()
@@ -55,13 +55,6 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, type, description) => {
-  // Delete old records
-  let count = await this.getCount();
-  if (count.total > MIN_THRESHOLD) {
-    let removableId = eventId[0] - MIN_THRESHOLD;
-    this.deleteAllLessThan(removableId);
-  }
-
   let eventId = await db
     .insert({
       account_id: accountId,
@@ -70,6 +63,13 @@ exports.add = async (accountId, type, description) => {
       created_at: new Date().getTime()
     })
     .into("log_events");
+
+  // Delete old records
+  let count = await this.getCount();
+  if (count.total > MIN_THRESHOLD) {
+    let removableId = eventId[0] - MIN_THRESHOLD;
+    this.deleteAllLessThan(removableId);
+  }
 
   return eventId;
 };

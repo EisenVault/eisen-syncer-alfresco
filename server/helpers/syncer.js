@@ -1,6 +1,7 @@
 const fs = require("fs");
 const _ = require("lodash");
 const path = require("path");
+const crypt = require("../config/crypt");
 const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
@@ -9,6 +10,7 @@ const nodeModel = require("../models/node");
 const glob = require("glob");
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
+var progress = require("progress-stream");
 
 /**
  *
@@ -125,6 +127,11 @@ exports.recursiveDownload = async params => {
         });
       }
     }
+
+    // Since its not quite possible to know if the iteration is fully completed as its not possible to know how many total items should be downloaded,
+    // So a workaround is to update the last_sync_at timestamp of the account.
+    // To know if the sync has completed or not, we will check the difference between current time and the last_sync_at and if its more than 20 seconds, we will consider the sync is complete
+    accountModel.updateSyncTime(account.id);
   } catch (error) {
     errorLogModel.add(account.id, error);
     console.log("ERROR OCCURRED: ", error);
@@ -297,7 +304,8 @@ _upload = async params => {
       headers: {
         "content-type": "application/json",
         authorization:
-          "Basic " + btoa(account.username + ":" + account.password)
+          "Basic " +
+          btoa(account.username + ":" + crypt.decrypt(account.password))
       },
       body: JSON.stringify({
         name: directoryName,
@@ -311,6 +319,11 @@ _upload = async params => {
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
+        // Since its not quite possible to know if the iteration is fully completed as its not possible to know how many total items should be downloaded,
+        // So a workaround is to update the last_sync_at timestamp of the account.
+        // To know if the sync has completed or not, we will check the difference between current time and the last_sync_at and if its more than 20 seconds, we will consider the sync is complete
+        accountModel.updateSyncTime(account.id);
+
         // Add an event log
         eventLogModel.add(
           account.id,
@@ -342,7 +355,8 @@ _upload = async params => {
       url: account.instance_url + "/alfresco/service/api/upload",
       headers: {
         authorization:
-          "Basic " + btoa(account.username + ":" + account.password)
+          "Basic " +
+          btoa(account.username + ":" + crypt.decrypt(account.password))
       },
       formData: {
         filedata: {
@@ -404,12 +418,20 @@ _deleteServerNode = async params => {
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       deletedNodeId,
     headers: {
-      authorization: "Basic " + btoa(account.username + ":" + account.password)
+      authorization:
+        "Basic " +
+        btoa(account.username + ":" + crypt.decrypt(account.password))
     }
   };
 
   try {
     let response = await request(options);
+
+    // Since its not quite possible to know if the iteration is fully completed as its not possible to know how many total items should be downloaded,
+    // So a workaround is to update the last_sync_at timestamp of the account.
+    // To know if the sync has completed or not, we will check the difference between current time and the last_sync_at and if its more than 20 seconds, we will consider the sync is complete
+    accountModel.updateSyncTime(account.id);
+
     // Add an event log
     eventLogModel.add(
       account.id,
@@ -446,7 +468,9 @@ _download = async params => {
       sourceNodeId +
       "/content?attachment=true",
     headers: {
-      authorization: "Basic " + btoa(account.username + ":" + account.password)
+      authorization:
+        "Basic " +
+        btoa(account.username + ":" + crypt.decrypt(account.password))
     }
   };
 
@@ -454,6 +478,15 @@ _download = async params => {
     let response = await request(options).pipe(
       fs.createWriteStream(destinationPath)
     );
+
+    fs.watchFile(destinationPath, function() {
+      fs.stat(destinationPath, function(err, stats) {
+        // Since its not quite possible to know if the iteration is fully completed as its not possible to know how many total items should be downloaded,
+        // So a workaround is to update the last_sync_at timestamp of the account.
+        // To know if the sync has completed or not, we will check the difference between current time and the last_sync_at and if its more than 20 seconds, we will consider the sync is complete
+        accountModel.updateSyncTime(account.id);
+      });
+    });
 
     // Add an event log
     eventLogModel.add(

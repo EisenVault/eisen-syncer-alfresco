@@ -1,27 +1,53 @@
 const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
-exports.getAll = async () => {
+exports.getAll = async syncEnabled => {
   return await db
     .select(
       "id",
       "instance_url",
       "username",
       "sync_path",
-      "sync_on",
+      "sync_enabled",
       "sync_frequency",
+      "last_synced_at",
       "overwrite"
     )
+    .modify(queryBuilder => {
+      if (syncEnabled == 1) {
+        queryBuilder.where("sync_enabled", 1);
+      } else if (syncEnabled == 0) {
+        queryBuilder.where("sync_enabled", 0);
+      }
+    })
     .from("accounts");
 };
 
 exports.getOne = async id => {
   return await db
     .select(
+      "id",
       "instance_url",
       "username",
       "sync_path",
-      "sync_on",
+      "sync_enabled",
+      "sync_frequency",
+      "overwrite"
+    )
+    .first()
+    .from("accounts")
+    .where("id", id);
+};
+
+exports.getOneWithPassword = async id => {
+  return await db
+    .select(
+      "id",
+      "instance_url",
+      "username",
+      "password",
+      "sync_path",
+      "sync_enabled",
       "sync_frequency",
       "overwrite"
     )
@@ -54,7 +80,7 @@ exports.addAccount = async request => {
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
-      sync_on: request.body.sync_on,
+      sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       overwrite: request.body.overwrite,
       created_at: new Date().getTime(),
@@ -70,7 +96,7 @@ exports.updateAccount = async (accountId, request) => {
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,
-      sync_on: request.body.sync_on,
+      sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       overwrite: request.body.overwrite,
       updated_at: new Date().getTime()
@@ -81,7 +107,7 @@ exports.updateAccount = async (accountId, request) => {
 exports.updateSync = async (accountId, request) => {
   return await db("accounts")
     .update({
-      sync_on: request.body.sync_on,
+      sync_enabled: request.body.sync_enabled,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

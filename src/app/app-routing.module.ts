@@ -13,6 +13,10 @@ import { SettingsComponent } from "./settings/settings.component";
 const routes: Routes = [
   {
     path: "",
+    component: ManageComponent
+  },
+  {
+    path: "account-new",
     component: InstanceInfoComponent
   },
   {

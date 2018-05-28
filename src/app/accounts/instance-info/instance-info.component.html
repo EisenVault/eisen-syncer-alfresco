@@ -3,7 +3,19 @@
     <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
   </div>
   <div class="col-md-9 centered">
-    <h3>Add a new Account</h3>
+
+    <div class="d-flex">
+      <div class="mr-auto">
+        <h3>Add a new Account</h3>
+      </div>
+      <div class="a">
+        <a class="btn btn-outline-info" href="#" role="button" routerLink="/">
+          <i class="fas fa-user-cog"></i>
+          Manage Accounts
+        </a>
+      </div>
+    </div>
+
     <hr>
     <form>
       <div class="form-group">
@@ -76,17 +88,17 @@
           </div>
         </div>
         <div class="col">
-            <div class="form-group">
-                <label for="frequency">Sync Frequency</label>
-                <select class="form-control" id="frequency" [(ngModel)]="sync_frequency" name="sync_frequency">
-                  <option value="2">2 mins</option>
-                  <option value="10">10 mins</option>
-                  <option value="30">30 mins</option>
-                  <option value="60">60 mins</option>
-                </select>
-                <div class="text-danger" *ngIf="errors.sync_frequency">{{ errors.sync_frequency.join('') }}</div>
-                <small id="emailHelp" class="form-text text-muted">Your files will be synced after every {{sync_frequency}} minutes.</small>
-              </div>
+          <div class="form-group">
+            <label for="frequency">Sync Frequency</label>
+            <select class="form-control" id="frequency" [(ngModel)]="sync_frequency" name="sync_frequency">
+              <option value="2">2 mins</option>
+              <option value="10">10 mins</option>
+              <option value="30">30 mins</option>
+              <option value="60">60 mins</option>
+            </select>
+            <div class="text-danger" *ngIf="errors.sync_frequency">{{ errors.sync_frequency.join('') }}</div>
+            <small id="emailHelp" class="form-text text-muted">Your files will be synced after every {{sync_frequency}} minutes.</small>
+          </div>
         </div>
       </div>
 

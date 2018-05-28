@@ -3,7 +3,10 @@ const accountModel = require("../models/account");
 const validator = require("validator");
 
 exports.getAll = async (request, response) => {
-  return response.status(200).json(await accountModel.getAll());
+  let syncEnabled = request.query.sync_enabled;
+  console.log( 'getAllCalled' );
+  
+  return response.status(200).json(await accountModel.getAll(syncEnabled));
 };
 
 exports.getOne = async (request, response) => {

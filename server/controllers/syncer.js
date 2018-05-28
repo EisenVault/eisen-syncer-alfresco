@@ -31,8 +31,8 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  let account = await accountModel.getOne(request.query.account_id);
-  let nodes = await watchNodeModel.getNodes(account);
+  let account = await accountModel.getOneWithPassword(request.query.account_id);
+  let nodes = await watchNodeModel.getNodes(account.id);
 
   try {
     for (let node of nodes) {
@@ -42,7 +42,7 @@ exports.download = async (request, response) => {
         destinationPath: account.sync_path
       });
     }
-
+  
     return response.status(200).json({ success: true });
   } catch (error) {
     return response

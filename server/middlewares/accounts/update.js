@@ -6,11 +6,11 @@ module.exports = async (request, response, next) => {
   let errors = [];
 
   if (
-    _.isNil(request.body.sync_on) ||
-    validator.isEmpty(String(request.body.sync_on))
+    _.isNil(request.body.sync_enabled) ||
+    validator.isEmpty(String(request.body.sync_enabled))
   ) {
     errors.push({
-      sync_on: ["Auto Sync cannot be empty"]
+      sync_enabled: ["Auto Sync cannot be empty"]
     });
   }
 
