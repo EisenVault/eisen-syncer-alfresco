@@ -2,6 +2,7 @@ import { Component, OnInit } from "@angular/core";
 import { AccountService } from "../../services/account.service";
 import { Router } from "@angular/router";
 import { THROW_IF_NOT_FOUND } from "@angular/core/src/di/injector";
+import { SyncerService } from "../../services/syncer.service";
 
 @Component({
   selector: "app-manage",
@@ -9,41 +10,56 @@ import { THROW_IF_NOT_FOUND } from "@angular/core/src/di/injector";
   styleUrls: ["./manage.component.scss"]
 })
 export class ManageComponent implements OnInit {
-  public accounts: object;
+  public accounts;
   public isSaved: boolean = false;
   constructor(
     private _accountService: AccountService,
+    private _syncerService: SyncerService,
     private _router: Router
   ) {}
 
   ngOnInit() {
-    this._accountService
-      .getAccounts()
-      .subscribe(accounts => (this.accounts = accounts));
+    // Load all accounts
+    this._getAccounts();
 
     // Refresh the account data every 10 seconds to see if any sync is still in progress
     setInterval(() => {
       this._accountService.getAccounts().subscribe(accounts => {
         this.accounts = accounts;
 
-        for (let account of accounts) {
+        for (let account of this.accounts) {
           let lastSyncInMinutes = this.differenceInMinutes(
             account.last_synced_at
           );
           console.log("lastSyncInMinutes", lastSyncInMinutes);
-          console.log("account.sync_frequency", account.sync_frequency);
-          console.log("account.sync_enabled ", account.sync_enabled);
 
           if (
             account.sync_enabled == 1 &&
-            lastSyncInMinutes < account.sync_frequency
+            account.sync_in_progress == 0 &&
+            lastSyncInMinutes >= account.sync_frequency
           ) {
-
             // Fire the upload and then the download api...
+            this._syncerService
+              .syncDownloads(account.id)
+              .subscribe(response => {
+                this._syncerService
+                  .syncUploads(account.id, account.overwrite)
+                  .subscribe(response => {
+                    this._getAccounts();
+                  });
+              });
+
+            console.log("Firing:", account.instance_url);
           }
         }
       });
     }, 10000);
+  }
+
+  _getAccounts() {
+    this._accountService
+      .getAccounts()
+      .subscribe(accounts => (this.accounts = accounts));
   }
 
   update(e, accountId) {
@@ -58,19 +74,21 @@ export class ManageComponent implements OnInit {
   }
 
   goToManageAccount(accountId) {
-    this._router.navigate([""], { queryParams: { accountId: accountId } });
+    this._router.navigate(["account-new"], {
+      queryParams: { accountId: accountId }
+    });
   }
 
-  isSynced(time) {
-    let now = Date.now();
-    let difference = Math.round((now - time) / 60);
-
-    // If the last sync date/time was more than 30 seconds then assume the syncing was completed.
-    if (difference > 30) {
-      return true;
+  deleteAccount(accountId) {
+    if (
+      confirm(
+        "This will delete the selected account but will not delete the folder or its contents. Continue?"
+      )
+    ) {
+      this._accountService
+        .deleteAccount(accountId)
+        .subscribe(response => this._getAccounts());
     }
-
-    return false;
   }
 
   differenceInMinutes(time) {

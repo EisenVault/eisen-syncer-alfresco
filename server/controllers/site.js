@@ -4,6 +4,7 @@ const crypt = require("../config/crypt");
 const btoa = require("btoa");
 const http = require("request-promise-native");
 const errorLogModel = require("../models/log-error");
+const token = require("../helpers/token");
 
 exports.getAll = async (request, response) => {
   let account = await accountModel.getOneByAccountId(request.params.account_id);
@@ -15,8 +16,7 @@ exports.getAll = async (request, response) => {
       "/alfresco/api/-default-/public/alfresco/versions/1/sites?maxItems=9999",
     headers: {
       authorization:
-        "Basic " +
-        btoa(account.username + ":" + crypt.decrypt(account.password))
+        "Basic " + await token.get(account)
     }
   };
 

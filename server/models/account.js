@@ -10,6 +10,7 @@ exports.getAll = async syncEnabled => {
       "sync_path",
       "sync_enabled",
       "sync_frequency",
+      "sync_in_progress",
       "last_synced_at",
       "overwrite"
     )
@@ -29,9 +30,11 @@ exports.getOne = async id => {
       "id",
       "instance_url",
       "username",
+      "token",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
+      "sync_in_progress",
       "overwrite"
     )
     .first()
@@ -39,17 +42,10 @@ exports.getOne = async id => {
     .where("id", id);
 };
 
-exports.getOneWithPassword = async id => {
+exports.getPassword = async id => {
   return await db
     .select(
-      "id",
-      "instance_url",
-      "username",
-      "password",
-      "sync_path",
-      "sync_enabled",
-      "sync_frequency",
-      "overwrite"
+      "*",
     )
     .first()
     .from("accounts")
@@ -116,7 +112,25 @@ exports.updateSync = async (accountId, request) => {
 exports.updateSyncTime = async accountId => {
   return await db("accounts")
     .update({
+      sync_in_progress: 0,
       last_synced_at: new Date().getTime()
+    })
+    .where("id", accountId);
+};
+
+exports.updateIsSyncing = async accountId => {
+  return await db("accounts")
+    .update({
+      sync_in_progress: 1
+    })
+    .where("id", accountId);
+};
+
+exports.updateToken = async (accountId, token) => {
+  return await db("accounts")
+    .update({
+      token: token,
+      updated_at: new Date().getTime()
     })
     .where("id", accountId);
 };

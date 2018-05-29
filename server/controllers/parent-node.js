@@ -4,6 +4,7 @@ const crypt = require("../config/crypt");
 const btoa = require("btoa");
 const http = require("request-promise-native");
 const errorLogModel = require("../models/log-error");
+const token = require("../helpers/token");
 
 exports.getAll = async (request, response) => {
   let nodeId = request.params.node_id;
@@ -23,8 +24,7 @@ exports.getAll = async (request, response) => {
       "/parents",
     headers: {
       authorization:
-        "Basic " +
-        btoa(account.username + ":" + crypt.decrypt(account.password))
+        "Basic " + await token.get(account)
     }
   };
 

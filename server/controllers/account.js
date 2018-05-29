@@ -1,6 +1,7 @@
 const express = require("express");
 const accountModel = require("../models/account");
 const validator = require("validator");
+const watcher = require("../helpers/watcher");
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
@@ -14,20 +15,9 @@ exports.getOne = async (request, response) => {
 };
 
 exports.addAccount = async (request, response) => {
-  // Before adding the new account lets check if the account already exsits
-  // let account = await accountModel.findByInstance(
-  //   request.body.instance_url,
-  //   request.body.username
-  // );
-
-  // if (account) {
-  //   // If the account already exists, delete it so that we can add the fresh data
-  //   accountModel.deleteAccount(account.id);
-  // }
-
   // If its a new account add it to the DB
   let accountId = await accountModel.addAccount(request);
-
+  await watcher.updateWatcher();
   return response.status(201).json({
     account_id: accountId[0]
   });
@@ -35,6 +25,7 @@ exports.addAccount = async (request, response) => {
 
 exports.updateAccount = async (request, response) => {
   let accountId = await accountModel.updateAccount(request.params.id, request);
+  await watcher.updateWatcher();
   return response.status(200).json({
     account_id: request.params.id
   });
@@ -42,7 +33,7 @@ exports.updateAccount = async (request, response) => {
 
 exports.updateSync = async (request, response) => {
   let account = await accountModel.updateSync(request.params.id, request);
-
+  await watcher.updateWatcher();
   return response.status(200).json({
     success: true
   });
@@ -50,6 +41,7 @@ exports.updateSync = async (request, response) => {
 
 exports.updateSyncTime = async (request, response) => {
   let account = await accountModel.updateSyncTime(request.params.id);
+  await watcher.updateWatcher();
 
   return response.status(200).json({
     success: true
@@ -57,7 +49,8 @@ exports.updateSyncTime = async (request, response) => {
 };
 
 exports.deleteAccount = async (request, response) => {
-  return response
-    .status(200)
-    .json(await accountModel.deleteAccount(request.params.id));
+  let deleteAccount = await accountModel.deleteAccount(request.params.id);
+  await watcher.updateWatcher();
+
+  return response.status(200).json(deleteAccount);
 };

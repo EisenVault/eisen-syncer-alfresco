@@ -17,7 +17,7 @@ export class InstanceInfoComponent implements OnInit {
   public password: string = "";
   public sync_path: string = "...";
   public sync_frequency: number = 2;
-  public sync_on: boolean = true;
+  public sync_enabled: boolean = true;
   public overwrite: boolean = false;
   public file: string = "";
 
@@ -35,7 +35,7 @@ export class InstanceInfoComponent implements OnInit {
           if (response) {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
-            this.sync_on = (<any>response).sync_on;
+            this.sync_enabled = (<any>response).sync_enabled;
             this.sync_path = (<any>response).sync_path;
             this.sync_frequency = (<any>response).sync_frequency;
             this.overwrite = (<any>response).overwrite;
@@ -60,7 +60,7 @@ export class InstanceInfoComponent implements OnInit {
         password: this.password,
         sync_path: this.sync_path,
         sync_frequency: this.sync_frequency,
-        sync_on: this.sync_on,
+        sync_enabled: this.sync_enabled,
         overwrite: this.overwrite
       })
       .subscribe(
@@ -99,7 +99,7 @@ export class InstanceInfoComponent implements OnInit {
         password: this.password,
         sync_path: this.sync_path,
         sync_frequency: this.sync_frequency,
-        sync_on: this.sync_on,
+        sync_enabled: this.sync_enabled,
         overwrite: this.overwrite
       })
       .subscribe(

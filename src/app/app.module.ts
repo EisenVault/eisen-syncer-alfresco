@@ -11,6 +11,7 @@ import { WatchNodeService } from "./services/watch-node.service";
 import { LogService } from "./services/log.service";
 import { ParentNodeService } from "./services/parent-node.service";
 import { SettingService } from "./services/setting.service";
+import { SyncerService } from "./services/syncer.service";
 
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
@@ -23,7 +24,7 @@ import { EventComponent } from "./logs/event/event.component";
 import { ErrorComponent } from "./logs/error/error.component";
 import { ManageComponent } from "./accounts/manage/manage.component";
 import { SharedModule } from "./shared/shared.module";
-import { SettingsComponent } from './settings/settings.component';
+import { SettingsComponent } from "./settings/settings.component";
 
 @NgModule({
   declarations: [
@@ -52,7 +53,8 @@ import { SettingsComponent } from './settings/settings.component';
     WatchNodeService,
     LogService,
     SettingService,
-    ParentNodeService
+    ParentNodeService,
+    SyncerService
   ],
   bootstrap: [AppComponent]
 })

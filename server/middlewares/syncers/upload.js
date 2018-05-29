@@ -1,15 +1,24 @@
 const validator = require("validator");
 const _ = require("lodash");
+const accountModel = require("../../models/account");
 
-module.exports = (request, response, next) => {
+module.exports = async (request, response, next) => {
   let errors = [];
 
-  if (_.isNil(request.body.account_id) || _.isEmpty(request.body.account_id)) {
+  if (
+    _.isNil(request.body.account_id) ||
+    !_.isNumber(request.body.account_id)
+  ) {
     errors.push({ account_id: "Account ID is mandatory" });
   }
 
-  if (_.isNil(request.body.overwrite) || _.isEmpty(request.body.overwrite)) {
+  if (_.isNil(request.body.overwrite) || !_.isNumber(request.body.overwrite)) {
     errors.push({ overwrite: "overwrite is mandatory" });
+  }
+
+  let account = await accountModel.getOne(request.body.account_id);
+  if (account === undefined) {
+    errors.push({ accountId: "Account ID is invalid" });
   }
 
   if (errors.length > 0) {

@@ -35,7 +35,7 @@
             <th scope="col">Username</th>
             <th scope="col">Sync Path</th>
             <th scope="col">Auto Sync</th>
-            <th scope="col">Status</th>
+            <th scope="col">Last Synced</th>
             <th scope="col">Manage</th>
           </tr>
         </thead>
@@ -45,20 +45,22 @@
             <td>{{ account.username }}</td>
             <td>{{ account.sync_path }}</td>
             <td>
-              <input type="checkbox" name="id" value="true" [checked]="account.sync_on" (click)="update($event, account.id)">
+              <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
             </td>
             <td>
-              <div *ngIf="isSynced(account.last_synced_at); else syncing">
-                <span class="badge badge-success">Synced</span>
-              </div>
-              <ng-template #syncing>
+              <div *ngIf="account.sync_in_progress == 1; else synccomplete">
                 <img src="/assets/imgs/spinner.gif" alt="">
+              </div>
+              <ng-template #synccomplete>
+                <span class="badge badge-success" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
               </ng-template>
             </td>
             <td>
-              <button type="button" class="btn btn-outline-info" (click)="goToManageAccount(account.id)">
+              <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account.id)">
                 <i class="fas fa-edit"></i>
-                Edit
+              </button>
+              <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account.id)">
+                <i class="fas fa-trash"></i>
               </button>
             </td>
           </tr>

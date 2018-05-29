@@ -5,6 +5,7 @@ const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
 const errorLogModel = require("../models/log-error");
+const token = require("../helpers/token");
 
 /**
  *
@@ -30,7 +31,7 @@ exports.getChildren = async params => {
       parentNodeId +
       "/children",
     headers: {
-      authorization: "Basic " + btoa(account.username + ":" + crypt.decrypt(account.password))
+      authorization: "Basic " + await token.get(account)
     }
   };
 

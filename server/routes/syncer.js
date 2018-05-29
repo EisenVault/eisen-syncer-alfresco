@@ -10,7 +10,7 @@ const syncerUploadMiddleware = require("../middlewares/syncers/upload");
 // Controllers
 const syncerController = require("../controllers/syncer");
 
-router.get("/download", syncerDownloadMiddleware, syncerController.download);
-router.post("/upload", syncerUploadMiddleware, syncerController.upload);
+router.get("/downloads/:accountId?", syncerDownloadMiddleware, syncerController.download);
+router.post("/uploads", syncerUploadMiddleware, syncerController.upload);
 
 module.exports = router;
