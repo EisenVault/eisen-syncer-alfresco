@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const watcher = require('./helpers/watcher')
+const watcher = require("./helpers/watcher");
 const cors = require("cors");
 const app = express();
 const PORT = 7113;

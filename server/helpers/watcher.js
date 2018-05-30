@@ -7,6 +7,11 @@ const watchNodeModel = require("../models/watch-node");
 // Add a new watcher
 exports.watch = account => {
   let watchlist = [];
+
+  if (!fs.existsSync(account.sync_path)) {
+    return watchlist;
+  }
+
   watch.watchTree(account.sync_path, function(f, curr, prev) {
     if (typeof f == "object" && prev === null && curr === null) {
       // Finished walking the tree
@@ -63,7 +68,6 @@ exports.updateWatcher = async () => {
     this.watch(account);
   }
 };
-
 
 async function _upload(account) {
   let nodes = await watchNodeModel.getNodes(account.id);

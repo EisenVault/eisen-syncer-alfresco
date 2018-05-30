@@ -1,6 +1,7 @@
 const { db } = require("../config/db");
 const path = require("path");
 const _ = require("lodash");
+const LIMIT = 5;
 
 /**
  *
@@ -120,19 +121,41 @@ exports.getNewFileList = async params => {
   let account = params.account;
   let localFilePathList = params.localFilePathList;
 
-  let existingRecords = await db
-    .whereIn("file_path", localFilePathList)
-    .where("account_id", account.id)
-    .where("is_file", 1)
-    .from("nodes");
+  console.log("COUNT:", localFilePathList.length);
 
-  let dbFilePathList = [];
-  // Iterate through all the records and prepare a list of files that exists in the DB
-  for (let record of existingRecords) {
-    dbFilePathList.push(record.file_path);
+  try {
+    let existingRecords = [];
+    let listCount = 0;
+    console.log("localFilePathList.length", localFilePathList.length);
+
+    while (listCount < localFilePathList.length) {
+      existingRecords.concat(
+        localFilePathList.slice(listCount, listCount + LIMIT)
+      );
+      listCount = listCount + LIMIT;
+    }
+    console.log("existingRecords", existingRecords);
+
+    return;
+    // let existingRecords = await db
+    // .select("file_path")
+    // .whereIn("file_path", localFilePathList)
+    // .where("account_id", account.id)
+    // .where("is_file", 1)
+    // .from("nodes");
+
+    let dbFilePathList = [];
+    // Iterate through all the records and prepare a list of files that exists in the DB
+    for (let record of existingRecords) {
+      dbFilePathList.push(record.file_path);
+    }
+
+    return _.difference(localFilePathList, dbFilePathList);
+  } catch (error) {
+    console.log("getNewFileList:", error);
+
+    return [];
   }
-
-  return _.difference(localFilePathList, dbFilePathList);
 };
 
 /**
@@ -148,18 +171,27 @@ exports.getDeletedNodeList = async params => {
   let account = params.account;
   let localFilePathList = params.localFilePathList;
 
-  let existingRecords = await db
-    .whereNotIn("file_path", localFilePathList)
-    .where("account_id", account.id)
-    .from("nodes");
+  try {
+    console.log(localFilePathList.length);
 
-  let dbFilePathList = [];
-  // Iterate through all the records and prepare a list of files that exists in the DB
-  for (let record of existingRecords) {
-    dbFilePathList.push(record.node_id);
+    let existingRecords = await db
+      .select("node_id")
+      .whereNotIn("file_path", localFilePathList)
+      .where("account_id", account.id)
+      .from("nodes");
+
+    let dbFilePathList = [];
+    // Iterate through all the records and prepare a list of files that exists in the DB
+    for (let record of existingRecords) {
+      dbFilePathList.push(record.node_id);
+    }
+
+    return dbFilePathList;
+  } catch (error) {
+    console.log("getDeletedNodeList Error : ", error);
+
+    return [];
   }
-
-  return dbFilePathList;
 };
 
 /**

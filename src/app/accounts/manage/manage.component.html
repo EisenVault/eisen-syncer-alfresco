@@ -52,7 +52,10 @@
                 <img src="/assets/imgs/spinner.gif" alt="">
               </div>
               <ng-template #synccomplete>
-                <span class="badge badge-success" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
+                <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
+                <ng-template #nosynctime>
+                  <span class="badge badge-danger">Unsynced</span>
+                </ng-template>
               </ng-template>
             </td>
             <td>

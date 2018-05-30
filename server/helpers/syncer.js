@@ -183,18 +183,24 @@ exports.recursiveUpload = async params => {
       console.log("Error occured during listing files/folders", error);
     } else {
       // Get the list of all nodes that are locally deleted.
+      console.log( '1' );
+      
       let deletedNodes = await nodeModel.getDeletedNodeList({
         account: account,
         localFilePathList: localFilePathList
       });
+      console.log( '2' );
 
       // Recursively delete all files from the server that are deleted on local
       for (let deletedNodeId of deletedNodes) {
         try {
+      console.log( '3' );
+          
           let deletedResponse = await _deleteServerNode({
             account: account,
             deletedNodeId: deletedNodeId
           });
+          console.log( 4 );
 
           // If the node was successfully deleted from the server, we will remove it from the DB as well
           if (deletedResponse == 204) {
@@ -213,18 +219,24 @@ exports.recursiveUpload = async params => {
       }
 
       // Next, get the list of files that are newly created on local
+      console.log( 5 );
+      
       let newFileList = await nodeModel.getNewFileList({
         account: account,
         localFilePathList: localFilePathList
       });
+      console.log( 6 );
 
       for (let localFilePath of newFileList) {
+        console.log( 7 );
+        
         // Get the nodeid of the folder from the DB so that we can upload the current file/folder inside its target folder
         let folderNodeId = await nodeModel.getFolderNodeId({
           account: account,
           rootNodeId: rootNodeId,
           localFilePath: localFilePath
         });
+        console.log( 8 );
 
         try {
           // Upload the new files to the server
@@ -236,6 +248,8 @@ exports.recursiveUpload = async params => {
           });
 
           if (serverResponseNodeId) {
+          console.log( 9 );
+            
             // Since we have uploaded the file/folder to the server, lets add a record for the same in the DB
             await nodeModel.add({
               account: account,
@@ -246,6 +260,8 @@ exports.recursiveUpload = async params => {
               isFolder: fs.statSync(localFilePath).isDirectory(),
               isFile: fs.statSync(localFilePath).isFile()
             });
+          console.log( 10  );
+            
           }
         } catch (error) {
           // When uploading duplicate folders, the api complains with a 409 http status code, but we can safely ignore this error
@@ -314,6 +330,8 @@ _upload = async params => {
     };
 
     try {
+      console.log( 11 );
+      
       // Set the issyncing flag to on so that the client can know if the syncing progress is still going
       accountModel.updateIsSyncing(account.id);
 
@@ -321,8 +339,12 @@ _upload = async params => {
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
+
+        console.log( 12 );
+        
         // Set the sync completed time and also set issync flag to off
         accountModel.updateSyncTime(account.id);
+        console.log(13  );
 
         // Add an event log
         eventLogModel.add(
@@ -375,8 +397,11 @@ _upload = async params => {
   }
 
   try {
+    console.log( 14 );
+    
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
     accountModel.updateIsSyncing(account.id);
+    console.log( 15 );
 
     let response = await request(options);
     response = JSON.parse(response.body);
@@ -385,6 +410,7 @@ _upload = async params => {
     if (refId[1]) {
       // Set the sync completed time and also set issync flag to off
       accountModel.updateSyncTime(account.id);
+      console.log( 16 );
 
       // Add an event log
       eventLogModel.add(
