@@ -17,28 +17,29 @@ exports.watch = account => {
       // Finished walking the tree
       console.log("Finished walking the tree");
     } else if (prev === null) {
-      // f is a new file
+      // f is a new file/folder
       if (watchlist.indexOf(f) == -1) {
         let type = "file";
         if (fs.lstatSync(f).isDirectory()) {
           type = "directory";
         }
-        _upload(account);
-        console.log(f + " is a new " + type);
+        _upload(account, f);
+        // console.log(f + " is a new " + type);
       }
 
       watchlist.push(f);
     } else if (curr.nlink === 0) {
       // f was removed
       if (watchlist.indexOf(f) == -1) {
-        _upload(account);
-        console.log(f + " was removed");
+        _delete(account, [f]);
+        // console.log(f + " was removed");
       }
       watchlist.push(f);
     } else {
       // f was changed
       if (watchlist.indexOf(f) == -1) {
-        console.log(f + " was changed");
+        _upload(account, f);
+        // console.log(f + " was changed");
       }
       watchlist.push(f);
     }
@@ -69,14 +70,22 @@ exports.updateWatcher = async () => {
   }
 };
 
-async function _upload(account) {
+async function _upload(account, syncPath) {
   let nodes = await watchNodeModel.getNodes(account.id);
 
   for (let node of nodes) {
     // Recursively upload all new files to the server
-    await syncer.recursiveUpload({
+    await syncer.directoryWalk({
       account: account,
+      sync_path: syncPath,
       rootNodeId: node.node_id
     });
   }
+}
+
+async function _delete(account, fileList) {
+  await syncer.deleteMissingFiles({
+    account: account,
+    fileList: fileList
+  });
 }

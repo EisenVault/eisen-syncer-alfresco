@@ -40,7 +40,7 @@ exports.updateSync = async (request, response) => {
 };
 
 exports.updateSyncTime = async (request, response) => {
-  let account = await accountModel.updateSyncTime(request.params.id);
+  let account = await accountModel.syncComplete(request.params.id);
   await watcher.updateWatcher();
 
   return response.status(200).json({

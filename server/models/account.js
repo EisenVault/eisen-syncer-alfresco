@@ -44,9 +44,7 @@ exports.getOne = async id => {
 
 exports.getPassword = async id => {
   return await db
-    .select(
-      "*",
-    )
+    .select("*")
     .first()
     .from("accounts")
     .where("id", id);
@@ -109,19 +107,19 @@ exports.updateSync = async (accountId, request) => {
     .where("id", accountId);
 };
 
-exports.updateSyncTime = async accountId => {
+exports.syncStart = async accountId => {
   return await db("accounts")
     .update({
-      sync_in_progress: 0,
-      last_synced_at: new Date().getTime()
+      sync_in_progress: 1
     })
     .where("id", accountId);
 };
 
-exports.updateIsSyncing = async accountId => {
+exports.syncComplete = async accountId => {
   return await db("accounts")
     .update({
-      sync_in_progress: 1
+      sync_in_progress: 0,
+      last_synced_at: new Date().getTime()
     })
     .where("id", accountId);
 };

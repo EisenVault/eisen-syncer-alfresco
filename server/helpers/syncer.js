@@ -132,7 +132,7 @@ exports.recursiveDownload = async params => {
     errorLogModel.add(account.id, error);
     console.log("ERROR OCCURRED: ", error);
     // Set the sync completed time and also set issync flag to off
-    accountModel.updateSyncTime(account.id);
+    accountModel.syncComplete(account.id);
   }
 };
 
@@ -160,9 +160,66 @@ _deleteFolderRecursive = function(path) {
  * @param object params
  * {
  *  account: Account<Object>,
+ *  rootNodeId: string,
  * }
  */
-exports.recursiveUpload = async params => {
+exports.directoryWalk = async params => {
+  let account = params.account;
+  let rootFolder = params.sync_path || account.sync_path;
+  let overwrite = account.overwrite;
+  let rootNodeId = params.rootNodeId;
+
+  // This function will list all files/folders/sub-folders recursively.
+  glob(rootFolder + "/**/*", async (error, localFilePathList) => {
+    // Iterate through each file and perform certain task
+    for (let filePath of localFilePathList) {
+      // Get the DB record of the filePath
+      let recordExists = await nodeModel.getOneByFilePath({
+        account: account,
+        filePath: filePath
+      });
+
+      // CASE 1: Check if file is available on disk but missing in DB (New node was created).
+      // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
+      if (!recordExists) {
+        return await _upload({
+          account: account,
+          filePath: filePath,
+          rootNodeId: rootNodeId,
+          overwrite: overwrite
+        });
+      }
+
+      // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
+      // Upload the file to the server with "overwrite" flag set to true and once response received update the "file_modified_at" field in the "nodes" table.
+      fileModifiedTime = _getFileModifiedTime(localFilePath);
+      if (recordExists && recordExists.file_update_at != fileModifiedTime) {
+        await _upload({
+          account: account,
+          filePath: filePath,
+          rootNodeId: rootNodeId,
+          overwrite: true
+        });
+      }
+    } // Filelist iteration end
+
+    // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
+    // Delete node from server and once response received, delete record from DB.
+    await this.deleteMissingFiles({
+      account: account,
+      fileList: localFilePathList
+    });
+  });
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: Account<Object>,
+ * }
+ */
+exports.__OLD_recursiveUpload = async params => {
   let account = params.account;
   let rootFolder = account.sync_path;
   let overwrite = account.overwrite;
@@ -183,24 +240,19 @@ exports.recursiveUpload = async params => {
       console.log("Error occured during listing files/folders", error);
     } else {
       // Get the list of all nodes that are locally deleted.
-      console.log( '1' );
-      
+
       let deletedNodes = await nodeModel.getDeletedNodeList({
         account: account,
         localFilePathList: localFilePathList
       });
-      console.log( '2' );
 
       // Recursively delete all files from the server that are deleted on local
       for (let deletedNodeId of deletedNodes) {
         try {
-      console.log( '3' );
-          
           let deletedResponse = await _deleteServerNode({
             account: account,
             deletedNodeId: deletedNodeId
           });
-          console.log( 4 );
 
           // If the node was successfully deleted from the server, we will remove it from the DB as well
           if (deletedResponse == 204) {
@@ -219,24 +271,18 @@ exports.recursiveUpload = async params => {
       }
 
       // Next, get the list of files that are newly created on local
-      console.log( 5 );
-      
       let newFileList = await nodeModel.getNewFileList({
         account: account,
         localFilePathList: localFilePathList
       });
-      console.log( 6 );
 
       for (let localFilePath of newFileList) {
-        console.log( 7 );
-        
         // Get the nodeid of the folder from the DB so that we can upload the current file/folder inside its target folder
         let folderNodeId = await nodeModel.getFolderNodeId({
           account: account,
           rootNodeId: rootNodeId,
           localFilePath: localFilePath
         });
-        console.log( 8 );
 
         try {
           // Upload the new files to the server
@@ -248,8 +294,6 @@ exports.recursiveUpload = async params => {
           });
 
           if (serverResponseNodeId) {
-          console.log( 9 );
-            
             // Since we have uploaded the file/folder to the server, lets add a record for the same in the DB
             await nodeModel.add({
               account: account,
@@ -260,8 +304,6 @@ exports.recursiveUpload = async params => {
               isFolder: fs.statSync(localFilePath).isDirectory(),
               isFile: fs.statSync(localFilePath).isFile()
             });
-          console.log( 10  );
-            
           }
         } catch (error) {
           // When uploading duplicate folders, the api complains with a 409 http status code, but we can safely ignore this error
@@ -271,12 +313,34 @@ exports.recursiveUpload = async params => {
             errorLogModel.add(account.id, error);
           }
           // Set the sync completed time and also set issync flag to off
-          accountModel.updateSyncTime(account.id);
+          accountModel.syncComplete(account.id);
         }
       }
     }
   });
 };
+
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: Account<Object>,
+ *  fileList: array,
+ * }
+ */
+exports.deleteMissingFiles = async params => {
+
+  let missingFiles = await nodeModel.getMissingFiles({
+    account: params.account,
+    fileList: params.fileList
+  });
+
+  for (let missingFile of missingFiles) {
+    _deleteServerNode(account, missingFile.node_id);
+  }
+
+}
 
 /**
  *
@@ -319,8 +383,7 @@ _upload = async params => {
         "/children",
       headers: {
         "content-type": "application/json",
-        authorization:
-          "Basic " + await token.get(account)
+        authorization: "Basic " + (await token.get(account))
       },
       body: JSON.stringify({
         name: directoryName,
@@ -330,21 +393,26 @@ _upload = async params => {
     };
 
     try {
-      console.log( 11 );
-      
       // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-      accountModel.updateIsSyncing(account.id);
+      accountModel.syncStart(account.id);
 
       let response = await request(options);
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
-
-        console.log( 12 );
-        
         // Set the sync completed time and also set issync flag to off
-        accountModel.updateSyncTime(account.id);
-        console.log(13  );
+        accountModel.syncComplete(account.id);
+
+        // Add a record in the db
+        await nodeModel.add({
+          account: account,
+          nodeId: response.entry.id,
+          fileName: path.basename(params.filePath),
+          filePath: params.filePath,
+          fileUpdateAt: _getFileModifiedTime(params.filePath),
+          isFolder: true,
+          isFile: false
+        });
 
         // Add an event log
         eventLogModel.add(
@@ -355,10 +423,15 @@ _upload = async params => {
         return response.entry.id;
       }
     } catch (error) {
-      // Add an error log
-      errorLogModel.add(account.id, error);
+      if (error.statusCode != 409) {
+        console.log("ERROR", error.statusCode, error);
+      } else {
+        // Add an error log
+        errorLogModel.add(account.id, error);
+      }
+
       // Set the sync completed time and also set issync flag to off
-      accountModel.updateSyncTime(account.id);
+      accountModel.syncComplete(account.id);
     }
 
     return false;
@@ -376,8 +449,7 @@ _upload = async params => {
       method: "POST",
       url: account.instance_url + "/alfresco/service/api/upload",
       headers: {
-        authorization:
-          "Basic " + await token.get(account)
+        authorization: "Basic " + (await token.get(account))
       },
       formData: {
         filedata: {
@@ -397,20 +469,26 @@ _upload = async params => {
   }
 
   try {
-    console.log( 14 );
-    
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.updateIsSyncing(account.id);
-    console.log( 15 );
-
+    accountModel.syncStart(account.id);
     let response = await request(options);
     response = JSON.parse(response.body);
     let refId = response.nodeRef.split("workspace://SpacesStore/");
 
     if (refId[1]) {
       // Set the sync completed time and also set issync flag to off
-      accountModel.updateSyncTime(account.id);
-      console.log( 16 );
+      accountModel.syncComplete(account.id);
+
+      // Add a record in the db
+      await nodeModel.add({
+        account: account,
+        nodeId: refId[1],
+        fileName: path.basename(params.filePath),
+        filePath: params.filePath,
+        fileUpdateAt: _getFileModifiedTime(params.filePath),
+        isFolder: false,
+        isFile: true
+      });
 
       // Add an event log
       eventLogModel.add(
@@ -425,7 +503,7 @@ _upload = async params => {
   } catch (error) {
     errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
-    accountModel.updateSyncTime(account.id);
+    accountModel.syncComplete(account.id);
   }
 };
 
@@ -449,32 +527,41 @@ _deleteServerNode = async params => {
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       deletedNodeId,
     headers: {
-      authorization:
-        "Basic " + await token.get(account)
+      authorization: "Basic " + (await token.get(account))
     }
   };
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.updateIsSyncing(account.id);
+    accountModel.syncStart(account.id);
+
+    console.log("Deleting: ", deletedNodeId);
 
     let response = await request(options);
 
     // Set the sync completed time and also set issync flag to off
-    accountModel.updateSyncTime(account.id);
+    accountModel.syncComplete(account.id);
 
-    // Add an event log
-    eventLogModel.add(
-      account.id,
-      "DELETE_NODE",
-      `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
-    );
+    if (response.statusCode == 204) {
+      // Delete the record from the DB
+      await nodeModel.delete({
+        account: account,
+        nodeId: deletedNodeId
+      });
+
+      // Add an event log
+      eventLogModel.add(
+        account.id,
+        "DELETE_NODE",
+        `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
+      );
+    }
 
     return response.statusCode;
   } catch (error) {
     errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
-    accountModel.updateSyncTime(account.id);
+    accountModel.syncComplete(account.id);
   }
 };
 
@@ -500,14 +587,15 @@ _download = async params => {
       sourceNodeId +
       "/content?attachment=true",
     headers: {
-      authorization:
-        "Basic " + await token.get(account)
+      authorization: "Basic " + (await token.get(account))
     }
   };
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.updateIsSyncing(account.id);
+    accountModel.syncStart(account.id);
+
+    console.log("Downloading", destinationPath);
 
     let response = await request(options).pipe(
       fs.createWriteStream(destinationPath)
@@ -516,7 +604,7 @@ _download = async params => {
     fs.watchFile(destinationPath, function() {
       fs.stat(destinationPath, function(err, stats) {
         // Set the sync completed time and also set issync flag to off
-        accountModel.updateSyncTime(account.id);
+        accountModel.syncComplete(account.id);
       });
     });
 
@@ -530,7 +618,7 @@ _download = async params => {
   } catch (error) {
     errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
-    accountModel.updateSyncTime(account.id);
+    accountModel.syncComplete(account.id);
   }
 };
 
