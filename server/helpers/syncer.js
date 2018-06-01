@@ -10,7 +10,6 @@ const nodeModel = require("../models/node");
 const glob = require("glob");
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
-var progress = require("progress-stream");
 const token = require("../helpers/token");
 
 /**
@@ -169,8 +168,12 @@ exports.directoryWalk = async params => {
   let overwrite = account.overwrite;
   let rootNodeId = params.rootNodeId;
 
+  if (fs.statSync(rootFolder).isDirectory()) {
+    rootFolder = rootFolder + "/**/*";
+  }
+
   // This function will list all files/folders/sub-folders recursively.
-  glob(rootFolder + "/**/*", async (error, localFilePathList) => {
+  glob(rootFolder, async (error, localFilePathList) => {
     // Iterate through each file and perform certain task
     for (let filePath of localFilePathList) {
       // Get the DB record of the filePath
@@ -182,7 +185,7 @@ exports.directoryWalk = async params => {
       // CASE 1: Check if file is available on disk but missing in DB (New node was created).
       // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
       if (!recordExists) {
-        return await _upload({
+        await _upload({
           account: account,
           filePath: filePath,
           rootNodeId: rootNodeId,
@@ -192,7 +195,7 @@ exports.directoryWalk = async params => {
 
       // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
       // Upload the file to the server with "overwrite" flag set to true and once response received update the "file_modified_at" field in the "nodes" table.
-      fileModifiedTime = _getFileModifiedTime(localFilePath);
+      fileModifiedTime = _getFileModifiedTime(filePath);
       if (recordExists && recordExists.file_update_at != fileModifiedTime) {
         await _upload({
           account: account,
@@ -205,121 +208,12 @@ exports.directoryWalk = async params => {
 
     // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
     // Delete node from server and once response received, delete record from DB.
-    await this.deleteMissingFiles({
-      account: account,
-      fileList: localFilePathList
-    });
+    // await this.deleteMissingFiles({
+    //   account: account,
+    //   fileList: localFilePathList
+    // });
   });
 };
-
-/**
- *
- * @param object params
- * {
- *  account: Account<Object>,
- * }
- */
-exports.__OLD_recursiveUpload = async params => {
-  let account = params.account;
-  let rootFolder = account.sync_path;
-  let overwrite = account.overwrite;
-  let rootNodeId = params.rootNodeId;
-
-  // This function will list all files/folders/sub-folders recursively.
-  let getDirectories = function(src, callback) {
-    glob(src + "/**/*", callback);
-  };
-
-  getDirectories(rootFolder, async (error, localFilePathList) => {
-    if (error) {
-      // Add an error log
-      errorLogModel.add(
-        account.id,
-        "Error occured during listing files/folders. " + error
-      );
-      console.log("Error occured during listing files/folders", error);
-    } else {
-      // Get the list of all nodes that are locally deleted.
-
-      let deletedNodes = await nodeModel.getDeletedNodeList({
-        account: account,
-        localFilePathList: localFilePathList
-      });
-
-      // Recursively delete all files from the server that are deleted on local
-      for (let deletedNodeId of deletedNodes) {
-        try {
-          let deletedResponse = await _deleteServerNode({
-            account: account,
-            deletedNodeId: deletedNodeId
-          });
-
-          // If the node was successfully deleted from the server, we will remove it from the DB as well
-          if (deletedResponse == 204) {
-            nodeModel.delete({
-              account: account,
-              nodeId: deletedNodeId
-            });
-          }
-        } catch (error) {
-          // Looks like the file was deleted from the server and local, lets delete the record in that case
-          nodeModel.delete({
-            account: account,
-            nodeId: deletedNodeId
-          });
-        }
-      }
-
-      // Next, get the list of files that are newly created on local
-      let newFileList = await nodeModel.getNewFileList({
-        account: account,
-        localFilePathList: localFilePathList
-      });
-
-      for (let localFilePath of newFileList) {
-        // Get the nodeid of the folder from the DB so that we can upload the current file/folder inside its target folder
-        let folderNodeId = await nodeModel.getFolderNodeId({
-          account: account,
-          rootNodeId: rootNodeId,
-          localFilePath: localFilePath
-        });
-
-        try {
-          // Upload the new files to the server
-          let serverResponseNodeId = await _upload({
-            account: account,
-            filePath: localFilePath,
-            rootNodeId: rootNodeId,
-            overwrite: overwrite
-          });
-
-          if (serverResponseNodeId) {
-            // Since we have uploaded the file/folder to the server, lets add a record for the same in the DB
-            await nodeModel.add({
-              account: account,
-              nodeId: serverResponseNodeId,
-              fileName: path.basename(localFilePath),
-              filePath: localFilePath,
-              fileUpdateAt: _getFileModifiedTime(localFilePath),
-              isFolder: fs.statSync(localFilePath).isDirectory(),
-              isFile: fs.statSync(localFilePath).isFile()
-            });
-          }
-        } catch (error) {
-          // When uploading duplicate folders, the api complains with a 409 http status code, but we can safely ignore this error
-          if (error.statusCode != 409) {
-            console.log(error);
-          } else {
-            errorLogModel.add(account.id, error);
-          }
-          // Set the sync completed time and also set issync flag to off
-          accountModel.syncComplete(account.id);
-        }
-      }
-    }
-  });
-};
-
 
 /**
  *
@@ -330,17 +224,45 @@ exports.__OLD_recursiveUpload = async params => {
  * }
  */
 exports.deleteMissingFiles = async params => {
+  let account = params.account;
+  let filePath = params.filePath;
 
-  let missingFiles = await nodeModel.getMissingFiles({
-    account: params.account,
-    fileList: params.fileList
+  let record = await nodeModel.getOneByFileOrFolderPath({
+    account: account,
+    path: filePath
   });
 
-  for (let missingFile of missingFiles) {
-    _deleteServerNode(account, missingFile.node_id);
+  if (!record) {
+    console.log("No Record For", filePath);
+  } else {
+    console.log("Filepath", filePath);
   }
 
-}
+  // If the deleted item was a directory, remove all records for that folder
+  if (record && record.is_folder == 1) {
+    let records = await nodeModel.getAllByFolderPath({
+      account: account,
+      folderPath: filePath
+    });
+
+    for (let node of records) {
+      // Delete the node from the server, once thats done it will delete the record from the DB as well
+      _deleteServerNode({
+        account: account,
+        deletedNodeId: node.node_id
+      });
+    }
+  }
+
+  // If the deleted item was a file, remove that record
+  if (record && record.is_file == 1) {
+    // Delete the node from the server, once thats done it will delete the record from the DB as well
+    _deleteServerNode({
+      account: account,
+      deletedNodeId: record.node_id
+    });
+  }
+};
 
 /**
  *
@@ -357,8 +279,8 @@ _upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
-  let overwrite = params.overwrite;
-  let options = false;
+  let overwrite = String(params.overwrite);
+  let options = {};
 
   if (!account) {
     throw new Error("Account not found");
@@ -383,7 +305,7 @@ _upload = async params => {
         "/children",
       headers: {
         "content-type": "application/json",
-        authorization: "Basic " + (await token.get(account))
+        Authorization: "Basic " + (await token.get(account))
       },
       body: JSON.stringify({
         name: directoryName,
@@ -402,6 +324,7 @@ _upload = async params => {
       if (response.entry.id) {
         // Set the sync completed time and also set issync flag to off
         accountModel.syncComplete(account.id);
+        console.log("Uploaded Folder", params.filePath);
 
         // Add a record in the db
         await nodeModel.add({
@@ -424,8 +347,6 @@ _upload = async params => {
       }
     } catch (error) {
       if (error.statusCode != 409) {
-        console.log("ERROR", error.statusCode, error);
-      } else {
         // Add an error log
         errorLogModel.add(account.id, error);
       }
@@ -449,62 +370,62 @@ _upload = async params => {
       method: "POST",
       url: account.instance_url + "/alfresco/service/api/upload",
       headers: {
-        authorization: "Basic " + (await token.get(account))
+        Authorization: "Basic " + (await token.get(account))
       },
       formData: {
         filedata: {
           value: fs.createReadStream(filePath),
           options: {}
         },
-        filename: path.basename(params.filePath),
+        filename: path.basename(filePath),
         destination: "workspace://SpacesStore/" + rootNodeId,
         uploadDirectory: uploadDirectory,
         overwrite: overwrite
       }
     };
-  }
 
-  if (_.isEmpty(options)) {
-    return false;
-  }
+    try {
+      // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+      accountModel.syncStart(account.id);
+      let response = await request(options);
 
-  try {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.syncStart(account.id);
-    let response = await request(options);
-    response = JSON.parse(response.body);
-    let refId = response.nodeRef.split("workspace://SpacesStore/");
+      response = JSON.parse(response.body);
+      let refId = response.nodeRef.split("workspace://SpacesStore/");
 
-    if (refId[1]) {
+      if (refId[1]) {
+        // Set the sync completed time and also set issync flag to off
+        accountModel.syncComplete(account.id);
+        console.log("Uploaded File", params.filePath);
+
+        // Add a record in the db
+        await nodeModel.add({
+          account: account,
+          nodeId: refId[1],
+          fileName: path.basename(params.filePath),
+          filePath: params.filePath,
+          fileUpdateAt: _getFileModifiedTime(params.filePath),
+          isFolder: false,
+          isFile: true
+        });
+
+        // Add an event log
+        eventLogModel.add(
+          account.id,
+          "UPLOAD_FILE",
+          `Uploaded File: ${filePath} to ${account.instance_url}`
+        );
+        return refId[1];
+      }
+
+      return false;
+    } catch (error) {
+      errorLogModel.add(account.id, error);
       // Set the sync completed time and also set issync flag to off
       accountModel.syncComplete(account.id);
-
-      // Add a record in the db
-      await nodeModel.add({
-        account: account,
-        nodeId: refId[1],
-        fileName: path.basename(params.filePath),
-        filePath: params.filePath,
-        fileUpdateAt: _getFileModifiedTime(params.filePath),
-        isFolder: false,
-        isFile: true
-      });
-
-      // Add an event log
-      eventLogModel.add(
-        account.id,
-        "UPLOAD_FILE",
-        `Uploaded File: ${filePath} to ${account.instance_url}`
-      );
-      return refId[1];
     }
-
-    return false;
-  } catch (error) {
-    errorLogModel.add(account.id, error);
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
   }
+
+  return false;
 };
 
 /**

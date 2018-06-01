@@ -55,6 +55,8 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, type, description) => {
+  // console.log( type, description );
+  
   let eventId = await db
     .insert({
       account_id: accountId,

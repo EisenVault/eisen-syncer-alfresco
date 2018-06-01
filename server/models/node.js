@@ -27,7 +27,7 @@ exports.add = async params => {
   let isFile = params.isFile;
 
   let record = await db
-    .first("id")
+    .first("account_id")
     .where("account_id", account.id)
     .where("node_id", nodeId)
     .from("nodes");
@@ -130,9 +130,21 @@ exports.getOneByFilePath = async params => {
     .select("*")
     .first()
     .from("nodes")
-    .where("file_update_at", "!=", fileUpdateAt)
     .where("account_id", account.id)
     .where("file_path", filePath);
+};
+
+exports.getOneByFileOrFolderPath = async params => {
+  let account = params.account;
+  let path = params.path;
+
+  return await db
+    .select("*")
+    .first()
+    .from("nodes")
+    .where("account_id", account.id)
+    .where("file_path", "LIKE", "%" + path + "%")
+    .orWhere("folder_path", "LIKE", "%" + path + "%");
 };
 
 /**
@@ -159,6 +171,23 @@ exports.getOne = async params => {
     .where("node_id", nodeId);
 };
 
+/**
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  folderPath: <String>,
+ * }
+ */
+exports.getAllByFolderPath = async params => {
+  let account = params.account;
+  let folderPath = params.folderPath;
+
+  return await db
+    .select("*")
+    .from("nodes")
+    .where("account_id", account.id)
+    .where("folder_path", folderPath);
+};
 
 /**
  * This method will return all the nodes that are not available in the DB.
@@ -180,6 +209,7 @@ exports.getMissingFiles = async params => {
     let chunk = fileList.slice(listCount, listCount + LIMIT);
 
     let result = await db
+      .pluck("file_path")
       .whereNotIn("file_path", chunk)
       .where("account_id", account.id)
       .from("nodes");
@@ -189,7 +219,11 @@ exports.getMissingFiles = async params => {
     listCount = listCount + LIMIT;
   }
 
-  return missingFiles;
+  console.log(" fileList", fileList);
+  console.log(" internalmissingFiles", missingFiles);
+  console.log("diff", _.difference(fileList, missingFiles));
+
+  return _.difference(fileList, missingFiles);
 };
 
 // /**
@@ -355,5 +389,23 @@ exports.delete = async params => {
   await db("nodes")
     .where("account_id", account.id)
     .where("node_id", nodeId)
+    .delete();
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  nodeId: <String>
+ * }
+ */
+exports.deleteByFolderPath = async params => {
+  let account = params.account;
+  let folderPath = params.folderPath;
+
+  await db("nodes")
+    .where("account_id", account.id)
+    .where("folder_path", folderPath)
     .delete();
 };

@@ -12,7 +12,11 @@ exports.watch = account => {
     return watchlist;
   }
 
-  watch.watchTree(account.sync_path, function(f, curr, prev) {
+  watch.watchTree(account.sync_path, { ignoreDotFiles: true }, function(
+    f,
+    curr,
+    prev
+  ) {
     if (typeof f == "object" && prev === null && curr === null) {
       // Finished walking the tree
       console.log("Finished walking the tree");
@@ -24,22 +28,22 @@ exports.watch = account => {
           type = "directory";
         }
         _upload(account, f);
-        // console.log(f + " is a new " + type);
+        console.log(f + " is a new " + type);
       }
 
       watchlist.push(f);
     } else if (curr.nlink === 0) {
       // f was removed
       if (watchlist.indexOf(f) == -1) {
-        _delete(account, [f]);
-        // console.log(f + " was removed");
+        _delete(account, f);
+        console.log(f + " was removed");
       }
       watchlist.push(f);
     } else {
       // f was changed
       if (watchlist.indexOf(f) == -1) {
         _upload(account, f);
-        // console.log(f + " was changed");
+        console.log(f + " was changed");
       }
       watchlist.push(f);
     }
@@ -51,7 +55,7 @@ exports.watch = account => {
 };
 
 // remove a watchlist
-exports.remove = path => {
+exports.unwatch = path => {
   watch.unwatchTree(path);
 };
 
@@ -60,7 +64,7 @@ exports.updateWatcher = async () => {
 
   // Remove all watchers first
   for (let account of accounts) {
-    this.remove(account.sync_path);
+    this.unwatch(account.sync_path);
   }
 
   // Add new watchers
@@ -83,9 +87,9 @@ async function _upload(account, syncPath) {
   }
 }
 
-async function _delete(account, fileList) {
+async function _delete(account, filePath) {
   await syncer.deleteMissingFiles({
     account: account,
-    fileList: fileList
+    filePath: filePath
   });
 }
