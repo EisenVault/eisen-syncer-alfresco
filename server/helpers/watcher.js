@@ -55,17 +55,21 @@ exports.watch = account => {
 };
 
 // remove a watchlist
-exports.unwatch = path => {
-  watch.unwatchTree(path);
-};
-
-exports.updateWatcher = async () => {
+exports.unwatchAll = async () => {
   let accounts = await accountModel.getAll();
 
   // Remove all watchers first
   for (let account of accounts) {
-    this.unwatch(account.sync_path);
+    watch.unwatchTree(account.sync_path);
   }
+
+};
+
+exports.watchAll = async () => {
+  let accounts = await accountModel.getAll();
+
+  // Remove all watchers first
+  this.unwatchAll()
 
   // Add new watchers
   accounts = await accountModel.getAll(1);

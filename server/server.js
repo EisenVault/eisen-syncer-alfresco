@@ -20,7 +20,7 @@ app.use("/sites", require("./routes/site"));
 app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
 
-watcher.updateWatcher();
+watcher.watchAll();
 
 app.listen(PORT, () => {
   console.log("server running on " + PORT);

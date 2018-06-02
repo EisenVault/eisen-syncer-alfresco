@@ -25,23 +25,11 @@ exports.add = async params => {
   let isFolder = params.isFolder;
   let isFile = params.isFile;
 
-  let record = await db
-    .first("account_id")
+  // Delete the record if it already exists
+  await db("nodes")
     .where("account_id", account.id)
-    .where("node_id", nodeId)
-    .from("nodes");
-
-  if (record) {
-    // If record already exists, update its file_update_at field
-    record = db("nodes")
-      .update({
-        file_update_at: fileUpdateAt
-      })
-      .where("account_id", account.id)
-      .where("node_id", nodeId);
-
-    return record;
-  }
+    .where("file_path", filePath)
+    .delete();
 
   try {
     // If its a new record, simply add it
