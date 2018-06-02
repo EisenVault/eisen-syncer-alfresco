@@ -51,7 +51,7 @@ exports.watch = account => {
 
   setInterval(() => {
     watchlist = [];
-  }, 1500);
+  }, 1000);
 };
 
 // remove a watchlist
@@ -79,7 +79,7 @@ async function _upload(account, syncPath) {
 
   for (let node of nodes) {
     // Recursively upload all new files to the server
-    await syncer.directoryWalk({
+    await syncer.recursiveUpload({
       account: account,
       sync_path: syncPath,
       rootNodeId: node.node_id
@@ -88,7 +88,7 @@ async function _upload(account, syncPath) {
 }
 
 async function _delete(account, filePath) {
-  await syncer.deleteMissingFiles({
+  await syncer.deleteByPath({
     account: account,
     filePath: filePath
   });

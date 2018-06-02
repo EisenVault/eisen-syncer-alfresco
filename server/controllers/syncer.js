@@ -57,3 +57,31 @@ exports.download = async (request, response) => {
       .json({ success: false, error: "Nothing to download" });
   }
 };
+
+
+// Delete records from DB for files that do not exists on local
+exports.delete = async (request, response) => {
+  let account = await accountModel.getOne(request.params.accountId);
+
+  // Set the sync in progress to off
+  accountModel.syncComplete(account.id);
+
+  try {
+    let nodes = await watchNodeModel.getNodes(account.id);
+
+    for (let node of nodes) {
+      // Recursively walk through each directory and perform certain task
+      await syncer.recursiveDelete({
+        account: account
+      });
+    }
+
+    return response
+      .status(200)
+      .json(await accountModel.getOne(request.body.account_id));
+  } catch (error) {
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to upload", error: error });
+  }
+};
