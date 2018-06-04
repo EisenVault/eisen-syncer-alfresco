@@ -26,10 +26,14 @@ exports.add = async params => {
   let isFile = params.isFile;
 
   // Delete the record if it already exists
-  await db("nodes")
-    .where("account_id", account.id)
-    .where("file_path", filePath)
-    .delete();
+  try {
+    await db("nodes")
+      .where("account_id", account.id)
+      .where("file_path", filePath)
+      .delete();
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 
   try {
     // If its a new record, simply add it
@@ -54,36 +58,50 @@ exports.getOneByFilePath = async params => {
   let account = params.account;
   let filePath = params.filePath;
 
-  return await db
-    .select("*")
-    .first()
-    .from("nodes")
-    .where("account_id", account.id)
-    .where("file_path", filePath);
+  try {
+    return await db
+      .select("*")
+      .first()
+      .from("nodes")
+      .where("account_id", account.id)
+      .where("file_path", filePath);
+  } catch (error) {
+    console.log( error );
+    
+    return errorLogModel.add(account, error);
+  }
 };
 
 exports.getOneByNodeId = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
-  return await db
-    .select("*")
-    .first()
-    .from("nodes")
-    .where("account_id", account.id)
-    .where("node_id", nodeId);
+  try {
+    return await db
+      .select("*")
+      .first()
+      .from("nodes")
+      .where("account_id", account.id)
+      .where("node_id", nodeId);
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 };
 
 exports.getAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
 
-  return await db
-    .select("*")
-    .from("nodes")
-    .where("account_id", account.id)
-    .where("file_path", "LIKE", path + "%")
-    .orWhere("folder_path", "LIKE", path + "%");
+  try {
+    return await db
+      .select("*")
+      .from("nodes")
+      .where("account_id", account.id)
+      .where("file_path", path)
+      .orWhere("folder_path", path);
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 };
 
 /**
@@ -101,13 +119,17 @@ exports.getOne = async params => {
   let nodeId = params.nodeId;
   let fileUpdateAt = params.fileUpdateAt;
 
-  return await db
-    .select("file_update_at")
-    .first()
-    .from("nodes")
-    .where("file_update_at", "!=", fileUpdateAt)
-    .where("account_id", account.id)
-    .where("node_id", nodeId);
+  try {
+    return await db
+      .select("file_update_at")
+      .first()
+      .from("nodes")
+      .where("file_update_at", "!=", fileUpdateAt)
+      .where("account_id", account.id)
+      .where("node_id", nodeId);
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 };
 
 /**
@@ -121,11 +143,15 @@ exports.getAllByFolderPath = async params => {
   let account = params.account;
   let folderPath = params.folderPath;
 
-  return await db
-    .select("*")
-    .from("nodes")
-    .where("account_id", account.id)
-    .where("folder_path", folderPath);
+  try {
+    return await db
+      .select("*")
+      .from("nodes")
+      .where("account_id", account.id)
+      .where("folder_path", folderPath);
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 };
 
 /**
@@ -147,133 +173,21 @@ exports.getMissingFiles = async params => {
   while (listCount <= fileList.length) {
     let chunk = fileList.slice(listCount, listCount + LIMIT);
 
-    let result = await db
-      .pluck("file_path")
-      .whereNotIn("file_path", chunk)
-      .where("account_id", account.id)
-      .from("nodes");
+    try {
+      let result = await db
+        .pluck("file_path")
+        .whereNotIn("file_path", chunk)
+        .where("account_id", account.id)
+        .from("nodes");
 
-    missingFiles = missingFiles.concat(result);
-
-    listCount = listCount + LIMIT;
+      missingFiles = missingFiles.concat(result);
+      listCount = listCount + LIMIT;
+      return missingFiles;
+    } catch (error) {
+      errorLogModel.add(account, error);
+    }
   }
-
-  return missingFiles;
 };
-
-/**
- * This method will return a list of files that are not in DB records, which means those files were locally created and needs to be uploaded to the server.
- *
- * @param object params
- * {
- *  account: <Object>,
- *  fileList: <Array>
- * }
- */
-// exports.getNewFileList = async params => {
-//   let account = params.account;
-//   let localFilePathList = params.localFilePathList;
-
-//   try {
-//     let existingRecords = [];
-//     let listCount = 0;
-//     while (listCount <= localFilePathList.length) {
-//       let chunk = localFilePathList.slice(listCount, listCount + LIMIT);
-
-//       let result = await db
-//         .select("file_path")
-//         .whereIn("file_path", chunk)
-//         .where("account_id", account.id)
-//         .where("is_file", 1)
-//         .from("nodes");
-
-//       existingRecords = existingRecords.concat(result);
-
-//       listCount = listCount + LIMIT;
-//     }
-
-//     let dbFilePathList = [];
-//     // Iterate through all the records and prepare a list of files that exists in the DB
-//     for (let record of existingRecords) {
-//       dbFilePathList.push(record.file_path);
-//     }
-
-//     return _.difference(localFilePathList, dbFilePathList);
-//   } catch (error) {
-//     console.log("getNewFileList:", error);
-
-//     return [];
-//   }
-// };
-
-/**
- * This method will return a list of files that are deleted on the local machine.
- *
- * @param object params
- * {
- *  account: <Object>,
- *  localFilePathList: <Array>
- * }
- */
-// exports.getDeletedNodeList = async params => {
-//   let account = params.account;
-//   let localFilePathList = params.localFilePathList;
-
-//   try {
-//     let existingRecords = [];
-//     let listCount = 0;
-//     while (listCount <= localFilePathList.length) {
-//       let chunk = localFilePathList.slice(listCount, listCount + LIMIT);
-
-//       let result = await db
-//         .select("node_id")
-//         .whereNotIn("file_path", chunk)
-//         .where("account_id", account.id)
-//         .from("nodes");
-
-//       existingRecords = existingRecords.concat(result);
-//       listCount = listCount + LIMIT;
-//     }
-
-//     let dbFilePathList = [];
-//     // Iterate through all the records and prepare a list of files that exists in the DB
-//     for (let record of existingRecords) {
-//       dbFilePathList.push(record.node_id);
-//     }
-
-//     return dbFilePathList;
-//   } catch (error) {
-//     errorLogModel.add(account, error);
-//     return [];
-//   }
-// };
-
-/**
- *
- * @param object params
- * {
- *  account: <Object>
- *  rootNodeId: <String>
- *  localFilePath: <String>
- * }
- */
-// exports.getFolderNodeId = async params => {
-//   let account = params.account;
-//   let localFilePath = params.localFilePath;
-//   let nodeId = params.rootNodeId;
-
-//   let record = await db
-//     .first("node_id")
-//     .from("nodes")
-//     .where("account_id", account.id)
-//     .where("file_path", path.dirname(localFilePath));
-
-//   if (record) {
-//     return record.node_id;
-//   }
-
-//   return nodeId;
-// };
 
 /**
  *
@@ -287,10 +201,14 @@ exports.delete = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
-  await db("nodes")
-    .where("account_id", account.id)
-    .where("node_id", nodeId)
-    .delete();
+  try {
+    await db("nodes")
+      .where("account_id", account.id)
+      .where("node_id", nodeId)
+      .delete();
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
 };
 
 /**

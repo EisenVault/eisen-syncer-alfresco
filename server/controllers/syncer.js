@@ -17,7 +17,7 @@ exports.upload = async (request, response) => {
 
     for (let node of nodes) {
       // Recursively walk through each directory and perform certain task
-      await syncer.directoryWalk({
+      await syncer.recursiveUpload({
         account: account,
         rootNodeId: node.node_id
       });
@@ -27,6 +27,7 @@ exports.upload = async (request, response) => {
       .status(200)
       .json(await accountModel.getOne(request.body.account_id));
   } catch (error) {
+    
     return response
       .status(404)
       .json({ success: false, error: "Nothing to upload", error: error });
@@ -35,6 +36,7 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
+  
   let account = await accountModel.getOne(request.params.accountId);
   let nodes = await watchNodeModel.getNodes(account.id);
 

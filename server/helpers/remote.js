@@ -7,6 +7,7 @@ const accountModel = require("../models/account");
 const errorLogModel = require("../models/log-error");
 const nodeModel = require("../models/node");
 const token = require("../helpers/token");
+const syncer = require("../helpers/syncer");
 
 /**
  *
@@ -32,7 +33,7 @@ exports.getChildren = async params => {
       parentNodeId +
       "/children",
     headers: {
-      authorization: "Basic " + await token.get(account)
+      authorization: "Basic " + (await token.get(account))
     }
   };
 
@@ -41,11 +42,8 @@ exports.getChildren = async params => {
     return JSON.parse(response);
   } catch (error) {
     errorLogModel.add(account.id, error);
-    console.log(error);
   }
 };
-
-
 
 /**
  * @param object params
@@ -111,7 +109,6 @@ exports.deleteServerNode = async params => {
   }
 };
 
-
 /**
  *
  * @param object params
@@ -160,7 +157,7 @@ exports.download = async params => {
       account: account,
       nodeId: sourceNodeId,
       filePath: destinationPath,
-      fileUpdateAt: _getFileModifiedTime(destinationPath),
+      fileUpdateAt: syncer.getFileModifiedTime(destinationPath),
       isFolder: false,
       isFile: true
     });
@@ -178,8 +175,6 @@ exports.download = async params => {
     accountModel.syncComplete(account.id);
   }
 };
-
-
 
 /**
  *
@@ -206,7 +201,7 @@ exports.upload = async params => {
   // If its a directory, send a request to create the directory.
   if (fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
-    let relativePath = params.filePath.replace(account.sync_path + "/", "");
+    let relativePath = filePath.replace(account.sync_path + "/", "");
     relativePath = relativePath.substring(
       0,
       relativePath.length - directoryName.length - 1
@@ -248,7 +243,7 @@ exports.upload = async params => {
           account: account,
           nodeId: response.entry.id,
           filePath: params.filePath,
-          fileUpdateAt: _getFileModifiedTime(params.filePath),
+          fileUpdateAt: syncer.getFileModifiedTime(params.filePath),
           isFolder: true,
           isFile: false
         });
@@ -311,14 +306,14 @@ exports.upload = async params => {
       if (refId[1]) {
         // Set the sync completed time and also set issync flag to off
         accountModel.syncComplete(account.id);
-        console.log("Uploaded File", params.filePath);
+        console.log("Uploaded File", filePath);
 
         // Add a record in the db
         await nodeModel.add({
           account: account,
           nodeId: refId[1],
           filePath: params.filePath,
-          fileUpdateAt: _getFileModifiedTime(params.filePath),
+          fileUpdateAt: syncer.getFileModifiedTime(filePath),
           isFolder: false,
           isFile: true
         });

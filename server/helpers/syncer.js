@@ -39,9 +39,8 @@ exports.recursiveDownload = async params => {
       account: account,
       parentNodeId: sourceNodeId
     });
-    console.log( 'total per folder:', childrens.list.entries.length );
 
-    let counter=0;
+    let counter = 0;
     for (const child of childrens.list.entries) {
       counter++;
       let currentDirectory = path.join(destinationPath, child.entry.name);
@@ -75,17 +74,9 @@ exports.recursiveDownload = async params => {
       } else {
         // Case 2: File present in local
         let nodeModifiedDate = Math.round(
-          Date.parse(child.entry.modifiedAt) / 1000
+          Date.parse(String(child.entry.modifiedAt)) / 1000
         );
-        let fileModifiedDate = Math.round(record.file_update_at / 1000);
-
-        if (nodeModifiedDate > fileModifiedDate) {
-          console.log("server is new");
-        } else if (nodeModifiedDate < fileModifiedDate) {
-          console.log("local is new");
-        } else if (nodeModifiedDate == fileModifiedDate) {
-          console.log("both equal");
-        }
+        let fileModifiedDate = record.file_update_at;
 
         // Check if server file modified date is Greater than local node, then download node (server node is newer version)
         if (nodeModifiedDate > fileModifiedDate) {
@@ -107,13 +98,10 @@ exports.recursiveDownload = async params => {
       }
     }
 
-    console.log( 'counter', counter );
-    
     // Start watcher now
     watcher.watchAll();
   } catch (error) {
     errorLogModel.add(account.id, error);
-    console.log("ERROR OCCURRED: ", error);
     // Set the sync completed time and also set issync flag to off
     accountModel.syncComplete(account.id);
   }
@@ -139,12 +127,13 @@ exports.recursiveUpload = async params => {
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
   }
+  console.log("rootFolder", rootFolder);
 
   // This function will list all files/folders/sub-folders recursively.
   glob(rootFolder, async (error, localFilePathList) => {
     // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-    if (fs.statSync(syncPath).isDirectory()) {
-      localFilePathList.unshift(syncPath);
+    if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
+      localFilePathList.unshift(params.sync_path);
     }
 
     let counter = 0;
@@ -166,11 +155,15 @@ exports.recursiveUpload = async params => {
           rootNodeId: rootNodeId,
           overwrite: overwrite
         });
+        continue;
       }
 
       // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
       // Upload the file to the server with "overwrite" flag set to true and once response received update the "file_modified_at" field in the "nodes" table.
-      fileModifiedTime = _getFileModifiedTime(filePath);
+      fileModifiedTime = this.getFileModifiedTime(filePath);
+      // console.log('CONDITION', recordExists && recordExists.file_update_at != fileModifiedTime );
+      console.log(filePath);
+
       if (recordExists && recordExists.file_update_at != fileModifiedTime) {
         await remote.upload({
           account: account,
@@ -178,21 +171,17 @@ exports.recursiveUpload = async params => {
           rootNodeId: rootNodeId,
           overwrite: true
         });
+        continue;
       }
     } // Filelist iteration end
 
-    if (counter >= localFilePathList.length) {
-      console.log("FOREACH LOOP COMPLETED");
-    }
-
-    console.log("FOREACH running");
-
     // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
     // Delete node from server and once response received, delete record from DB.
-    // await this.deleteMissingFiles({
-    //   account: account,
-    //   fileList: localFilePathList
-    // });
+    if (counter === localFilePathList.length) {
+      this.recursiveDelete({
+        account: account
+      });
+    }
   });
 };
 
@@ -207,22 +196,17 @@ exports.recursiveDelete = async params => {
 
   // This function will list all files/folders/sub-folders recursively.
   glob(account.sync_path + "/**/*", async (error, localFilePathList) => {
-    // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-    if (fs.statSync(account.sync_path).isDirectory()) {
-      localFilePathList.unshift(account.sync_path);
-    }
-
-    // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
-    // Delete node from server and once response received, delete record from DB.
     let missingFiles = await nodeModel.getMissingFiles({
       account: account,
       fileList: localFilePathList
     });
 
-    for (let file of missingFiles) {
-      this.deleteByPath({
+    console.log("missing files", missingFiles);
+
+    for (const missingFilePath of missingFiles) {
+      await this.deleteByPath({
         account: account,
-        filePath: file
+        filePath: missingFilePath
       });
     }
   });
@@ -286,23 +270,20 @@ _createItemOnLocal = async params => {
     }
 
     // Add refrence to the nodes table
-    nodeModel.add({
+    await nodeModel.add({
       account: account,
       nodeId: sourceNodeId,
       filePath: currentDirectory,
-      fileUpdateAt: _getFileModifiedTime(currentDirectory),
+      fileUpdateAt: this.getFileModifiedTime(currentDirectory),
       isFolder: true,
       isFile: false
     });
 
-    this.recursiveDownload({
+    await this.recursiveDownload({
       account: account,
       sourceNodeId: sourceNodeId,
       destinationPath: currentDirectory
     });
-
-
-
   } else if (child.entry.isFile == true) {
     // If the child is a file, download it
     await remote.download({
@@ -320,12 +301,10 @@ _createItemOnLocal = async params => {
  *  filePath: <String>
  * }
  */
-_getFileModifiedTime = function(filePath) {
-  let fileModifiedDate = new Date().getTime();
+exports.getFileModifiedTime = function(filePath) {
   if (fs.existsSync(filePath)) {
     let fileStat = fs.statSync(filePath);
-    let fileModifiedDate = Date.parse(fileStat.mtime) / 1000;
+    return Date.parse(String(fileStat.mtime)) / 1000;
   }
-
-  return fileModifiedDate;
+  return 0;
 };

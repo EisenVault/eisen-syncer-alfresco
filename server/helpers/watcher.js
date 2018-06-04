@@ -19,7 +19,6 @@ exports.watch = account => {
   ) {
     if (typeof f == "object" && prev === null && curr === null) {
       // Finished walking the tree
-      console.log("Finished walking the tree");
     } else if (prev === null) {
       // f is a new file/folder
       if (watchlist.indexOf(f) == -1) {
@@ -79,6 +78,7 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, syncPath) {
+  return;
   let nodes = await watchNodeModel.getNodes(account.id);
 
   for (let node of nodes) {
@@ -92,6 +92,7 @@ async function _upload(account, syncPath) {
 }
 
 async function _delete(account, filePath) {
+  return;
   await syncer.deleteByPath({
     account: account,
     filePath: filePath
