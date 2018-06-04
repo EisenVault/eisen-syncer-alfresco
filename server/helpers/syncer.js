@@ -127,7 +127,6 @@ exports.recursiveUpload = async params => {
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
   }
-  console.log("rootFolder", rootFolder);
 
   // This function will list all files/folders/sub-folders recursively.
   glob(rootFolder, async (error, localFilePathList) => {
