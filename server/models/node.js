@@ -65,9 +65,7 @@ exports.getOneByFilePath = async params => {
       .from("nodes")
       .where("account_id", account.id)
       .where("file_path", filePath);
-  } catch (error) {
-    console.log( error );
-    
+  } catch (error) {   
     return errorLogModel.add(account, error);
   }
 };
@@ -84,7 +82,7 @@ exports.getOneByNodeId = async params => {
       .where("account_id", account.id)
       .where("node_id", nodeId);
   } catch (error) {
-    errorLogModel.add(account, error);
+   return errorLogModel.add(account, error);
   }
 };
 
@@ -182,11 +180,13 @@ exports.getMissingFiles = async params => {
 
       missingFiles = missingFiles.concat(result);
       listCount = listCount + LIMIT;
-      return missingFiles;
     } catch (error) {
       errorLogModel.add(account, error);
     }
   }
+
+  return missingFiles;
+  
 };
 
 /**
@@ -211,20 +211,3 @@ exports.delete = async params => {
   }
 };
 
-/**
- *
- * @param object params
- * {
- *  account: <Object>,
- *  nodeId: <String>
- * }
- */
-// exports.deleteByFolderPath = async params => {
-//   let account = params.account;
-//   let folderPath = params.folderPath;
-
-//   await db("nodes")
-//     .where("account_id", account.id)
-//     .where("folder_path", folderPath)
-//     .delete();
-// };

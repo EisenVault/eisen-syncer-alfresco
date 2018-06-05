@@ -78,7 +78,6 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, syncPath) {
-  return;
   let nodes = await watchNodeModel.getNodes(account.id);
 
   for (let node of nodes) {
@@ -92,7 +91,6 @@ async function _upload(account, syncPath) {
 }
 
 async function _delete(account, filePath) {
-  return;
   await syncer.deleteByPath({
     account: account,
     filePath: filePath

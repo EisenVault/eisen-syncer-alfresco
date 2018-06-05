@@ -17,7 +17,7 @@ exports.getOne = async (request, response) => {
 exports.addAccount = async (request, response) => {
   // If its a new account add it to the DB
   let accountId = await accountModel.addAccount(request);
-  await watcher.updateWatcher();
+  await watcher.watchAll();
   return response.status(201).json({
     account_id: accountId[0]
   });
@@ -25,7 +25,7 @@ exports.addAccount = async (request, response) => {
 
 exports.updateAccount = async (request, response) => {
   let accountId = await accountModel.updateAccount(request.params.id, request);
-  await watcher.updateWatcher();
+  await watcher.watchAll();
   return response.status(200).json({
     account_id: request.params.id
   });
@@ -33,7 +33,7 @@ exports.updateAccount = async (request, response) => {
 
 exports.updateSync = async (request, response) => {
   let account = await accountModel.updateSync(request.params.id, request);
-  await watcher.updateWatcher();
+  await watcher.watchAll();
   return response.status(200).json({
     success: true
   });
@@ -41,7 +41,7 @@ exports.updateSync = async (request, response) => {
 
 exports.updateSyncTime = async (request, response) => {
   let account = await accountModel.syncComplete(request.params.id);
-  await watcher.updateWatcher();
+  await watcher.watchAll();
 
   return response.status(200).json({
     success: true
@@ -50,7 +50,7 @@ exports.updateSyncTime = async (request, response) => {
 
 exports.deleteAccount = async (request, response) => {
   let deleteAccount = await accountModel.deleteAccount(request.params.id);
-  await watcher.updateWatcher();
+  await watcher.watchAll();
 
   return response.status(200).json(deleteAccount);
 };

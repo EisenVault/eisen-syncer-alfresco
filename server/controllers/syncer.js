@@ -10,7 +10,7 @@ exports.upload = async (request, response) => {
   let account = await accountModel.getOne(request.body.account_id);
 
   // Set the sync in progress to off
-  accountModel.syncComplete(account.id);
+  await accountModel.syncComplete(account.id);
 
   try {
     let nodes = await watchNodeModel.getNodes(account.id);
@@ -41,7 +41,7 @@ exports.download = async (request, response) => {
   let nodes = await watchNodeModel.getNodes(account.id);
 
   // Set the sync progress to compeleted
-  accountModel.syncComplete(account.id);
+  await accountModel.syncComplete(account.id);
 
   try {
     for (let node of nodes) {
@@ -66,7 +66,7 @@ exports.delete = async (request, response) => {
   let account = await accountModel.getOne(request.params.accountId);
 
   // Set the sync in progress to off
-  accountModel.syncComplete(account.id);
+  await accountModel.syncComplete(account.id);
 
   try {
     let nodes = await watchNodeModel.getNodes(account.id);

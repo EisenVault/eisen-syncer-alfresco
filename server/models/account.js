@@ -102,16 +102,22 @@ exports.updateSync = async (accountId, request) => {
   return await db("accounts")
     .update({
       sync_enabled: request.body.sync_enabled,
+      sync_in_progress: 0,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);
 };
 
 exports.syncStart = async accountId => {
-  return await db("accounts")
+  await db("accounts")
     .update({
       sync_in_progress: 1
     })
+    .where("id", accountId);
+
+  return await db
+    .first()
+    .from("accounts")
     .where("id", accountId);
 };
 

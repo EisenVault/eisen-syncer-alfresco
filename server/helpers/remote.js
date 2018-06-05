@@ -5,6 +5,7 @@ const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
 const errorLogModel = require("../models/log-error");
+const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("../helpers/token");
 const syncer = require("../helpers/syncer");
