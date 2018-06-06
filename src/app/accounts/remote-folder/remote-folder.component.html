@@ -37,14 +37,13 @@
         </a>
       </div>
     </div>
-
-    <div *ngIf="showNodes">
+     <div *ngIf="showNodes">
       <h6>Select a Folder</h6>
       <div class="list-group pointer" *ngFor="let node of nodes">
         <a class="list-group-item list-group-item-action flex-column align-items-start">
           <div class="d-flex w-100 justify-content-between">
             <h5 class="mb-1">
-              <input type="checkbox" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
+              <input type="radio" name="node" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
               <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
             </h5>
           </div>
@@ -64,7 +63,6 @@
         <i class="fas fa-check-circle"></i>
         Finish
       </button>
-
     </div>
   </div>
 </div>

@@ -2,7 +2,6 @@ const watch = require("watch");
 const fs = require("fs");
 const syncer = require("../helpers/syncer");
 const accountModel = require("../models/account");
-const watchNodeModel = require("../models/watch-node");
 
 // Add a new watcher
 exports.watch = account => {
@@ -61,14 +60,13 @@ exports.unwatchAll = async () => {
   for (let account of accounts) {
     watch.unwatchTree(account.sync_path);
   }
-
 };
 
 exports.watchAll = async () => {
   let accounts = await accountModel.getAll();
 
   // Remove all watchers first
-  this.unwatchAll()
+  this.unwatchAll();
 
   // Add new watchers
   accounts = await accountModel.getAll(1);
@@ -78,16 +76,11 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, syncPath) {
-  let nodes = await watchNodeModel.getNodes(account.id);
-
-  for (let node of nodes) {
-    // Recursively upload all new files to the server
-    await syncer.recursiveUpload({
-      account: account,
-      sync_path: syncPath,
-      rootNodeId: node.node_id
-    });
-  }
+  await syncer.recursiveUpload({
+    account: account,
+    sync_path: syncPath,
+    rootNodeId: account.watch_node
+  });
 }
 
 async function _delete(account, filePath) {

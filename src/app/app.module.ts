@@ -7,7 +7,6 @@ import { NgxElectronModule } from "ngx-electron";
 import { AccountService } from "./services/account.service";
 import { SiteService } from "./services/site.service";
 import { NodeService } from "./services/node.service";
-import { WatchNodeService } from "./services/watch-node.service";
 import { LogService } from "./services/log.service";
 import { ParentNodeService } from "./services/parent-node.service";
 import { SettingService } from "./services/setting.service";
@@ -50,7 +49,6 @@ import { SettingsComponent } from "./settings/settings.component";
     AccountService,
     SiteService,
     NodeService,
-    WatchNodeService,
     LogService,
     SettingService,
     ParentNodeService,

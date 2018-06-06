@@ -31,6 +31,13 @@ exports.updateAccount = async (request, response) => {
   });
 };
 
+exports.updateWatchNode = async (request, response) => {
+  let account = await accountModel.updateWatchNode(request.params.id, request);
+  return response.status(200).json({
+    success: true
+  });
+};
+
 exports.updateSync = async (request, response) => {
   let account = await accountModel.updateSync(request.params.id, request);
   await watcher.watchAll();

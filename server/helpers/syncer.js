@@ -45,6 +45,19 @@ exports.recursiveDownload = async params => {
       parentNodeId: sourceNodeId
     });
 
+    console.log( childrens , sourceNodeId );
+    
+    // If no children are found, no point in proceeding further, so bailout!
+    if (!childrens) {
+      console.log( 'no children' );
+      
+      // Start watcher now
+      watcher.watchAll();
+      // Set the sync completed time and also set issync flag to off
+      await accountModel.syncComplete(account.id);
+      return;
+    }
+
     let counter = 0;
     for (const child of childrens.list.entries) {
       // Do not continue if the sync is not enabled
@@ -88,8 +101,10 @@ exports.recursiveDownload = async params => {
       } else {
         // Case 2: File present in local
         if (record) {
+          // Convert the time to UTC and then get the unixtimestamp.
           let nodeModifiedDate = Math.round(
-            Date.parse(String(child.entry.modifiedAt)) / 1000
+            Date.parse(new Date(String(child.entry.modifiedAt)).toUTCString()) /
+              1000
           );
 
           let fileModifiedDate = record.file_update_at;
@@ -118,7 +133,7 @@ exports.recursiveDownload = async params => {
     } // End forloop
 
     if (counter === childrens.list.entries.length) {
-      console.log("FINISHED....", counter, account);
+      console.log("Finished downloading");
 
       if (false) {
         // TODO: When counter reaches count of apiendpoint then execute this script
@@ -242,7 +257,7 @@ exports.recursiveDelete = async params => {
       fileList: localFilePathList
     });
 
-    console.log("missing files", missingFiles, account);
+    console.log("missing files", missingFiles);
 
     for (const missingFilePath of missingFiles) {
       await this.deleteByPath({
@@ -353,7 +368,9 @@ _createItemOnLocal = async params => {
 exports.getFileModifiedTime = function(filePath) {
   if (fs.existsSync(filePath)) {
     let fileStat = fs.statSync(filePath);
-    return Date.parse(String(fileStat.mtime)) / 1000;
+    return Math.round(
+      Date.parse(new Date(String(fileStat.mtime)).toUTCString()) / 1000
+    );
   }
   return 0;
 };

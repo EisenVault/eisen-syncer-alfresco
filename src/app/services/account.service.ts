@@ -55,9 +55,15 @@ export class AccountService {
     );
   }
 
-  deleteAccount(accountId) {
-    return this._http.delete(environment.apiUrl + "/accounts/" + accountId);
+  updateWatchNode(accountId, nodeId) {
+    return this._http.put(
+      environment.apiUrl + "/accounts/" + accountId + "/watchnode",
+      {
+        watch_node: nodeId
+      }
+    );
   }
+
 
   updateSync(accountId, sync) {
     return this._http.put(
@@ -66,5 +72,9 @@ export class AccountService {
         sync_enabled: sync
       }
     );
+  }
+
+  deleteAccount(accountId) {
+    return this._http.delete(environment.apiUrl + "/accounts/" + accountId);
   }
 }

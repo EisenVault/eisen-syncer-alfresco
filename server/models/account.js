@@ -7,6 +7,7 @@ exports.getAll = async syncEnabled => {
       "id",
       "instance_url",
       "username",
+      "watch_node",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
@@ -31,6 +32,7 @@ exports.getOne = async id => {
       "instance_url",
       "username",
       "token",
+      "watch_node",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
@@ -73,6 +75,7 @@ exports.addAccount = async request => {
       instance_url: request.body.instance_url,
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
+      watch_node: request.body.watch_node,
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
@@ -93,6 +96,15 @@ exports.updateAccount = async (accountId, request) => {
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       overwrite: request.body.overwrite,
+      updated_at: new Date().getTime()
+    })
+    .where("id", accountId);
+};
+
+exports.updateWatchNode = async (accountId, request) => {
+  return await db("accounts")
+    .update({
+      sync_enabled: request.body.watch_node,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

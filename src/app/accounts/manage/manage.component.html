@@ -48,7 +48,7 @@
               <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
             </td>
             <td>
-              <div *ngIf="account.sync_in_progress == 1; else synccomplete">
+              <div *ngIf="isLoading(account) || account.sync_in_progress == 1; else synccomplete">
                 <img src="/assets/imgs/spinner.gif" alt="">
               </div>
               <ng-template #synccomplete>
