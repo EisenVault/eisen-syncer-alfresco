@@ -3,7 +3,7 @@ import { Router, ActivatedRoute, ParamMap } from "@angular/router";
 import { SiteService } from "../../services/site.service";
 import { NodeService } from "../../services/node.service";
 import { ParentNodeService } from "../../services/parent-node.service";
-import { WatchNodeService } from "../../services/watch-node.service";
+import { AccountService } from "../../services/account.service";
 
 @Component({
   selector: "app-remote-folder",
@@ -17,7 +17,7 @@ export class RemoteFolderComponent implements OnInit {
   public showSites: boolean = true;
   public showNodes: boolean = false;
   public showLevelUp: boolean = false;
-  public selectedNodes: string[] = [];
+  public selectedNode: string = '';
   public parentNodeId: string = "";
 
   constructor(
@@ -25,7 +25,7 @@ export class RemoteFolderComponent implements OnInit {
     private _route: ActivatedRoute,
     private _siteService: SiteService,
     private _nodeService: NodeService,
-    private _watchNodeService: WatchNodeService,
+    private _accountService: AccountService,
     private _parentNodeService: ParentNodeService
   ) {}
 
@@ -38,7 +38,7 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadSites() {
-    this.selectedNodes = [];
+    this.selectedNode = '';
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
       this.showSites = true;
@@ -47,7 +47,7 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadNodes(nodeId) {
-    this.selectedNodes = [];
+    this.selectedNode = '';
     this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
       this.showLevelUp = true;
       this.nodes = (<any>response).list.entries;
@@ -64,7 +64,7 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   _setParentId() {
-    if (this.nodes.length > 0) {
+    if (this.nodes && this.nodes.length > 0) {
       let nodeId = this.nodes[0].entry.id;
 
       this._parentNodeService
@@ -79,11 +79,10 @@ export class RemoteFolderComponent implements OnInit {
 
   addToList(e, nodeId) {
     if (e.target.value == "true") {
-      return this.selectedNodes.push(nodeId);
+      return this.selectedNode = nodeId;
     }
 
-    let index = this.selectedNodes.indexOf(nodeId);
-    return this.selectedNodes.splice(index, 1);
+    return '';
   }
 
   goBack() {
@@ -91,13 +90,13 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   finalize() {
-    this._watchNodeService
-      .addWatchNodes(this.accountId, this.selectedNodes)
+    this._accountService
+      .updateWatchNode(this.accountId, this.selectedNode)
       .subscribe(
         response => {
           this._router.navigate(["account-finalize", this.accountId]);
         },
-        error => console.log("sm er occ", error)
+        error => console.log(error)
       );
   }
 }

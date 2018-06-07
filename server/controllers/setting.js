@@ -25,3 +25,11 @@ exports.update = async (request, response) => {
     setting: setting
   });
 };
+
+exports.startupLaunch = async (request, response) => {
+  await settingModel.update("LAUNCH_AT_STARTUP", request);
+  let setting = await settingModel.getOne('LAUNCH_AT_STARTUP');
+  return response.status(200).json({
+    setting: setting
+  });
+};

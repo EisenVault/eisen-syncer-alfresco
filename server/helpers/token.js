@@ -47,6 +47,5 @@ exports.get = async account => {
     return token;
   } catch (error) {
     errorLogModel.add(account.id, error);
-    console.log(error);
   }
 };

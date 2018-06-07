@@ -27,7 +27,6 @@ export class AccountService {
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
         sync_enabled: params.sync_enabled,
-        overwrite: params.overwrite
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
@@ -46,7 +45,6 @@ export class AccountService {
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
         sync_enabled: params.sync_enabled,
-        overwrite: params.overwrite
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
@@ -55,9 +53,15 @@ export class AccountService {
     );
   }
 
-  deleteAccount(accountId) {
-    return this._http.delete(environment.apiUrl + "/accounts/" + accountId);
+  updateWatchNode(accountId, nodeId) {
+    return this._http.put(
+      environment.apiUrl + "/accounts/" + accountId + "/watchnode",
+      {
+        watch_node: nodeId
+      }
+    );
   }
+
 
   updateSync(accountId, sync) {
     return this._http.put(
@@ -66,5 +70,9 @@ export class AccountService {
         sync_enabled: sync
       }
     );
+  }
+
+  deleteAccount(accountId) {
+    return this._http.delete(environment.apiUrl + "/accounts/" + accountId);
   }
 }

@@ -12,6 +12,22 @@ exports.getOne = async name => {
     .where("name", name);
 };
 
+exports.startupLaunch = async () => {
+  return await db
+    .select("value")
+    .first()
+    .from("settings")
+    .where("name", "LAUNCH_AT_STARTUP");
+};
+
+exports.isNewInstallation = async () => {
+  return await db
+    .select("value")
+    .first()
+    .from("settings")
+    .where("name", "NEW_INSTALLATION");
+};
+
 exports.add = async request => {
   return await db
     .insert({
@@ -22,6 +38,7 @@ exports.add = async request => {
 };
 
 exports.update = async (name, request) => {
+  
   return await db("settings")
     .update({
       value: request.body.value

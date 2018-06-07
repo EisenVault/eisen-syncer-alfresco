@@ -14,8 +14,8 @@
       <form>
         <div class="form-group">
           <div class="form-check">
-            <input type="checkbox" class="form-check-input" name="startup_launch" [(ngModel)]="startup_launch" [checked]="startup_launch">
-            <label class="form-check-label" for="startup">Launch on startup?</label>
+            <input type="checkbox" class="form-check-input" id="startup_launch" name="startup_launch" [(ngModel)]="startup_launch" >
+            <label class="form-check-label" for="startup_launch">Launch on startup?</label>
           </div>
           <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
             <i class="fas fa-save"></i>

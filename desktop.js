@@ -3,6 +3,11 @@ const url = require("url");
 const path = require("path");
 const server = require("./server/server");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
+const AutoLaunch = require("auto-launch");
+// const appName = require((__dirname + "/package.json").replace(
+//   "/server/controllers",
+//   ""
+// )).name;
 
 // Set environment
 process.env.NODE_ENV = "dev";
@@ -10,6 +15,22 @@ process.env.NODE_ENV = "dev";
 let mainWindow, tray;
 
 let forceQuit = false;
+
+ipcMain.on("autolaunch", (event, arg) => {
+  const autoLauncher = new AutoLaunch({
+    name: app.getName()
+  });
+
+  if (arg == 1) {
+    autoLauncher.enable();
+    console.log("autoload enabled");
+  } else {
+    autoLauncher.disable();
+    console.log("autoload disabled");
+  }
+  console.log(arg);
+  // event.returnValue = 'pong'
+});
 
 // Listen for app to be ready
 app.on("ready", () => {

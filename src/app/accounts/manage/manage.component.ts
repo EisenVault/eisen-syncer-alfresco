@@ -12,6 +12,7 @@ import { SyncerService } from "../../services/syncer.service";
 export class ManageComponent implements OnInit {
   public accounts;
   public isSaved: boolean = false;
+  public showAccountLoaders: number[] = [];
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
@@ -38,22 +39,37 @@ export class ManageComponent implements OnInit {
             account.sync_in_progress == 0 &&
             lastSyncInMinutes >= account.sync_frequency
           ) {
+            let index = this.showAccountLoaders.indexOf(account.id);
+            if (index == -1) {
+              this.showAccountLoaders.push(account.id);
+            }
+
             // Fire the upload and then the download api...
             this._syncerService
               .syncDownloads(account.id)
               .subscribe(response => {
+                console.log("rseponse after download complete", response);
+
+                let index = this.showAccountLoaders.indexOf(account.id);
+                this.showAccountLoaders.splice(index, 1);
+
                 this._syncerService
-                  .syncUploads(account.id, account.overwrite)
+                  .syncUploads(account.id)
                   .subscribe(response => {
                     this._getAccounts();
+                    console.log("rseponse after upload complete", response);
                   });
-              });
+              }); // End download subscribe
 
             console.log("Firing:", account.instance_url);
           }
-        }
+        } // End forloop
       });
     }, 10000);
+  }
+
+  isLoading(account) {
+    return this.showAccountLoaders.indexOf(account.id) >= 0;
   }
 
   _getAccounts() {

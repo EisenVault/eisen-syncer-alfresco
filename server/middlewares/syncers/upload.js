@@ -12,10 +12,6 @@ module.exports = async (request, response, next) => {
     errors.push({ account_id: "Account ID is mandatory" });
   }
 
-  if (_.isNil(request.body.overwrite) || !_.isNumber(request.body.overwrite)) {
-    errors.push({ overwrite: "overwrite is mandatory" });
-  }
-
   let account = await accountModel.getOne(request.body.account_id);
   if (account === undefined) {
     errors.push({ accountId: "Account ID is invalid" });

@@ -7,12 +7,12 @@ exports.getAll = async syncEnabled => {
       "id",
       "instance_url",
       "username",
+      "watch_node",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress",
-      "last_synced_at",
-      "overwrite"
+      "last_synced_at"
     )
     .modify(queryBuilder => {
       if (syncEnabled == 1) {
@@ -31,11 +31,11 @@ exports.getOne = async id => {
       "instance_url",
       "username",
       "token",
+      "watch_node",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress",
-      "overwrite"
     )
     .first()
     .from("accounts")
@@ -44,9 +44,7 @@ exports.getOne = async id => {
 
 exports.getPassword = async id => {
   return await db
-    .select(
-      "*",
-    )
+    .select("*")
     .first()
     .from("accounts")
     .where("id", id);
@@ -75,10 +73,10 @@ exports.addAccount = async request => {
       instance_url: request.body.instance_url,
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
+      watch_node: request.body.watch_node,
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
-      overwrite: request.body.overwrite,
       created_at: new Date().getTime(),
       updated_at: new Date().getTime()
     })
@@ -94,7 +92,15 @@ exports.updateAccount = async (accountId, request) => {
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
-      overwrite: request.body.overwrite,
+      updated_at: new Date().getTime()
+    })
+    .where("id", accountId);
+};
+
+exports.updateWatchNode = async (accountId, request) => {
+  return await db("accounts")
+    .update({
+      watch_node: request.body.watch_node,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);
@@ -104,24 +110,30 @@ exports.updateSync = async (accountId, request) => {
   return await db("accounts")
     .update({
       sync_enabled: request.body.sync_enabled,
+      sync_in_progress: 0,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);
 };
 
-exports.updateSyncTime = async accountId => {
+exports.syncStart = async accountId => {
+  await db("accounts")
+    .update({
+      sync_in_progress: 1
+    })
+    .where("id", accountId);
+
+  return await db
+    .first()
+    .from("accounts")
+    .where("id", accountId);
+};
+
+exports.syncComplete = async accountId => {
   return await db("accounts")
     .update({
       sync_in_progress: 0,
       last_synced_at: new Date().getTime()
-    })
-    .where("id", accountId);
-};
-
-exports.updateIsSyncing = async accountId => {
-  return await db("accounts")
-    .update({
-      sync_in_progress: 1
     })
     .where("id", accountId);
 };
