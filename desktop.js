@@ -4,10 +4,6 @@ const path = require("path");
 const server = require("./server/server");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
-// const appName = require((__dirname + "/package.json").replace(
-//   "/server/controllers",
-//   ""
-// )).name;
 
 // Set environment
 process.env.NODE_ENV = "dev";
