@@ -38,6 +38,7 @@ exports.add = async request => {
 };
 
 exports.update = async (name, request) => {
+  
   return await db("settings")
     .update({
       value: request.body.value

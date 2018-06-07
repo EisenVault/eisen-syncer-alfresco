@@ -32,6 +32,10 @@ app.use("/nodes", require("./routes/node"));
 // Start watching all the sync_paths
 watcher.watchAll();
 
-app.listen(PORT, () => {
-  console.log("server running on " + PORT);
-});
+try {
+  app.listen(PORT, () => {
+    console.log("server running on " + PORT);
+  });
+} catch (error) {
+  console.log( `Port ${PORT} is already in use...` );
+}
