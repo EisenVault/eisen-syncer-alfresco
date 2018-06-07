@@ -67,6 +67,9 @@
               </button>
             </td>
           </tr>
+          <tr *ngIf="accounts && accounts.length < 1">
+            <td colspan="6" align="center">You have not yet added any accounts. Would you like to <a routerLink="/account-new">add one</a>?</td>
+          </tr>
         </tbody>
       </table>
     </div>

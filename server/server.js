@@ -32,6 +32,7 @@ app.use("/nodes", require("./routes/node"));
 // Start watching all the sync_paths
 watcher.watchAll();
 
+
 try {
   app.listen(PORT, () => {
     console.log("server running on " + PORT);
