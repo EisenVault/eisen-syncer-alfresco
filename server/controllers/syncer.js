@@ -11,7 +11,7 @@ exports.upload = async (request, response) => {
   try {
     await syncer.recursiveUpload({
       account: account,
-      rootNodeId: accountModel.watch_node
+      rootNodeId: account.watch_node
     });
 
     return response

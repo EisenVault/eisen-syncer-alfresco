@@ -17,7 +17,7 @@ export class RemoteFolderComponent implements OnInit {
   public showSites: boolean = true;
   public showNodes: boolean = false;
   public showLevelUp: boolean = false;
-  public selectedNode: string;
+  public selectedNode: string = '';
   public parentNodeId: string = "";
 
   constructor(
@@ -64,7 +64,7 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   _setParentId() {
-    if (this.nodes.length > 0) {
+    if (this.nodes && this.nodes.length > 0) {
       let nodeId = this.nodes[0].entry.id;
 
       this._parentNodeService
@@ -96,7 +96,7 @@ export class RemoteFolderComponent implements OnInit {
         response => {
           this._router.navigate(["account-finalize", this.accountId]);
         },
-        error => console.log("sm er occ", error)
+        error => console.log(error)
       );
   }
 }

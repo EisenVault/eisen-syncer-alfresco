@@ -12,8 +12,7 @@ exports.getAll = async syncEnabled => {
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress",
-      "last_synced_at",
-      "overwrite"
+      "last_synced_at"
     )
     .modify(queryBuilder => {
       if (syncEnabled == 1) {
@@ -37,7 +36,6 @@ exports.getOne = async id => {
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress",
-      "overwrite"
     )
     .first()
     .from("accounts")
@@ -79,7 +77,6 @@ exports.addAccount = async request => {
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
-      overwrite: request.body.overwrite,
       created_at: new Date().getTime(),
       updated_at: new Date().getTime()
     })
@@ -95,7 +92,6 @@ exports.updateAccount = async (accountId, request) => {
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
-      overwrite: request.body.overwrite,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);
@@ -104,7 +100,7 @@ exports.updateAccount = async (accountId, request) => {
 exports.updateWatchNode = async (accountId, request) => {
   return await db("accounts")
     .update({
-      sync_enabled: request.body.watch_node,
+      watch_node: request.body.watch_node,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

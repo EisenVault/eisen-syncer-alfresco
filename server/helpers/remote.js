@@ -185,14 +185,12 @@ exports.download = async params => {
  *  filePath: <String>,
  *  rootNodeId: <String>,
  *  uploadDirectory: <String>,
- *  overwrite: <Boolean>
  * }
  */
 exports.upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
-  let overwrite = String(params.overwrite);
   let options = {};
 
   if (!account) {
@@ -200,7 +198,7 @@ exports.upload = async params => {
   }
 
   // If its a directory, send a request to create the directory.
-  if (fs.statSync(filePath).isDirectory()) {
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = filePath.replace(account.sync_path + "/", "");
     relativePath = relativePath.substring(
@@ -271,7 +269,7 @@ exports.upload = async params => {
   }
 
   // If its a file, send a request to upload the file.
-  if (fs.statSync(filePath).isFile()) {
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
     uploadDirectory = uploadDirectory
       .replace(account.sync_path, "")
@@ -292,7 +290,7 @@ exports.upload = async params => {
         filename: path.basename(filePath),
         destination: "workspace://SpacesStore/" + rootNodeId,
         uploadDirectory: uploadDirectory,
-        overwrite: overwrite
+        overwrite: 'true'
       }
     };
 

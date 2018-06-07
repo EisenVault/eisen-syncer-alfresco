@@ -43,7 +43,6 @@ export class ManageComponent implements OnInit {
             if (index == -1) {
               this.showAccountLoaders.push(account.id);
             }
-            console.log("loop", account.id, this.showAccountLoaders);
 
             // Fire the upload and then the download api...
             this._syncerService
@@ -54,12 +53,12 @@ export class ManageComponent implements OnInit {
                 let index = this.showAccountLoaders.indexOf(account.id);
                 this.showAccountLoaders.splice(index, 1);
 
-                // this._syncerService
-                //   .syncUploads(account.id, account.overwrite)
-                //   .subscribe(response => {
-                //     this._getAccounts();
-                //     this.showLoader = false;
-                //   });
+                this._syncerService
+                  .syncUploads(account.id)
+                  .subscribe(response => {
+                    this._getAccounts();
+                    console.log("rseponse after upload complete", response);
+                  });
               }); // End download subscribe
 
             console.log("Firing:", account.instance_url);
@@ -70,10 +69,6 @@ export class ManageComponent implements OnInit {
   }
 
   isLoading(account) {
-    // console.log( this.showAccountLoaders );
-
-    // console.log( this.showAccountLoaders.indexOf(account.id) >= 0 );
-
     return this.showAccountLoaders.indexOf(account.id) >= 0;
   }
 

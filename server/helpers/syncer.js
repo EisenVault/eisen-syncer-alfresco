@@ -45,12 +45,8 @@ exports.recursiveDownload = async params => {
       parentNodeId: sourceNodeId
     });
 
-    console.log( childrens , sourceNodeId );
-    
     // If no children are found, no point in proceeding further, so bailout!
     if (!childrens) {
-      console.log( 'no children' );
-      
       // Start watcher now
       watcher.watchAll();
       // Set the sync completed time and also set issync flag to off
@@ -161,14 +157,12 @@ exports.recursiveDownload = async params => {
  * {
  *  account: Account<Object>,
  *  syncPath: string,
- *  overwrite: boolean,
  *  rootNodeId: string,
  * }
  */
 exports.recursiveUpload = async params => {
   let account = params.account;
   let syncPath = params.sync_path || account.sync_path;
-  let overwrite = account.overwrite;
   let rootNodeId = params.rootNodeId;
 
   rootFolder = syncPath;
@@ -200,30 +194,26 @@ exports.recursiveUpload = async params => {
         filePath: filePath
       });
 
-      console.log("filePath", filePath, rootNodeId);
-
       // CASE 1: Check if file is available on disk but missing in DB (New node was created).
       // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
       if (!recordExists) {
         await remote.upload({
           account: account,
           filePath: filePath,
-          rootNodeId: rootNodeId,
-          overwrite: overwrite
+          rootNodeId: rootNodeId
         });
         continue;
       }
 
       // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
-      // Upload the file to the server with "overwrite" flag set to true and once response received update the "file_modified_at" field in the "nodes" table.
+      // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
       fileModifiedTime = this.getFileModifiedTime(filePath);
 
       if (recordExists && recordExists.file_update_at != fileModifiedTime) {
         await remote.upload({
           account: account,
           filePath: filePath,
-          rootNodeId: rootNodeId,
-          overwrite: true
+          rootNodeId: rootNodeId
         });
         continue;
       }

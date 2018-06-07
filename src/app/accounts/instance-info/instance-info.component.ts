@@ -18,7 +18,6 @@ export class InstanceInfoComponent implements OnInit {
   public sync_path: string = "...";
   public sync_frequency: number = 2;
   public sync_enabled: boolean = true;
-  public overwrite: boolean = false;
   public file: string = "";
 
   constructor(
@@ -38,7 +37,6 @@ export class InstanceInfoComponent implements OnInit {
             this.sync_enabled = (<any>response).sync_enabled;
             this.sync_path = (<any>response).sync_path;
             this.sync_frequency = (<any>response).sync_frequency;
-            this.overwrite = (<any>response).overwrite;
           }
         });
       }
@@ -61,7 +59,6 @@ export class InstanceInfoComponent implements OnInit {
         sync_path: this.sync_path,
         sync_frequency: this.sync_frequency,
         sync_enabled: this.sync_enabled,
-        overwrite: this.overwrite
       })
       .subscribe(
         response => {
@@ -100,7 +97,6 @@ export class InstanceInfoComponent implements OnInit {
         sync_path: this.sync_path,
         sync_frequency: this.sync_frequency,
         sync_enabled: this.sync_enabled,
-        overwrite: this.overwrite
       })
       .subscribe(
         response => {

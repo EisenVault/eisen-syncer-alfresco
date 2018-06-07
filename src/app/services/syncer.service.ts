@@ -14,10 +14,9 @@ export class SyncerService {
     );
   }
 
-  syncUploads(accountId: number, overwrite: boolean) {
+  syncUploads(accountId: number){
     return this._httpClient.post(environment.apiUrl + "/syncer/uploads", {
       account_id: accountId,
-      overwrite: overwrite
     });
   }
 }

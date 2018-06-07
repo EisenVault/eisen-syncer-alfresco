@@ -9,7 +9,6 @@ exports.getAll = async () => {
       "accounts.username",
       "accounts.sync_path",
       "accounts.sync_enabled",
-      "accounts.overwrite"
     )
     .from("log_events")
     .innerJoin("accounts", "log_events.account_id", "accounts.id")
@@ -24,7 +23,6 @@ exports.getAllByAccountId = async accountId => {
       "accounts.username",
       "accounts.sync_path",
       "accounts.sync_enabled",
-      "accounts.overwrite"
     )
     .from("log_events")
     .innerJoin("accounts", "log_events.account_id", "accounts.id")
@@ -40,7 +38,6 @@ exports.getOne = async id => {
       "accounts.username",
       "accounts.sync_path",
       "accounts.sync_enabled",
-      "accounts.overwrite"
     )
     .first()
     .from("log_events")

@@ -27,7 +27,6 @@ export class AccountService {
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
         sync_enabled: params.sync_enabled,
-        overwrite: params.overwrite
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
@@ -46,7 +45,6 @@ export class AccountService {
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
         sync_enabled: params.sync_enabled,
-        overwrite: params.overwrite
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
