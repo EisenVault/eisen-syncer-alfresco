@@ -19,20 +19,17 @@ ipcMain.on("autolaunch", (event, arg) => {
 
   if (arg == 1) {
     autoLauncher.enable();
-    console.log("autoload enabled");
   } else {
     autoLauncher.disable();
-    console.log("autoload disabled");
   }
-  console.log(arg);
-  // event.returnValue = 'pong'
+  event.returnValue = arg;
 });
 
 // Listen for app to be ready
 app.on("ready", () => {
   // Create main window
   mainWindow = new BrowserWindow({
-    width: 800,
+    width: 1024,
     height: 650,
     title: "Eisen Syncer - Syncing files made simple"
   });
@@ -68,6 +65,20 @@ app.on("ready", () => {
             protocol: "file:",
             slashes: true,
             hash: "/account/manage"
+          })
+        );
+        mainWindow.show();
+      }
+    },
+    {
+      label: "Settings",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/settings"
           })
         );
         mainWindow.show();
@@ -147,26 +158,7 @@ app.on("ready", () => {
 });
 
 // Create menu template
-const mainMenuTemplate = [
-  {
-    label: "File",
-    submenu: [
-      {
-        label: "Add item",
-        click() {
-          alert("123");
-        }
-      },
-      {
-        label: "Quit " + app.getName(),
-        accelerator: process.platform == "darwin" ? "Command+Q" : "Ctrl+Q",
-        click() {
-          app.quit();
-        }
-      }
-    ]
-  }
-];
+const mainMenuTemplate = [];
 
 // For mac, add empty object to menu
 if (process.platform == "darwin") {

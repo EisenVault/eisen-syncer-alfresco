@@ -15,6 +15,8 @@ interface Setting {
 })
 export class SettingsComponent implements OnInit {
   public startup_launch;
+  public isSaved: boolean = false;
+
   constructor(
     private _settingService: SettingService,
     private _electronService: ElectronService
@@ -31,13 +33,15 @@ export class SettingsComponent implements OnInit {
   saveSettings() {
     let value = this.startup_launch === true ? 1 : 0;
     this._settingService.startupSettings(value).subscribe(response => {});
-
     if (this._electronService.isElectronApp) {
-      let reply: string = this._electronService.ipcRenderer.sendSync(
+      let reply = this._electronService.ipcRenderer.sendSync(
         "autolaunch",
         value
       );
-      console.log(reply);
+      this.isSaved = true;
+      setTimeout(() => {
+        this.isSaved = false;
+      }, 3000);
     }
   }
 }

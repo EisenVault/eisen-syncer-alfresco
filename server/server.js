@@ -33,10 +33,6 @@ app.use("/nodes", require("./routes/node"));
 watcher.watchAll();
 
 
-try {
-  app.listen(PORT, () => {
-    console.log("server running on " + PORT);
-  });
-} catch (error) {
-  console.log( `Port ${PORT} is already in use...` );
-}
+app.listen(PORT, () => {
+  console.log("server running on " + PORT);
+});

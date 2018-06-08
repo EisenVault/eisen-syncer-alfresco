@@ -6,7 +6,8 @@
 
     <div class="d-flex">
       <div class="mr-auto">
-        <h3>Add a new Account</h3>
+        <h3 *ngIf="!accountId">Add a new Account</h3>
+        <h3 *ngIf="accountId > 0">Edit Account</h3>
       </div>
       <div class="a">
         <a class="btn btn-outline-info" href="#" role="button" routerLink="/">
