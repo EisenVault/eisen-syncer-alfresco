@@ -14,7 +14,7 @@
     "elr": "electron-rebuild -f -w sqlite3 && ng build --prod && electron .",
     "package-mac": "ng build && electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/darwin/icon.icns --prune=true --out=release-builds",
     "package-win": "ng build && electron-packager . eisen-syncer --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win32/icon.ico --prune=true --out=release-builds --version-string.CompanyName=EisenVault --version-string.FileDescription=CE --version-string.ProductName=\"Eisen Syncer\"",
-    "package-linux": "ng build && electron-packager . eisen-syncer --overwrite --asar=false --platform=linux --arch=x64 --icon=src/assets/icons/linux/icon.png --prune=true --out=release-builds"
+    "package-linux": "ng build && electron-packager . eisen-syncer --overwrite --asar.unpackDir=server/database --platform=linux --arch=x64 --icon=src/assets/icons/linux/icon.png --prune=true --out=release-builds"
   },
   "main": "desktop.js",
   "private": true,
@@ -55,6 +55,7 @@
     "@types/jasmine": "~2.8.6",
     "@types/jasminewd2": "~2.0.3",
     "@types/node": "~8.9.4",
+    "asar": "^0.14.3",
     "codelyzer": "~4.2.1",
     "electron-packager": "^12.0.2",
     "electron-rebuild": "^1.7.3",
