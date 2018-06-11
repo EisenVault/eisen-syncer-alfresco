@@ -1,8 +1,8 @@
 import { Component, OnInit } from "@angular/core";
 import { AccountService } from "../../services/account.service";
 import { Router } from "@angular/router";
-import { THROW_IF_NOT_FOUND } from "@angular/core/src/di/injector";
 import { SyncerService } from "../../services/syncer.service";
+import { ElectronService } from "ngx-electron";
 
 @Component({
   selector: "app-manage",
@@ -16,6 +16,7 @@ export class ManageComponent implements OnInit {
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
+    private _electronService: ElectronService,
     private _router: Router
   ) {}
 
@@ -57,6 +58,17 @@ export class ManageComponent implements OnInit {
                   .syncUploads(account.id)
                   .subscribe(response => {
                     this._getAccounts();
+
+                    // Display a notification that the sync is now complete for the account
+                    if (this._electronService.isElectronApp) {
+                      this._electronService.ipcRenderer.sendSync("syncNotify", {
+                        title: "Syncing Complete",
+                        body:
+                          "Syncing is now complete for the instance " +
+                          account.instance_url
+                      });
+                    }
+
                     console.log("rseponse after upload complete", response);
                   });
               }); // End download subscribe

@@ -34,7 +34,7 @@ export class SettingsComponent implements OnInit {
     let value = this.startup_launch === true ? 1 : 0;
     this._settingService.startupSettings(value).subscribe(response => {});
     if (this._electronService.isElectronApp) {
-      let reply = this._electronService.ipcRenderer.sendSync(
+      this._electronService.ipcRenderer.sendSync(
         "autolaunch",
         value
       );
