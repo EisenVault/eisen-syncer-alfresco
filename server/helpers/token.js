@@ -19,7 +19,7 @@ exports.get = async account => {
   account = await accountModel.getPassword(account.id);
 
   let now = Date.now();
-  let updatedAt = account.updated_at;
+  let updatedAt = Number(account.token_updated_at);
   let differenceMinutes = (now - updatedAt) / 1000 / 60;
 
   // If the token was generated less than 60 minutes then we can return the token instead of generating a new one

@@ -59,16 +59,6 @@ export class ManageComponent implements OnInit {
                   .subscribe(response => {
                     this._getAccounts();
 
-                    // Display a notification that the sync is now complete for the account
-                    if (this._electronService.isElectronApp) {
-                      this._electronService.ipcRenderer.sendSync("syncNotify", {
-                        title: "Syncing Complete",
-                        body:
-                          "Syncing is now complete for the instance " +
-                          account.instance_url
-                      });
-                    }
-
                     console.log("rseponse after upload complete", response);
                   });
               }); // End download subscribe
