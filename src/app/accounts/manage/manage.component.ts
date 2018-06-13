@@ -45,7 +45,7 @@ export class ManageComponent implements OnInit {
               this.showAccountLoaders.push(account.id);
             }
 
-            // Fire the upload and then the download api...
+            // Fire the download api and then the upload api...
             this._syncerService
               .syncDownloads(account.id)
               .subscribe(response => {

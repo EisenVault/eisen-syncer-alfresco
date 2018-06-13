@@ -102,6 +102,7 @@ exports.getAllByFileOrFolderPath = async params => {
   }
 };
 
+
 /**
  *
  * @param object params
@@ -152,9 +153,9 @@ exports.getAllByFolderPath = async params => {
   }
 };
 
+
 /**
- * This method will return all the nodes that are not available in the DB.
- *
+ * This method will return all the records that are not available in the DB.
  *
  * @param object params
  * {
@@ -186,7 +187,6 @@ exports.getMissingFiles = async params => {
   }
 
   return missingFiles;
-  
 };
 
 /**
@@ -211,3 +211,43 @@ exports.delete = async params => {
   }
 };
 
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  filePath: <String>
+ * }
+ */
+exports.deleteByPath = async params => {
+  let account = params.account;
+  let filePath = params.filePath;
+
+  try {
+    await db("nodes")
+      .where("account_id", account.id)
+      .where("file_path", filePath)
+      .delete();
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>
+ * }
+ */
+exports.deleteAll = async params => {
+  let account = params.account;
+
+  try {
+    await db("nodes")
+      .where("account_id", account.id)
+      .delete();
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
+};

@@ -129,18 +129,54 @@ exports.recursiveDownload = async params => {
     } // End forloop
 
     if (counter === childrens.list.entries.length) {
-      console.log("Finished downloading");
+      let serverNodes = await remote.getNodeCount({
+        account: account,
+        nodeId: account.watch_node
+      });
 
-      if (false) {
-        // TODO: When counter reaches count of apiendpoint then execute this script
-        // console.log("FINISHED....", counter);
-        // console.log( _.uniq(this.recursiveDownload.serverFileList) );
+      console.log("serverNodesCount", serverNodes.node_count);
+      console.log("length", _.uniq(this.recursiveDownload.serverFileList), _.uniq(this.recursiveDownload.serverFileList).length);
+
+      if (
+        serverNodes.node_count == _.uniq(this.recursiveDownload.serverFileList).length
+      ) {
+        console.log("Finished downloading");
+
+        if (_.uniq(this.recursiveDownload.serverFileList).length == 0) {
+          // If there are no nodes available in the server, we will remove all files on the local
+          await nodeModel.deleteAll({
+            account: account
+          });
+
+          // Delete all files/folders from the account sync path
+          _deleteFolderRecursive(account.sync_path, false);
+        } else {
+
+          // For every missing nodes on the server, we will remove from the local as well.
+          missingFiles = await nodeModel.getMissingFiles({
+            account: account,
+            fileList: _.uniq(this.recursiveDownload.serverFileList)
+          });
+
+          for (const missingFile of missingFiles) {
+            console.log( 'delete', missingFile );
+            
+            // Delete the file/folder first
+            _deleteFolderRecursive(missingFile);
+
+            // Then remove the entry from the DB
+            await nodeModel.deleteByPath({
+              account: account,
+              filePath: missingFile
+            });
+          }
+        }
+
+        // Start watcher now
+        watcher.watchAll();
+        // Set the sync completed time and also set issync flag to off
+        await accountModel.syncComplete(account.id);
       }
-
-      // Start watcher now
-      watcher.watchAll();
-      // Set the sync completed time and also set issync flag to off
-      await accountModel.syncComplete(account.id);
     }
   } catch (error) {
     console.log(error);
@@ -197,6 +233,8 @@ exports.recursiveUpload = async params => {
       // CASE 1: Check if file is available on disk but missing in DB (New node was created).
       // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
       if (!recordExists) {
+        console.log("Uploading " + filePath + " since record does not exists");
+
         await remote.upload({
           account: account,
           filePath: filePath,
@@ -209,7 +247,16 @@ exports.recursiveUpload = async params => {
       // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
       fileModifiedTime = this.getFileModifiedTime(filePath);
 
-      if (recordExists && recordExists.file_update_at != fileModifiedTime) {
+      if (recordExists && Math.abs(fileModifiedTime - recordExists.file_update_at) > 1) {
+        console.log(
+          "Uploading " +
+            filePath +
+            " since " +
+            recordExists.file_update_at +
+            " notequal " +
+            fileModifiedTime
+        );
+
         await remote.upload({
           account: account,
           filePath: filePath,
@@ -247,8 +294,6 @@ exports.recursiveDelete = async params => {
       fileList: localFilePathList
     });
 
-    console.log("missing files", missingFiles);
-
     for (const missingFilePath of missingFiles) {
       await this.deleteByPath({
         account: account,
@@ -285,7 +330,7 @@ exports.deleteByPath = async params => {
 };
 
 // This function will recursively delete all files/folders from a path. It even deletes an empty folder.
-_deleteFolderRecursive = function(path) {
+_deleteFolderRecursive = function(path, deleteRoot = true) {
   var files = [];
   if (fs.existsSync(path)) {
     // If file, just delete it
@@ -304,7 +349,10 @@ _deleteFolderRecursive = function(path) {
         fs.unlinkSync(curPath);
       }
     });
-    fs.rmdirSync(path);
+    // Delete the root path only if flagged true
+    if(deleteRoot === true){
+      fs.rmdirSync(path);
+    }
   }
 };
 
