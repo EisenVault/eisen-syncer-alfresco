@@ -14,7 +14,7 @@ export class RemoteFolderComponent implements OnInit {
   public accountId;
   public sites = [];
   public nodes = [];
-  public showSites: boolean = true;
+  public showSites: boolean = false;
   public showNodes: boolean = false;
   public showLevelUp: boolean = false;
   public selectedNode: string = '';

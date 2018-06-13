@@ -142,6 +142,7 @@ exports.updateToken = async (accountId, token) => {
   return await db("accounts")
     .update({
       token: token,
+      token_updated_at: new Date().getTime(),
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

@@ -15,6 +15,41 @@ const syncer = require("../helpers/syncer");
  * @param object params
  * {
  *  account: Account<Object>,
+ *  nodeId: string
+ * }
+ */
+exports.getNodeCount = async params => {
+  let account = params.account;
+  let nodeId = params.nodeId;
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
+
+  var options = {
+    method: "GET",
+    url:
+      account.instance_url +
+      "/alfresco/s/com/eisenvault/totalNodesCount/" +
+      nodeId,
+    headers: {
+      authorization: "Basic " + (await token.get(account))
+    }
+  };
+
+  try {
+    let response = await request(options);
+    return JSON.parse(response);
+  } catch (error) {
+    errorLogModel.add(account.id, error);
+  }
+};
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: Account<Object>,
  *  parentNodeId: ''
  * }
  */
@@ -290,7 +325,7 @@ exports.upload = async params => {
         filename: path.basename(filePath),
         destination: "workspace://SpacesStore/" + rootNodeId,
         uploadDirectory: uploadDirectory,
-        overwrite: 'true'
+        overwrite: "true"
       }
     };
 

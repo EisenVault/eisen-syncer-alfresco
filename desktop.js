@@ -4,7 +4,6 @@ const path = require("path");
 const server = require("./server/server");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
-const notifier = require("electron-notifications");
 
 // Set environment
 process.env.NODE_ENV = "dev";
@@ -32,61 +31,12 @@ app.on("ready", () => {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 650,
-    title: "Eisen Syncer - Syncing files made simple"
+    title: "Eisen Syncer - Syncing files made simple",
+    icon: path.join(__dirname, "src/assets/logos/rounded.png")
   });
 
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/rounded.png"));
-
-  ipcMain.on("syncNotify", (event, arg) => {
-    var eNotify = require("electron-notify");
-
-    eNotify.notify({
-      title: arg.title,
-      text: arg.body
-    });
-
-    eNotify.setConfig({
-      displayTime: 25000,
-      width: 300,
-      height: 100,
-      padding: 0,
-      appIcon: path.join(__dirname, "/src/assets/logos/rounded.png"),
-
-      defaultStyleContainer: {
-        backgroundColor: "#ffffff",
-        overflow: "hidden",
-        padding: 0,
-        fontFamily: "Arial",
-        fontSize: 14,
-        position: "relative",
-        lineHeight: "15px"
-      },
-      defaultStyleClose: {
-        position: "absolute",
-        top: 1,
-        right: 3,
-        fontSize: 11,
-        color: "#000",
-        cursor: "pointer"
-      },
-      defaultStyleText: {
-        margin: 0,
-        overflow: "hidden",
-        cursor: "default",
-        color: "#000000"
-      },
-      defaultWindow: {
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        resizable: false,
-        show: false,
-        frame: false,
-        transparent: true,
-        acceptFirstMouse: true
-      }
-    });
-  });
 
   // Add tray context menu
   let trayMenuItems = [
@@ -176,6 +126,7 @@ app.on("ready", () => {
   const trayMenu = Menu.buildFromTemplate(trayMenuItems);
   tray.setToolTip("Sync your files easily");
   tray.setContextMenu(trayMenu);
+
 
   // Load the html file into window
   mainWindow.loadURL(
