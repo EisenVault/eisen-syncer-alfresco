@@ -24,50 +24,35 @@ export class ManageComponent implements OnInit {
     // Load all accounts
     this._getAccounts();
 
-    // Refresh the account data every 10 seconds to see if any sync is still in progress
-    setInterval(() => {
-      this._accountService.getAccounts().subscribe(accounts => {
-        this.accounts = accounts;
+    // When the app loads, lets try and sync the files from and to server.
+    this._accountService.getAccounts().subscribe(accounts => {
+      this.accounts = accounts;
 
-        for (let account of this.accounts) {
-          let lastSyncInMinutes = this.differenceInMinutes(
-            account.last_synced_at
-          );
-          console.log("lastSyncInMinutes", lastSyncInMinutes);
-
-          if (
-            account.sync_enabled == 1 &&
-            account.sync_in_progress == 0 &&
-            lastSyncInMinutes >= account.sync_frequency
-          ) {
-            let index = this.showAccountLoaders.indexOf(account.id);
-            if (index == -1) {
-              this.showAccountLoaders.push(account.id);
-            }
-
-            // Fire the download api and then the upload api...
-            this._syncerService
-              .syncDownloads(account.id)
-              .subscribe(response => {
-                console.log("rseponse after download complete", response);
-
-                let index = this.showAccountLoaders.indexOf(account.id);
-                this.showAccountLoaders.splice(index, 1);
-
-                this._syncerService
-                  .syncUploads(account.id)
-                  .subscribe(response => {
-                    this._getAccounts();
-
-                    console.log("rseponse after upload complete", response);
-                  });
-              }); // End download subscribe
-
-            console.log("Firing:", account.instance_url);
+      for (let account of this.accounts) {
+        if (account.sync_enabled == 1) {
+          let index = this.showAccountLoaders.indexOf(account.id);
+          if (index == -1) {
+            this.showAccountLoaders.push(account.id);
           }
-        } // End forloop
-      });
-    }, 10000);
+
+          // Fire the download api and then the upload api...
+          this._syncerService.syncDownloads(account.id).subscribe(response => {
+            console.log("rseponse after download complete", response);
+
+            let index = this.showAccountLoaders.indexOf(account.id);
+            this.showAccountLoaders.splice(index, 1);
+
+            this._syncerService.syncUploads(account.id).subscribe(response => {
+              this._getAccounts();
+
+              console.log("rseponse after upload complete", response);
+            });
+          }); // End download subscribe
+
+          console.log("Firing:", account.instance_url);
+        }
+      } // End forloop
+    });
   }
 
   isLoading(account) {
@@ -107,10 +92,5 @@ export class ManageComponent implements OnInit {
         .deleteAccount(accountId)
         .subscribe(response => this._getAccounts());
     }
-  }
-
-  differenceInMinutes(time) {
-    let now = Date.now();
-    return Math.round((now - time) / 1000 / 60);
   }
 }

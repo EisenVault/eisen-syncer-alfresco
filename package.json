@@ -13,10 +13,10 @@
     "e2e": "ng e2e",
     "el": "ng build && electron .",
     "rebuild": "electron-rebuild -f -w sqlite3",
-    "dist-mac":"electron-builder --x64 --mac",
+    "dist-mac": "electron-builder --x64 --mac",
     "elr": "electron-rebuild -f -w sqlite3 && ng build --prod && electron .",
-    "pack":"build --dir",
-    "dist":"build -m",
+    "pack": "build --dir",
+    "dist": "build -m",
     "postinstall": "electron-builder install-app-deps",
     "package-mac": "ng build && electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/darwin/icon.icns --prune=true --out=release-builds",
     "package-win": "ng build && electron-packager . eisen-syncer --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win32/icon.ico --prune=true --out=release-builds --version-string.CompanyName=EisenVault --version-string.FileDescription=CE --version-string.ProductName=\"Eisen Syncer\"",
@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "com.eisenvault.syncer",
-    "productName":"Desktop Syncer"
+    "productName": "Desktop Syncer"
   },
   "main": "desktop.js",
   "private": true,

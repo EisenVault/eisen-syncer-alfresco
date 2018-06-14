@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <title>Document</title>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            let message = document.getElementById('message');
+            let action = document.getElementById('action');
+            let button = document.getElementById('btn');
+
+            let socket = io.connect('http://localhost:3002');
+
+            socket.on('message', data => {
+                console.log(data);
+            });
+
+            button.addEventListener('click', () => {
+                socket.emit('message', {
+                    nodeId: message.value,
+                    action: action.value,
+                });
+            });
+
+        });
+
+    </script>
+</head>
+
+<body>
+
+    <label for="">
+        NodeID:
+        <input type="text" id="message">
+    </label>
+    <BR>
+    <label for="">
+        Action:
+        <select name="" id="action">
+            <option value="CREATE">CREATE</option>
+            <option value="EDIT">EDIT</option>
+            <option value="DELETE">DELETE</option>
+        </select>
+    </label>
+    <BR>
+    <button id="btn">Send</button>
+</body>
+
+</html>
