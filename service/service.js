@@ -10,8 +10,7 @@ const server = app.listen(3002, () => {
 let io = socket(server);
 
 io.on("connection", client => {
-  client.on("message", data => {
-    io.sockets.emit("message", data);
-    client.broadcast.emit("message", "sent to others");
+  client.on("notification", data => {
+    client.broadcast.emit("notification", data);
   });
 });

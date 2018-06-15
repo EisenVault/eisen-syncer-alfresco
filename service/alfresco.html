@@ -18,12 +18,12 @@
 
             let socket = io.connect('http://localhost:3002');
 
-            socket.on('message', data => {
+            socket.on('notification', data => {
                 console.log(data);
             });
 
             button.addEventListener('click', () => {
-                socket.emit('message', {
+                socket.emit('notification', {
                     nodeId: message.value,
                     action: action.value,
                 });
