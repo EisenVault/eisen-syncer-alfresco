@@ -1,17 +1,14 @@
-const fs = require("fs");
+const fs = require("fs-extra");
 const _ = require("lodash");
 const path = require("path");
-const crypt = require("../config/crypt");
-const btoa = require("btoa");
-const request = require("request-promise-native");
-const accountModel = require("../models/account");
-const remote = require("./remote");
-const nodeModel = require("../models/node");
 const glob = require("glob");
-const errorLogModel = require("../models/log-error");
-const eventLogModel = require("../models/log-event");
-const token = require("../helpers/token");
-const watcher = require("./watcher");
+const accountModel = require("../../models/account");
+const remote = require("../remote");
+const nodeModel = require("../../models/node");
+const errorLogModel = require("../../models/log-error");
+const eventLogModel = require("../../models/log-event");
+const watcher = require("../watcher");
+const _base = require("./_base");
 
 /**
  *
@@ -78,7 +75,7 @@ exports.recursiveDownload = async params => {
         // Case 1.1 Check File reference is present in DB (perhaps file was renamed on server).
         if (record) {
           // Delete the old file
-          _deleteFolderRecursive(record.file_path);
+          fs.removeSync(record.file_path);
 
           // Delete Old record from DB and update DB and set new filename
           await nodeModel.delete({
@@ -134,9 +131,6 @@ exports.recursiveDownload = async params => {
         nodeId: account.watch_node
       });
 
-      console.log("serverNodesCount", serverNodes.node_count);
-      console.log("length", _.uniq(this.recursiveDownload.serverFileList), _.uniq(this.recursiveDownload.serverFileList).length);
-
       if (
         serverNodes.node_count == _.uniq(this.recursiveDownload.serverFileList).length
       ) {
@@ -149,7 +143,7 @@ exports.recursiveDownload = async params => {
           });
 
           // Delete all files/folders from the account sync path
-          _deleteFolderRecursive(account.sync_path, false);
+          fs.removeSync(account.sync_path, false);
         } else {
 
           // For every missing nodes on the server, we will remove from the local as well.
@@ -162,7 +156,7 @@ exports.recursiveDownload = async params => {
             console.log( 'delete', missingFile );
             
             // Delete the file/folder first
-            _deleteFolderRecursive(missingFile);
+            fs.removeSync(missingFile);
 
             // Then remove the entry from the DB
             await nodeModel.deleteByPath({
@@ -245,7 +239,7 @@ exports.recursiveUpload = async params => {
 
       // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
       // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
-      fileModifiedTime = this.getFileModifiedTime(filePath);
+      fileModifiedTime = _base.getFileModifiedTime(filePath);
 
       if (recordExists && Math.abs(fileModifiedTime - recordExists.file_update_at) > 1) {
         console.log(
@@ -329,32 +323,6 @@ exports.deleteByPath = async params => {
   }
 };
 
-// This function will recursively delete all files/folders from a path. It even deletes an empty folder.
-_deleteFolderRecursive = function(path, deleteRoot = true) {
-  var files = [];
-  if (fs.existsSync(path)) {
-    // If file, just delete it
-    if (fs.lstatSync(path).isFile()) {
-      return fs.unlinkSync(path);
-    }
-
-    files = fs.readdirSync(path);
-    files.forEach(function(file, index) {
-      var curPath = path + "/" + file;
-      if (fs.lstatSync(curPath).isDirectory()) {
-        // recurse
-        _deleteFolderRecursive(curPath);
-      } else {
-        // delete file
-        fs.unlinkSync(curPath);
-      }
-    });
-    // Delete the root path only if flagged true
-    if(deleteRoot === true){
-      fs.rmdirSync(path);
-    }
-  }
-};
 
 _createItemOnLocal = async params => {
   let account = params.account;
@@ -369,12 +337,12 @@ _createItemOnLocal = async params => {
       fs.mkdirSync(currentDirectory);
     }
 
-    // Add refrence to the nodes table
+    // Add reference to the nodes table
     await nodeModel.add({
       account: account,
       nodeId: sourceNodeId,
       filePath: currentDirectory,
-      fileUpdateAt: this.getFileModifiedTime(currentDirectory),
+      fileUpdateAt: _base.getFileModifiedTime(currentDirectory),
       isFolder: true,
       isFile: false
     });
@@ -396,19 +364,3 @@ _createItemOnLocal = async params => {
   }
 };
 
-/**
- *
- * @param object filePath
- * {
- *  filePath: <String>
- * }
- */
-exports.getFileModifiedTime = function(filePath) {
-  if (fs.existsSync(filePath)) {
-    let fileStat = fs.statSync(filePath);
-    return Math.round(
-      Date.parse(new Date(String(fileStat.mtime)).toUTCString()) / 1000
-    );
-  }
-  return 0;
-};

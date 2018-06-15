@@ -1,6 +1,6 @@
 const fs = require("fs");
 const _ = require("lodash");
-const syncer = require("../helpers/syncer");
+const ondemand = require("../helpers/syncers/ondemand");
 const remote = require("../helpers/remote");
 const accountModel = require("../models/account");
 
@@ -9,7 +9,7 @@ exports.upload = async (request, response) => {
   let account = await accountModel.getOne(request.body.account_id);
 
   try {
-    await syncer.recursiveUpload({
+    await ondemand.recursiveUpload({
       account: account,
       rootNodeId: account.watch_node
     });
@@ -29,7 +29,7 @@ exports.download = async (request, response) => {
   let account = await accountModel.getOne(request.params.accountId);
 
   try {
-    await syncer.recursiveDownload({
+    await ondemand.recursiveDownload({
       account: account,
       sourceNodeId: account.watch_node,
       destinationPath: account.sync_path
@@ -48,7 +48,7 @@ exports.delete = async (request, response) => {
   let account = await accountModel.getOne(request.params.accountId);
 
   try {
-    await syncer.recursiveDelete({
+    await ondemand.recursiveDelete({
       account: account
     });
 

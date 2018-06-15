@@ -1,14 +1,13 @@
 const fs = require("fs");
 const path = require("path");
-const crypt = require("../config/crypt");
-const btoa = require("btoa");
 const request = require("request-promise-native");
 const accountModel = require("../models/account");
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
-const token = require("../helpers/token");
-const syncer = require("../helpers/syncer");
+const token = require("./token");
+const syncer = require("./syncers/ondemand");
+const _base = require("./syncers/_base");
 
 /**
  *
@@ -177,7 +176,7 @@ exports.download = async params => {
 
     console.log("Downloading", destinationPath);
 
-    let response = await request(options).pipe(
+    await request(options).pipe(
       fs.createWriteStream(destinationPath)
     );
 
@@ -193,7 +192,7 @@ exports.download = async params => {
       account: account,
       nodeId: sourceNodeId,
       filePath: destinationPath,
-      fileUpdateAt: syncer.getFileModifiedTime(destinationPath),
+      fileUpdateAt: _base.getFileModifiedTime(destinationPath),
       isFolder: false,
       isFile: true
     });
@@ -277,7 +276,7 @@ exports.upload = async params => {
           account: account,
           nodeId: response.entry.id,
           filePath: params.filePath,
-          fileUpdateAt: syncer.getFileModifiedTime(params.filePath),
+          fileUpdateAt: _base.getFileModifiedTime(params.filePath),
           isFolder: true,
           isFile: false
         });
@@ -347,7 +346,7 @@ exports.upload = async params => {
           account: account,
           nodeId: refId[1],
           filePath: params.filePath,
-          fileUpdateAt: syncer.getFileModifiedTime(filePath),
+          fileUpdateAt: _base.getFileModifiedTime(filePath),
           isFolder: false,
           isFile: true
         });

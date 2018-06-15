@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
-    <title>Document</title>
+    <title>Notification Simulator</title>
 
     <script>
 
@@ -23,10 +23,7 @@
             });
 
             button.addEventListener('click', () => {
-                socket.emit('notification', {
-                    nodeId: message.value,
-                    action: action.value,
-                });
+                socket.emit('notification', message.value);
             });
 
         });
@@ -36,19 +33,29 @@
 
 <body>
 
-    <label for="">
-        NodeID:
-        <input type="text" id="message">
+    <label for="message">
+            JSON:
     </label>
     <BR>
-    <label for="">
-        Action:
-        <select name="" id="action">
-            <option value="CREATE">CREATE</option>
-            <option value="EDIT">EDIT</option>
-            <option value="DELETE">DELETE</option>
-        </select>
-    </label>
+
+        <textarea name="" id="message" cols="100" rows="20">
+{
+    "instance_url" : "https://www.edms.cf",
+
+    "username" : "admin@soubhik",
+
+    "node_id" : "0594f1eb-0af4-4409-8067-666ffabcfafa",
+
+    "action" : "CREATE",
+
+    "is_file" : "false",
+
+    "is_folder" : "true",
+
+    "path" : "/Company Home/Sites/engineering/documentLibrary/hello"
+}
+        </textarea>
+    <BR>
     <BR>
     <button id="btn">Send</button>
 </body>

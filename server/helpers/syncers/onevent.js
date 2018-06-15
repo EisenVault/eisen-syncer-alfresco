@@ -1,0 +1,198 @@
+const fs = require("fs-extra");
+const path = require("path");
+const _ = require("lodash");
+const glob = require("glob");
+const mkdirp = require("mkdirp");
+
+const accountModel = require("../../models/account");
+const remote = require("../remote");
+const nodeModel = require("../../models/node");
+const errorLogModel = require("../../models/log-error");
+const eventLogModel = require("../../models/log-event");
+const watcher = require("../watcher");
+const _base = require("./_base");
+
+exports.create = async params => {
+  let instance_url = _getInstanceUrl(params.instance_url);
+  let account = await accountModel.findByInstance(
+    instance_url,
+    params.username
+  );
+
+  let currentPath = _getPath(account, params.path);
+
+  // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+  accountModel.syncStart(account.id);
+
+  // Stop watcher for a while
+  watcher.unwatchAll();
+
+  try {
+    // If the node is a folder, we will create the folder
+    if (params.is_folder === "true") {
+      mkdirp.sync(currentPath);
+
+      // Add reference to the nodes table
+      await nodeModel.add({
+        account: account,
+        nodeId: params.node_id,
+        filePath: currentPath,
+        fileUpdateAt: _base.getFileModifiedTime(currentPath),
+        isFolder: true,
+        isFile: false
+      });
+
+      // Start watcher now
+      watcher.watchAll();
+
+      // Set the sync completed time and also set issync flag to off
+      accountModel.syncComplete(account.id);
+    } else if (params.is_file === "true") {
+      mkdirp.sync(path.dirname(currentPath));
+
+      await remote.download({
+        account: account,
+        sourceNodeId: params.node_id,
+        destinationPath: currentPath
+      });
+
+      // Start watcher now
+      watcher.watchAll();
+
+      // Set the sync completed time and also set issync flag to off
+      accountModel.syncComplete(account.id);
+    }
+  } catch (error) {
+    errorLogModel.add(account.id, error);
+    // Start watcher now
+    watcher.watchAll();
+    // Set the sync completed time and also set issync flag to off
+    accountModel.syncComplete(account.id);
+  }
+};
+
+// Update the file
+exports.update = async params => {
+  let instance_url = _getInstanceUrl(params.instance_url);
+  let account = await accountModel.findByInstance(
+    instance_url,
+    params.username
+  );
+
+  let currentPath = _getPath(account, params.path);
+
+  // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+  accountModel.syncStart(account.id);
+
+  // Stop watcher for a while
+  watcher.unwatchAll();
+
+  let oldRecord = await nodeModel.getOneByNodeId({
+    account: account,
+    nodeId: params.node_id
+  });
+
+  try {
+    // If the node is a folder, we will create the folder
+    if (params.is_folder === "true" && currentPath !== oldRecord.file_path) {
+      // Rename the old folder to the new name
+      fs.renameSync(oldRecord.file_path, currentPath);
+
+      // Delete the old reference
+      await nodeModel.delete({
+        account: account,
+        nodeId: params.node_id
+      });
+
+      // Add reference to the nodes table
+      await nodeModel.add({
+        account: account,
+        nodeId: params.node_id,
+        filePath: currentPath,
+        fileUpdateAt: _base.getFileModifiedTime(currentPath),
+        isFolder: true,
+        isFile: false
+      });
+
+      // Start watcher now
+      watcher.watchAll();
+
+      // Set the sync completed time and also set issync flag to off
+      accountModel.syncComplete(account.id);
+    } else if (params.is_file === "true") {
+
+      // Delete the old file
+      fs.removeSync(oldRecord.file_path);
+
+      // Delete the old reference
+      await nodeModel.delete({
+        account: account,
+        nodeId: params.node_id
+      });
+
+      // Download the renamed/edited file
+      await remote.download({
+        account: account,
+        sourceNodeId: params.node_id,
+        destinationPath: currentPath
+      });
+
+      // Start watcher now
+      watcher.watchAll();
+
+      // Set the sync completed time and also set issync flag to off
+      accountModel.syncComplete(account.id);
+    }
+  } catch (error) {
+    errorLogModel.add(account.id, error);
+    // Start watcher now
+    watcher.watchAll();
+    // Set the sync completed time and also set issync flag to off
+    accountModel.syncComplete(account.id);
+  }
+};
+
+exports.delete = async params => {
+  let instance_url = _getInstanceUrl(params.instance_url);
+  let account = await accountModel.findByInstance(
+    instance_url,
+    params.username
+  );
+
+  let path = _getPath(account, params.path);
+
+  // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
+  accountModel.syncStart(account.id);
+
+  // Stop watcher for a while
+  watcher.unwatchAll();
+
+  fs.removeSync(path);
+
+  try {
+    // Then remove the entry from the DB
+    await nodeModel.deleteByPath({
+      account: account,
+      filePath: path
+    });
+
+    // Start watcher now
+    watcher.watchAll();
+    // Set the sync completed time and also set issync flag to off
+    accountModel.syncComplete(account.id);
+  } catch (error) {
+    errorLogModel.add(account.id, error);
+    // Start watcher now
+    watcher.watchAll();
+    // Set the sync completed time and also set issync flag to off
+    accountModel.syncComplete(account.id);
+  }
+};
+
+_getPath = (account, path) => {
+  return account.sync_path + "/" + path.split("documentLibrary/")[1] || "";
+};
+
+_getInstanceUrl = instance_url => {
+  return instance_url.replace(/\/+$/, ""); // Replace any trailing slashes
+};

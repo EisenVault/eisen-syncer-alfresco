@@ -90,6 +90,9 @@ exports.getAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
 
+  console.log( 'path',path );
+  
+
   try {
     return await db
       .select("*")

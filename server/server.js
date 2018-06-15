@@ -1,11 +1,14 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const watcher = require("./helpers/watcher");
-const accountModel = require("./models/account");
 const cors = require("cors");
+require("dotenv").config();
+const io = require("socket.io-client");
+const watcher = require("./helpers/watcher");
+const onevent = require("./helpers/syncers/onevent");
+const accountModel = require("./models/account");
 const app = express();
-const PORT = 7113;
 
+// Middlewares
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -32,10 +35,29 @@ app.use("/nodes", require("./routes/node"));
 // Start watching all the sync_paths
 watcher.watchAll();
 
+// Listen to event notifications from the socket service
+let socket = io.connect(process.env.SERVICE_URL);
+
+socket.on('notification', async data => {
+  data = JSON.parse(data);  
+
+  if(data.action.toUpperCase() == 'CREATE') {   
+    await onevent.create(data);
+  }
+  if(data.action.toUpperCase() == 'UPDATE') {   
+    await onevent.update(data);
+  }
+  if(data.action.toUpperCase() == 'DELETE') {   
+    await onevent.delete(data);
+  }
+});
+
+
+
 try {
-  app.listen(PORT, () => {
-    console.log("server running on " + PORT);
+  app.listen(process.env.SERVER_PORT, () => {
+    console.log("server running on " + process.env.SERVER_PORT);
   });
 } catch (error) {
-  console.log(`Port ${PORT} is already in use`);
+  console.log(`Port ${process.env.SERVER_PORT} is already in use`);
 }

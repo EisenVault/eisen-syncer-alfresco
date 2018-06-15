@@ -1,6 +1,6 @@
 const watch = require("watch");
 const fs = require("fs");
-const syncer = require("../helpers/syncer");
+const syncer = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
 
 // Add a new watcher
@@ -17,7 +17,7 @@ exports.watch = account => {
     prev
   ) {
     if (typeof f == "object" && prev === null && curr === null) {
-      // Finished walking the tree
+      // Finished walking the tree     
     } else if (prev === null) {
       // f is a new file/folder
       if (watchlist.indexOf(f) == -1) {
@@ -55,6 +55,7 @@ exports.watch = account => {
 // remove a watchlist
 exports.unwatchAll = async () => {
   let accounts = await accountModel.getAll();
+  console.log( 'Watcher paused' );
 
   // Remove all watchers first
   for (let account of accounts) {
@@ -68,6 +69,8 @@ exports.watchAll = async () => {
   // Remove all watchers first
   this.unwatchAll();
 
+  console.log( 'Watcher started' );
+  
   // Add new watchers
   accounts = await accountModel.getAll(1);
   for (let account of accounts) {
@@ -84,6 +87,8 @@ async function _upload(account, syncPath) {
 }
 
 async function _delete(account, filePath) {
+  console.log( account.id, filePath );
+  
   await syncer.deleteByPath({
     account: account,
     filePath: filePath
