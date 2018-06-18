@@ -24,6 +24,10 @@ exports.recursiveDownload = async params => {
   let sourceNodeId = params.sourceNodeId;
   let destinationPath = params.destinationPath;
 
+  if (account.sync_enabled == 0) {
+    return;
+  }
+
   // Declare a container that will hold all node ids that are fetched from the server
   if (typeof this.recursiveDownload.serverFileList == "undefined") {
     this.recursiveDownload.serverFileList = [];
@@ -53,11 +57,6 @@ exports.recursiveDownload = async params => {
 
     let counter = 0;
     for (const child of childrens.list.entries) {
-      // Do not continue if the sync is not enabled
-      if (sync.sync_enabled == 0) {
-        break;
-      }
-
       counter++;
       let currentDirectory = path.join(destinationPath, child.entry.name);
       let sourceNodeId = child.entry.id;
@@ -132,7 +131,8 @@ exports.recursiveDownload = async params => {
       });
 
       if (
-        serverNodes.node_count == _.uniq(this.recursiveDownload.serverFileList).length
+        serverNodes.node_count ==
+        _.uniq(this.recursiveDownload.serverFileList).length
       ) {
         console.log("Finished downloading");
 
@@ -143,9 +143,15 @@ exports.recursiveDownload = async params => {
           });
 
           // Delete all files/folders from the account sync path
-          fs.removeSync(account.sync_path, false);
+          glob(
+            account.sync_path + "/**/*",
+            async (error, localFilePathList) => {
+              for (let path of localFilePathList) {
+                fs.removeSync(path);
+              }
+            }
+          );
         } else {
-
           // For every missing nodes on the server, we will remove from the local as well.
           missingFiles = await nodeModel.getMissingFiles({
             account: account,
@@ -153,8 +159,8 @@ exports.recursiveDownload = async params => {
           });
 
           for (const missingFile of missingFiles) {
-            console.log( 'delete', missingFile );
-            
+            console.log("delete", missingFile);
+
             // Delete the file/folder first
             fs.removeSync(missingFile);
 
@@ -195,6 +201,10 @@ exports.recursiveUpload = async params => {
   let syncPath = params.sync_path || account.sync_path;
   let rootNodeId = params.rootNodeId;
 
+  if (account.sync_enabled == 0) {
+    return;
+  }
+
   rootFolder = syncPath;
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
@@ -212,11 +222,6 @@ exports.recursiveUpload = async params => {
     let counter = 0;
     // Iterate through each file and perform certain task
     for (let filePath of localFilePathList) {
-      // Do not continue if the sync is not enabled
-      if (sync.sync_enabled == 0) {
-        break;
-      }
-
       counter++;
       // Get the DB record of the filePath
       let recordExists = await nodeModel.getOneByFilePath({
@@ -241,7 +246,10 @@ exports.recursiveUpload = async params => {
       // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
       fileModifiedTime = _base.getFileModifiedTime(filePath);
 
-      if (recordExists && Math.abs(fileModifiedTime - recordExists.file_update_at) > 1) {
+      if (
+        recordExists &&
+        Math.abs(fileModifiedTime - recordExists.file_update_at) > 1
+      ) {
         console.log(
           "Uploading " +
             filePath +
@@ -281,6 +289,10 @@ exports.recursiveUpload = async params => {
 exports.recursiveDelete = async params => {
   let account = params.account;
 
+  if (account.sync_enabled == 0) {
+    return;
+  }
+
   // This function will list all files/folders/sub-folders recursively.
   glob(account.sync_path + "/**/*", async (error, localFilePathList) => {
     let missingFiles = await nodeModel.getMissingFiles({
@@ -309,20 +321,28 @@ exports.deleteByPath = async params => {
   let account = params.account;
   let filePath = params.filePath;
 
-  let records = await nodeModel.getAllByFileOrFolderPath({
-    account: account,
-    path: filePath
-  });
+  if (account.sync_enabled == 0) {
+    return;
+  }
 
-  for (let record of records) {
-    // Delete the node from the server, once thats done it will delete the record from the DB as well
-    await remote.deleteServerNode({
+  try {
+    let records = await nodeModel.getAllByFileOrFolderPath({
       account: account,
-      deletedNodeId: record.node_id
+      path: filePath
     });
+
+    for (let record of records) {
+      // Delete the node from the server, once thats done it will delete the record from the DB as well
+      await remote.deleteServerNode({
+        account: account,
+        deletedNodeId: record.node_id
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    errorLogModel.add(account.id, error);
   }
 };
-
 
 _createItemOnLocal = async params => {
   let account = params.account;
@@ -331,36 +351,40 @@ _createItemOnLocal = async params => {
   let sourceNodeId = params.sourceNodeId;
   let isRecursive = params.isRecursive || true;
 
-  if (child.entry.isFolder == true) {
-    // If the child is a folder, create the folder first
-    if (!fs.existsSync(currentDirectory)) {
-      fs.mkdirSync(currentDirectory);
-    }
+  try {
+    if (child.entry.isFolder == true) {
+      // If the child is a folder, create the folder first
+      if (!fs.existsSync(currentDirectory)) {
+        fs.mkdirSync(currentDirectory);
+      }
 
-    // Add reference to the nodes table
-    await nodeModel.add({
-      account: account,
-      nodeId: sourceNodeId,
-      filePath: currentDirectory,
-      fileUpdateAt: _base.getFileModifiedTime(currentDirectory),
-      isFolder: true,
-      isFile: false
-    });
+      // Add reference to the nodes table
+      await nodeModel.add({
+        account: account,
+        nodeId: sourceNodeId,
+        filePath: currentDirectory,
+        fileUpdateAt: _base.getFileModifiedTime(currentDirectory),
+        isFolder: true,
+        isFile: false
+      });
 
-    if (isRecursive) {
-      await this.recursiveDownload({
+      if (isRecursive) {
+        await this.recursiveDownload({
+          account: account,
+          sourceNodeId: sourceNodeId,
+          destinationPath: currentDirectory
+        });
+      }
+    } else if (child.entry.isFile == true) {
+      // If the child is a file, download it
+      await remote.download({
         account: account,
         sourceNodeId: sourceNodeId,
         destinationPath: currentDirectory
       });
     }
-  } else if (child.entry.isFile == true) {
-    // If the child is a file, download it
-    await remote.download({
-      account: account,
-      sourceNodeId: sourceNodeId,
-      destinationPath: currentDirectory
-    });
+  } catch (error) {
+    console.log(error);
+    errorLogModel.add(account.id, error);
   }
 };
-

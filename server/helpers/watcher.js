@@ -67,7 +67,7 @@ exports.watchAll = async () => {
   let accounts = await accountModel.getAll();
 
   // Remove all watchers first
-  this.unwatchAll();
+  await this.unwatchAll();
 
   console.log( 'Watcher started' );
   
