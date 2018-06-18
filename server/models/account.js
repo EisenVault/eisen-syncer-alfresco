@@ -2,7 +2,8 @@ const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
 exports.getAll = async syncEnabled => {
-  return await db
+  try {
+    return await db
     .select(
       "id",
       "instance_url",
@@ -22,6 +23,9 @@ exports.getAll = async syncEnabled => {
       }
     })
     .from("accounts");
+  } catch (error) {
+    return [{}];
+  }
 };
 
 exports.getOne = async id => {
@@ -70,7 +74,7 @@ exports.findByInstance = async (instance_url, username) => {
 exports.addAccount = async request => {
   return await db
     .insert({
-      instance_url: request.body.instance_url,
+      instance_url: request.body.instance_url.replace(/\/+$/, ""),
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
       watch_node: request.body.watch_node,
@@ -86,7 +90,7 @@ exports.addAccount = async request => {
 exports.updateAccount = async (accountId, request) => {
   return await db("accounts")
     .update({
-      instance_url: request.body.instance_url,
+      instance_url: request.body.instance_url.replace(/\/+$/, ""),
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
       sync_path: request.body.sync_path,

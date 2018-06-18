@@ -1,7 +1,6 @@
 const fs = require("fs-extra");
 const path = require("path");
 const _ = require("lodash");
-const glob = require("glob");
 const mkdirp = require("mkdirp");
 
 const accountModel = require("../../models/account");
@@ -18,6 +17,10 @@ exports.create = async params => {
     instance_url,
     params.username
   );
+
+  if (account.sync_enabled == 0) {
+    return;
+  }
 
   let currentPath = _getPath(account, params.path);
 
@@ -79,6 +82,10 @@ exports.update = async params => {
     params.username
   );
 
+  if (account.sync_enabled == 0) {
+    return;
+  }
+
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -120,7 +127,6 @@ exports.update = async params => {
       // Set the sync completed time and also set issync flag to off
       accountModel.syncComplete(account.id);
     } else if (params.is_file === "true") {
-
       // Delete the old file
       fs.removeSync(oldRecord.file_path);
 
@@ -159,6 +165,10 @@ exports.delete = async params => {
     params.username
   );
 
+  if (account.sync_enabled == 0) {
+    return;
+  }
+
   let path = _getPath(account, params.path);
 
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
@@ -167,13 +177,15 @@ exports.delete = async params => {
   // Stop watcher for a while
   watcher.unwatchAll();
 
-  fs.removeSync(path);
+  if (account.sync_path != path) {
+    fs.removeSync(path);
+  }
 
   try {
     // Then remove the entry from the DB
-    await nodeModel.deleteByPath({
+    await nodeModel.deleteAllByFileOrFolderPath({
       account: account,
-      filePath: path
+      path: path
     });
 
     // Start watcher now

@@ -65,7 +65,7 @@ exports.getOneByFilePath = async params => {
       .from("nodes")
       .where("account_id", account.id)
       .where("file_path", filePath);
-  } catch (error) {   
+  } catch (error) {
     return errorLogModel.add(account, error);
   }
 };
@@ -82,7 +82,7 @@ exports.getOneByNodeId = async params => {
       .where("account_id", account.id)
       .where("node_id", nodeId);
   } catch (error) {
-   return errorLogModel.add(account, error);
+    return errorLogModel.add(account, error);
   }
 };
 
@@ -90,21 +90,17 @@ exports.getAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
 
-  console.log( 'path',path );
-  
-
   try {
     return await db
       .select("*")
       .from("nodes")
       .where("account_id", account.id)
-      .where("file_path", path)
+      .where("file_path", "LIKE", path + "%")
       .orWhere("folder_path", path);
   } catch (error) {
     errorLogModel.add(account, error);
   }
 };
-
 
 /**
  *
@@ -155,7 +151,6 @@ exports.getAllByFolderPath = async params => {
     errorLogModel.add(account, error);
   }
 };
-
 
 /**
  * This method will return all the records that are not available in the DB.
@@ -230,6 +225,21 @@ exports.deleteByPath = async params => {
     await db("nodes")
       .where("account_id", account.id)
       .where("file_path", filePath)
+      .delete();
+  } catch (error) {
+    errorLogModel.add(account, error);
+  }
+};
+
+exports.deleteAllByFileOrFolderPath = async params => {
+  let account = params.account;
+  let path = params.path;
+
+  try {
+    return await db("nodes")
+      .where("account_id", account.id)
+      .where("file_path", "LIKE", path + "%")
+      .orWhere("folder_path", path)
       .delete();
   } catch (error) {
     errorLogModel.add(account, error);

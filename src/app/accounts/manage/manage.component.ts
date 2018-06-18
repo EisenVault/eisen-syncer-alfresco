@@ -4,6 +4,18 @@ import { Router } from "@angular/router";
 import { SyncerService } from "../../services/syncer.service";
 import { ElectronService } from "ngx-electron";
 
+interface IAccounts {
+  id: number;
+  instance_url: string;
+  username: string;
+  watch_node: string;
+  sync_path: string;
+  sync_enabled: number;
+  sync_frequency: number;
+  sync_in_progress: number;
+  last_synced_at: number;
+}
+
 @Component({
   selector: "app-manage",
   templateUrl: "./manage.component.html",
@@ -25,34 +37,51 @@ export class ManageComponent implements OnInit {
     this._getAccounts();
 
     // When the app loads, lets try and sync the files from and to server.
-    this._accountService.getAccounts().subscribe(accounts => {
+    this._accountService.getAccounts("sync_enabled=1").subscribe((accounts: IAccounts[]) => {
       this.accounts = accounts;
 
+      console.log( accounts );
+      
+
       for (let account of this.accounts) {
-        if (account.sync_enabled == 1) {
-          let index = this.showAccountLoaders.indexOf(account.id);
-          if (index == -1) {
-            this.showAccountLoaders.push(account.id);
-          }
-
-          // Fire the download api and then the upload api...
-          this._syncerService.syncDownloads(account.id).subscribe(response => {
-            console.log("rseponse after download complete", response);
-
-            let index = this.showAccountLoaders.indexOf(account.id);
-            this.showAccountLoaders.splice(index, 1);
-
-            this._syncerService.syncUploads(account.id).subscribe(response => {
-              this._getAccounts();
-
-              console.log("rseponse after upload complete", response);
-            });
-          }); // End download subscribe
-
-          console.log("Firing:", account.instance_url);
+        // This is for the spinning loader icon
+        let index = this.showAccountLoaders.indexOf(account.id);
+        if (index == -1) {
+          this.showAccountLoaders.push(account.id);
         }
+
+        // Fire the download api and then the upload api...
+        this._syncerService.syncDownloads(account.id).subscribe(response => {
+          let index = this.showAccountLoaders.indexOf(account.id);
+          this.showAccountLoaders.splice(index, 1);
+
+          this._syncerService.syncUploads(account.id).subscribe(response => {
+            this._getAccounts();
+          });
+        }); // End download subscribe
+
+        console.log("Firing:", account.instance_url);
       } // End forloop
     });
+
+    // For every x seconds, we will make a request to the account api and check which accounts are still syncing, so that we can attach loaders for those accounts
+    setInterval(() => {
+      console.log( 'setInterval...' );
+      
+      this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
+        for (let account of accounts) {
+          console.log( 'account.sync_in_progress', account.sync_in_progress );
+          
+            // This is for the spinning loader icon
+            let index = this.showAccountLoaders.indexOf(account.id);
+            if (index == -1 && account.sync_in_progress == 1) {
+              this.showAccountLoaders.push(account.id);
+            } else if (account.sync_in_progress == 0) {
+              this.showAccountLoaders.splice(index, 1);
+            }
+        } // End forloop
+      });
+    }, 10000);
   }
 
   isLoading(account) {
