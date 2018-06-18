@@ -43,9 +43,9 @@ exports.get = async account => {
     response = JSON.parse(response);
     let token = btoa(response.entry.id);
     // Update token in DB
-    accountModel.updateToken(account.id, token);
+    await accountModel.updateToken(account.id, token);
     return token;
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };

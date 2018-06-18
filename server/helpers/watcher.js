@@ -57,7 +57,7 @@ exports.unwatchAll = async () => {
   let accounts = await accountModel.getAll();
   console.log( 'Watcher paused' );
 
-  // Remove all watchers first
+  // Remove all watchers
   for (let account of accounts) {
     watch.unwatchTree(account.sync_path);
   }
@@ -87,8 +87,6 @@ async function _upload(account, syncPath) {
 }
 
 async function _delete(account, filePath) {
-  console.log( account.id, filePath );
-  
   await syncer.deleteByPath({
     account: account,
     filePath: filePath

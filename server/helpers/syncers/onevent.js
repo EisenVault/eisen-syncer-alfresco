@@ -25,13 +25,13 @@ exports.create = async params => {
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-  accountModel.syncStart(account.id);
+  await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
   watcher.unwatchAll();
 
   try {
-    // If the node is a folder, we will create the folder
+    // If the node is a folder, we will create the folder and all its subfolders
     if (params.is_folder === "true") {
       mkdirp.sync(currentPath);
 
@@ -49,7 +49,7 @@ exports.create = async params => {
       watcher.watchAll();
 
       // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await accountModel.syncComplete(account.id);
     } else if (params.is_file === "true") {
       mkdirp.sync(path.dirname(currentPath));
 
@@ -63,14 +63,14 @@ exports.create = async params => {
       watcher.watchAll();
 
       // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await accountModel.syncComplete(account.id);
     }
   } catch (error) {
-    errorLogModel.add(account.id, error);
     // Start watcher now
     watcher.watchAll();
     // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await accountModel.syncComplete(account.id);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -89,7 +89,7 @@ exports.update = async params => {
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-  accountModel.syncStart(account.id);
+  await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
   watcher.unwatchAll();
@@ -125,7 +125,7 @@ exports.update = async params => {
       watcher.watchAll();
 
       // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await accountModel.syncComplete(account.id);
     } else if (params.is_file === "true") {
       // Delete the old file
       fs.removeSync(oldRecord.file_path);
@@ -147,14 +147,14 @@ exports.update = async params => {
       watcher.watchAll();
 
       // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await accountModel.syncComplete(account.id);
     }
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
     // Start watcher now
     watcher.watchAll();
     // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await accountModel.syncComplete(account.id);
   }
 };
 
@@ -172,10 +172,7 @@ exports.delete = async params => {
   let path = _getPath(account, params.path);
 
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
-  accountModel.syncStart(account.id);
-
-  // Stop watcher for a while
-  watcher.unwatchAll();
+  await accountModel.syncStart(account.id);
 
   if (account.sync_path != path) {
     fs.removeSync(path);
@@ -188,16 +185,12 @@ exports.delete = async params => {
       path: path
     });
 
-    // Start watcher now
-    watcher.watchAll();
     // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await accountModel.syncComplete(account.id);
   } catch (error) {
-    errorLogModel.add(account.id, error);
-    // Start watcher now
-    watcher.watchAll();
+    await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await accountModel.syncComplete(account.id);
   }
 };
 

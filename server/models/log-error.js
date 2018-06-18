@@ -73,7 +73,7 @@ exports.add = async (accountId, description) => {
   let count = await this.getCount();
   if (count.total > MIN_THRESHOLD) {
     let removableId = eventId[0] - MIN_THRESHOLD;
-    this.deleteAllLessThan(removableId);
+    exports.deleteAllLessThan(removableId);
   }
 
   return eventId;

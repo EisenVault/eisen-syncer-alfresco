@@ -101,8 +101,8 @@ exports.recursiveDownload = async params => {
 
           let fileModifiedDate = record.file_update_at;
 
-          // Greater than local node, then download node (since server node is newer version)
-          if (nodeModifiedDate > fileModifiedDate) {
+          // If the difference between server and client file is greater than x secs, download the remote file (since server node is newer version)
+          if (nodeModifiedDate - fileModifiedDate > 2) {
             await _createItemOnLocal({
               child: child,
               currentDirectory: currentDirectory,
@@ -124,7 +124,9 @@ exports.recursiveDownload = async params => {
       }
     } // End forloop
 
+    // If the iteration is the end of the current folder structure...
     if (counter === childrens.list.entries.length) {
+      // We will check if this is end of the iteration
       let serverNodes = await remote.getNodeCount({
         account: account,
         nodeId: account.watch_node
@@ -142,7 +144,7 @@ exports.recursiveDownload = async params => {
             account: account
           });
 
-          // Delete all files/folders from the account sync path
+          // Delete all files/folders from the local sync path
           glob(
             account.sync_path + "/**/*",
             async (error, localFilePathList) => {
@@ -181,7 +183,7 @@ exports.recursiveDownload = async params => {
   } catch (error) {
     console.log(error);
 
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
   }
@@ -212,6 +214,7 @@ exports.recursiveUpload = async params => {
 
   // This function will list all files/folders/sub-folders recursively.
   glob(rootFolder, async (error, localFilePathList) => {
+    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
     let sync = await accountModel.syncStart(account.id);
 
     // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
@@ -232,8 +235,6 @@ exports.recursiveUpload = async params => {
       // CASE 1: Check if file is available on disk but missing in DB (New node was created).
       // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
       if (!recordExists) {
-        console.log("Uploading " + filePath + " since record does not exists");
-
         await remote.upload({
           account: account,
           filePath: filePath,
@@ -248,7 +249,7 @@ exports.recursiveUpload = async params => {
 
       if (
         recordExists &&
-        Math.abs(fileModifiedTime - recordExists.file_update_at) > 1
+        Math.abs(fileModifiedTime - recordExists.file_update_at) > 2
       ) {
         console.log(
           "Uploading " +
@@ -295,6 +296,9 @@ exports.recursiveDelete = async params => {
 
   // This function will list all files/folders/sub-folders recursively.
   glob(account.sync_path + "/**/*", async (error, localFilePathList) => {
+    // Start the sync
+    await accountModel.syncStart(account.id);
+
     let missingFiles = await nodeModel.getMissingFiles({
       account: account,
       fileList: localFilePathList
@@ -306,6 +310,9 @@ exports.recursiveDelete = async params => {
         filePath: missingFilePath
       });
     }
+
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
   });
 };
 
@@ -326,6 +333,9 @@ exports.deleteByPath = async params => {
   }
 
   try {
+    // Start the sync
+    await accountModel.syncStart(account.id);
+
     let records = await nodeModel.getAllByFileOrFolderPath({
       account: account,
       path: filePath
@@ -338,9 +348,14 @@ exports.deleteByPath = async params => {
         deletedNodeId: record.node_id
       });
     }
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
+
   } catch (error) {
     console.log(error);
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
   }
 };
 
@@ -385,6 +400,6 @@ _createItemOnLocal = async params => {
     }
   } catch (error) {
     console.log(error);
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };

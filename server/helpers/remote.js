@@ -6,7 +6,6 @@ const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
-const syncer = require("./syncers/ondemand");
 const _base = require("./syncers/_base");
 
 /**
@@ -40,7 +39,7 @@ exports.getNodeCount = async params => {
     let response = await request(options);
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -76,7 +75,7 @@ exports.getChildren = async params => {
     let response = await request(options);
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -104,12 +103,7 @@ exports.deleteServerNode = async params => {
   };
 
   try {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.syncStart(account.id);
     let response = await request(options);
-
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
 
     if (response.statusCode == 204) {
       // Delete the record from the DB
@@ -119,7 +113,7 @@ exports.deleteServerNode = async params => {
       });
 
       // Add an event log
-      eventLogModel.add(
+      await eventLogModel.add(
         account.id,
         "DELETE_NODE",
         `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
@@ -136,11 +130,8 @@ exports.deleteServerNode = async params => {
         nodeId: deletedNodeId
       });
     } else {
-      errorLogModel.add(account.id, error);
+      await errorLogModel.add(account.id, error);
     }
-
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
   }
 };
 
@@ -171,21 +162,18 @@ exports.download = async params => {
   };
 
   try {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.syncStart(account.id);
-
     console.log("Downloading", destinationPath);
 
     await request(options).pipe(
       fs.createWriteStream(destinationPath)
     );
 
-    fs.watchFile(destinationPath, function() {
-      fs.stat(destinationPath, function(err, stats) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
-      });
-    });
+    // fs.watchFile(destinationPath, function() {
+    //   fs.stat(destinationPath, function(err, stats) {
+    //     // Set the sync completed time and also set issync flag to off
+    //     await accountModel.syncComplete(account.id);
+    //   });
+    // });
 
     // Add refrence to the nodes table
     nodeModel.add({
@@ -198,16 +186,14 @@ exports.download = async params => {
     });
 
     // Add an event log
-    eventLogModel.add(
+    await eventLogModel.add(
       account.id,
       "DOWNLOAD_FILE",
       `Downloading File: ${destinationPath} from ${account.instance_url}`
     );
     return params;
   } catch (error) {
-    errorLogModel.add(account.id, error);
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -260,15 +246,10 @@ exports.upload = async params => {
     };
 
     try {
-      // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-      accountModel.syncStart(account.id);
-
       let response = await request(options);
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
         console.log("Uploaded Folder", params.filePath);
 
         // Add a record in the db
@@ -282,7 +263,7 @@ exports.upload = async params => {
         });
 
         // Add an event log
-        eventLogModel.add(
+        await eventLogModel.add(
           account.id,
           "UPLOAD_FOLDER",
           `Uploaded Folder: ${filePath} to ${account.instance_url}`
@@ -290,13 +271,11 @@ exports.upload = async params => {
         return response.entry.id;
       }
     } catch (error) {
+      // Ignore "duplicate" status codes
       if (error.statusCode != 409) {
         // Add an error log
-        errorLogModel.add(account.id, error);
+        await errorLogModel.add(account.id, error);
       }
-
-      // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
     }
 
     return false;
@@ -329,16 +308,12 @@ exports.upload = async params => {
     };
 
     try {
-      // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-      accountModel.syncStart(account.id);
       let response = await request(options);
 
       response = JSON.parse(response.body);
       let refId = response.nodeRef.split("workspace://SpacesStore/");
 
       if (refId[1]) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
         console.log("Uploaded File", filePath);
 
         // Add a record in the db
@@ -352,7 +327,7 @@ exports.upload = async params => {
         });
 
         // Add an event log
-        eventLogModel.add(
+        await eventLogModel.add(
           account.id,
           "UPLOAD_FILE",
           `Uploaded File: ${filePath} to ${account.instance_url}`
@@ -362,9 +337,7 @@ exports.upload = async params => {
 
       return false;
     } catch (error) {
-      errorLogModel.add(account.id, error);
-      // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await errorLogModel.add(account.id, error);
     }
   }
 
