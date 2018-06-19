@@ -46,7 +46,8 @@ exports.add = async params => {
         folder_path: path.dirname(filePath),
         file_update_at: fileUpdateAt,
         is_folder: isFolder,
-        is_file: isFile
+        is_file: isFile,
+        is_deleted: 0
       })
       .into("nodes");
   } catch (error) {
