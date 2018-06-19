@@ -164,6 +164,7 @@ exports.getAllByFolderPath = async params => {
 exports.getMissingFiles = async params => {
   let account = params.account;
   let fileList = params.fileList;
+  let column = params.column || 'file_path'
 
   let missingFiles = [];
   let listCount = 0;
@@ -172,7 +173,7 @@ exports.getMissingFiles = async params => {
 
     try {
       let result = await db
-        .pluck("file_path")
+        .pluck(column)
         .whereNotIn("file_path", chunk)
         .where("account_id", account.id)
         .from("nodes");

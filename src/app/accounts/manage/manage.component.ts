@@ -37,48 +37,53 @@ export class ManageComponent implements OnInit {
     this._getAccounts();
 
     // When the app loads, lets try and sync the files from and to server.
-    this._accountService.getAccounts("sync_enabled=1").subscribe((accounts: IAccounts[]) => {
-      this.accounts = accounts;
+    this._accountService
+      .getAccounts("sync_enabled=1")
+      .subscribe((accounts: IAccounts[]) => {
+        this.accounts = accounts;
 
-      console.log( accounts );
-      
-
-      for (let account of this.accounts) {
-        // This is for the spinning loader icon
-        let index = this.showAccountLoaders.indexOf(account.id);
-        if (index == -1) {
-          this.showAccountLoaders.push(account.id);
-        }
-
-        // Fire the download api and then the upload api...
-        this._syncerService.syncDownloads(account.id).subscribe(response => {
+        for (let account of this.accounts) {
+          // This is for the spinning loader icon
           let index = this.showAccountLoaders.indexOf(account.id);
-          this.showAccountLoaders.splice(index, 1);
+          if (index == -1) {
+            this.showAccountLoaders.push(account.id);
+          }
 
-          this._syncerService.syncUploads(account.id).subscribe(response => {
-            this._getAccounts();
-          });
-        }); // End download subscribe
+          // Fire the Delete, then Download then upload api...
+          this._syncerService.syncDelete(account.id).subscribe(response => {
+            let index = this.showAccountLoaders.indexOf(account.id);
+            this.showAccountLoaders.splice(index, 1);
 
-        console.log("Firing:", account.instance_url);
-      } // End forloop
-    });
+            this._syncerService
+              .syncDownloads(account.id)
+              .subscribe(response => {
+                this._syncerService
+                  .syncUploads(account.id)
+                  .subscribe(response => {
+                    this._getAccounts();
+                  }); // End Upload subscribe
+              }); // End Download subscribe
+          }); // End Delete
+
+          console.log("Firing:", account.instance_url);
+        } // End forloop
+      });
 
     // For every x seconds, we will make a request to the account api and check which accounts are still syncing, so that we can attach loaders for those accounts
     setInterval(() => {
-      console.log( 'setInterval...' );
-      
+      console.log("setInterval...");
+
       this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
         for (let account of accounts) {
-          console.log( 'account.sync_in_progress', account.sync_in_progress );
-          
-            // This is for the spinning loader icon
-            let index = this.showAccountLoaders.indexOf(account.id);
-            if (index == -1 && account.sync_in_progress == 1) {
-              this.showAccountLoaders.push(account.id);
-            } else if (account.sync_in_progress == 0) {
-              this.showAccountLoaders.splice(index, 1);
-            }
+          console.log("account.sync_in_progress", account.sync_in_progress);
+
+          // This is for the spinning loader icon
+          let index = this.showAccountLoaders.indexOf(account.id);
+          if (index == -1 && account.sync_in_progress == 1) {
+            this.showAccountLoaders.push(account.id);
+          } else if (account.sync_in_progress == 0) {
+            this.showAccountLoaders.splice(index, 1);
+          }
         } // End forloop
       });
     }, 10000);

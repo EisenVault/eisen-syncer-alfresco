@@ -6,6 +6,7 @@ const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
+const machineID = require("node-machine-id");
 const app = express();
 
 // Middlewares
@@ -38,21 +39,23 @@ watcher.watchAll();
 // Listen to event notifications from the socket service
 let socket = io.connect(process.env.SERVICE_URL);
 
-socket.on('notification', async data => {
-  data = JSON.parse(data);  
+socket.on("sync-notification", async data => {
+  data = typeof data === "object" ? data : JSON.parse(data);
 
-  if(data.action.toUpperCase() == 'CREATE') {   
+  if (data.machine_id == machineID.machineIdSync()) {
+    return;
+  }
+
+  if (data.action.toUpperCase() == "CREATE") {
     await onevent.create(data);
   }
-  if(data.action.toUpperCase() == 'UPDATE') {   
+  if (data.action.toUpperCase() == "UPDATE") {
     await onevent.update(data);
   }
-  if(data.action.toUpperCase() == 'DELETE') {   
+  if (data.action.toUpperCase() == "DELETE") {
     await onevent.delete(data);
   }
 });
-
-
 
 try {
   app.listen(process.env.SERVER_PORT, () => {

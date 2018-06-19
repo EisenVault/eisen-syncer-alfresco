@@ -35,7 +35,7 @@ exports.recursiveDownload = async params => {
 
   try {
     // Start the sync
-    let sync = await accountModel.syncStart(account.id);
+    await accountModel.syncStart(account.id);
 
     // Stop watcher for a while
     watcher.unwatchAll();
@@ -94,15 +94,12 @@ exports.recursiveDownload = async params => {
         // Case 2: File present in local
         if (record) {
           // Convert the time to UTC and then get the unixtimestamp.
-          let nodeModifiedDate = Math.round(
-            Date.parse(new Date(String(child.entry.modifiedAt)).toUTCString()) /
-              1000
-          );
+          let nodeModifiedDate = _base.convertToUTC(child.entry.modifiedAt);
 
           let fileModifiedDate = record.file_update_at;
 
-          // If the difference between server and client file is greater than x secs, download the remote file (since server node is newer version)
-          if (nodeModifiedDate - fileModifiedDate > 2) {
+          // If the server file time is greater, download the remote file (since server node is newer version)
+          if (nodeModifiedDate > fileModifiedDate) {
             await _createItemOnLocal({
               child: child,
               currentDirectory: currentDirectory,
@@ -139,7 +136,7 @@ exports.recursiveDownload = async params => {
         console.log("Finished downloading");
 
         if (_.uniq(this.recursiveDownload.serverFileList).length == 0) {
-          // If there are no nodes available in the server, we will remove all files on the local
+          // If there are no nodes available in the server, we will remove all files on the local and all db records
           await nodeModel.deleteAll({
             account: account
           });
@@ -215,7 +212,7 @@ exports.recursiveUpload = async params => {
   // This function will list all files/folders/sub-folders recursively.
   glob(rootFolder, async (error, localFilePathList) => {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    let sync = await accountModel.syncStart(account.id);
+    await accountModel.syncStart(account.id);
 
     // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
     if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
@@ -238,7 +235,8 @@ exports.recursiveUpload = async params => {
         await remote.upload({
           account: account,
           filePath: filePath,
-          rootNodeId: rootNodeId
+          rootNodeId: rootNodeId,
+          broadcast: true
         });
         continue;
       }
@@ -247,10 +245,7 @@ exports.recursiveUpload = async params => {
       // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
       fileModifiedTime = _base.getFileModifiedTime(filePath);
 
-      if (
-        recordExists &&
-        Math.abs(fileModifiedTime - recordExists.file_update_at) > 2
-      ) {
+      if (recordExists && fileModifiedTime != recordExists.file_update_at) {
         console.log(
           "Uploading " +
             filePath +
@@ -301,13 +296,16 @@ exports.recursiveDelete = async params => {
 
     let missingFiles = await nodeModel.getMissingFiles({
       account: account,
-      fileList: localFilePathList
+      fileList: localFilePathList,
+      column: "node_id"
     });
 
-    for (const missingFilePath of missingFiles) {
-      await this.deleteByPath({
+    for (const missingNode of missingFiles) {
+      // Delete the node from the server, once thats done it will delete the record from the DB as well
+      await remote.deleteServerNode({
         account: account,
-        filePath: missingFilePath
+        deletedNodeId: missingNode,
+        broadcast: true
       });
     }
 
@@ -345,12 +343,12 @@ exports.deleteByPath = async params => {
       // Delete the node from the server, once thats done it will delete the record from the DB as well
       await remote.deleteServerNode({
         account: account,
-        deletedNodeId: record.node_id
+        deletedNodeId: record.node_id,
+        broadcast: true
       });
     }
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
-
   } catch (error) {
     console.log(error);
     await errorLogModel.add(account.id, error);

@@ -17,12 +17,12 @@
 
             let socket = io.connect('http://localhost:3002');
 
-            socket.on('notification', data => {
+            socket.on('sync-notification', data => {
                 console.log(data);
             });
 
             button.addEventListener('click', () => {
-                socket.emit('notification', message.value);
+                socket.emit('sync-notification', message.value);
             });
 
         });
