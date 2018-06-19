@@ -50,7 +50,7 @@ exports.add = async params => {
       })
       .into("nodes");
   } catch (error) {
-    await  errorLogModel.add(account, error);
+    await errorLogModel.add(account, error);
   }
 };
 
@@ -63,6 +63,7 @@ exports.getOneByFilePath = async params => {
       .select("*")
       .first()
       .from("nodes")
+      .where("is_deleted", 0)
       .where("account_id", account.id)
       .where("file_path", filePath);
   } catch (error) {
@@ -80,6 +81,7 @@ exports.getOneByNodeId = async params => {
       .first()
       .from("nodes")
       .where("account_id", account.id)
+      .where("is_deleted", 0)
       .where("node_id", nodeId);
   } catch (error) {
     return await errorLogModel.add(account, error);
@@ -95,6 +97,7 @@ exports.getAllByFileOrFolderPath = async params => {
       .select("*")
       .from("nodes")
       .where("account_id", account.id)
+      .where("is_deleted", 0)
       .where("file_path", "LIKE", path + "%")
       .orWhere("folder_path", path);
   } catch (error) {
@@ -124,6 +127,7 @@ exports.getOne = async params => {
       .from("nodes")
       .where("file_update_at", "!=", fileUpdateAt)
       .where("account_id", account.id)
+      .where("is_deleted", 0)
       .where("node_id", nodeId);
   } catch (error) {
     await errorLogModel.add(account, error);
@@ -146,6 +150,7 @@ exports.getAllByFolderPath = async params => {
       .select("*")
       .from("nodes")
       .where("account_id", account.id)
+      .where("is_deleted", 0)
       .where("folder_path", folderPath);
   } catch (error) {
     await errorLogModel.add(account, error);
@@ -164,7 +169,7 @@ exports.getAllByFolderPath = async params => {
 exports.getMissingFiles = async params => {
   let account = params.account;
   let fileList = params.fileList;
-  let column = params.column || 'file_path'
+  let column = params.column || "file_path";
 
   let missingFiles = [];
   let listCount = 0;
@@ -176,6 +181,7 @@ exports.getMissingFiles = async params => {
         .pluck(column)
         .whereNotIn("file_path", chunk)
         .where("account_id", account.id)
+        .where("is_deleted", 0)
         .from("nodes");
 
       missingFiles = missingFiles.concat(result);
@@ -204,9 +210,11 @@ exports.delete = async params => {
     await db("nodes")
       .where("account_id", account.id)
       .where("node_id", nodeId)
-      .delete();
+      .update({
+        is_deleted: 1
+      });
   } catch (error) {
-    await  errorLogModel.add(account, error);
+    await errorLogModel.add(account, error);
   }
 };
 
@@ -226,9 +234,11 @@ exports.deleteByPath = async params => {
     await db("nodes")
       .where("account_id", account.id)
       .where("file_path", filePath)
-      .delete();
+      .update({
+        is_deleted: 1
+      });
   } catch (error) {
-    await  errorLogModel.add(account, error);
+    await errorLogModel.add(account, error);
   }
 };
 
@@ -241,7 +251,9 @@ exports.deleteAllByFileOrFolderPath = async params => {
       .where("account_id", account.id)
       .where("file_path", "LIKE", path + "%")
       .orWhere("folder_path", path)
-      .delete();
+      .update({
+        is_deleted: 1
+      });
   } catch (error) {
     await errorLogModel.add(account, error);
   }
@@ -260,7 +272,9 @@ exports.deleteAll = async params => {
   try {
     await db("nodes")
       .where("account_id", account.id)
-      .delete();
+      .update({
+        is_deleted: 1
+      });
   } catch (error) {
     await errorLogModel.add(account, error);
   }

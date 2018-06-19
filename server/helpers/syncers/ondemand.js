@@ -135,6 +135,9 @@ exports.recursiveDownload = async params => {
       ) {
         console.log("Finished downloading");
 
+        // TODO: Delete files from locals whose refrence is in DB
+        // The ones that does not have refrence in DB are new files that needs to be uploaded
+
         if (_.uniq(this.recursiveDownload.serverFileList).length == 0) {
           // If there are no nodes available in the server, we will remove all files on the local and all db records
           await nodeModel.deleteAll({
