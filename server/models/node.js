@@ -89,6 +89,20 @@ exports.getOneByNodeId = async params => {
   }
 };
 
+exports.getAll = async params => {
+  let account = params.account;
+
+  try {
+    return await db
+      .select("*")
+      .from("nodes")
+      .where("account_id", account.id)
+      .where("is_deleted", 0);
+  } catch (error) {
+    await errorLogModel.add(account, error);
+  }
+};
+
 exports.getAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
@@ -160,6 +174,7 @@ exports.getAllByFolderPath = async params => {
 
 /**
  * This method will return all the records that are not available in the DB.
+ * Meaning these files were deleted from the server but are present in local and hence needs to be deleted.
  *
  * @param object params
  * {

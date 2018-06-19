@@ -109,8 +109,8 @@ exports.deleteServerNode = async params => {
     let response = await request(options);
 
     if (response.statusCode == 204) {
-      console.log( 'Deleted', deletedNodeId );
-      
+      console.log("Deleted", deletedNodeId);
+
       // Find the path of the node id, so that we can broadcast it to other clients.
       let record = await nodeModel.getOneByNodeId({
         account: account,
@@ -190,16 +190,9 @@ exports.download = async params => {
   };
 
   try {
-    console.log("Downloading", destinationPath);
-
     await request(options).pipe(fs.createWriteStream(destinationPath));
 
-    // fs.watchFile(destinationPath, function() {
-    //   fs.stat(destinationPath, function(err, stats) {
-    //     // Set the sync completed time and also set issync flag to off
-    //     await accountModel.syncComplete(account.id);
-    //   });
-    // });
+    console.log("DOWNLOADED", destinationPath);
 
     // Add refrence to the nodes table
     await nodeModel.add({
