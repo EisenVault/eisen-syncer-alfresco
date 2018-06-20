@@ -6,7 +6,6 @@ const accountModel = require("../../models/account");
 const remote = require("../remote");
 const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
-const eventLogModel = require("../../models/log-event");
 const watcher = require("../watcher");
 const _base = require("./_base");
 
@@ -101,7 +100,8 @@ exports.recursiveDownload = async params => {
           // Convert the time to UTC and then get the unixtimestamp.
           let nodeModifiedDate = _base.convertToUTC(child.entry.modifiedAt);
 
-          let fileModifiedDate = record.file_update_at;
+          // let fileModifiedDate = record.file_update_at;
+          let fileModifiedDate = _base.getFileModifiedTime(record.file_path);
 
           // If the server file time is greater, download the remote file (since server node is newer version)
           if (nodeModifiedDate > fileModifiedDate) {
@@ -112,6 +112,15 @@ exports.recursiveDownload = async params => {
               sourceNodeId: sourceNodeId,
               isRecursive: false
             });
+
+            console.log(
+              "Downloading " +
+                currentDirectory +
+                " since " +
+                new Date(nodeModifiedDate * 1000).toLocaleString() +
+                " notequal " +
+                new Date(fileModifiedDate * 1000).toLocaleString()
+            );
           }
         }
       }
@@ -127,6 +136,8 @@ exports.recursiveDownload = async params => {
     } // End forloop
 
     // We will check if this is end of the iteration
+    console.log( 'cunt',this.recursiveDownload.serverNodes.node_count,  _.uniq(this.recursiveDownload.serverFileList).length );
+    
     if (
       this.recursiveDownload.serverNodes.node_count ==
       _.uniq(this.recursiveDownload.serverFileList).length
@@ -152,8 +163,12 @@ exports.recursiveDownload = async params => {
           fileList: _.uniq(this.recursiveDownload.serverFileList)
         });
 
+        console.log( 'serverFileList', _.uniq(this.recursiveDownload.serverFileList) );
+        console.log( 'missingFiles', missingFiles );
+        
+
         for (const missingFile of missingFiles) {
-          console.log("DELETING", missingFile);
+          console.log("DELETING MISSING", missingFile);
 
           // Delete the file/folder first
           fs.removeSync(missingFile);
@@ -164,7 +179,13 @@ exports.recursiveDownload = async params => {
             filePath: missingFile
           });
         }
+
+        // Reset the array
+        console.log( 'RESETTING SERVER LIST' );
+        
+        this.recursiveDownload.serverFileList = [];
       }
+      
 
       // Start watcher now
       watcher.watchAll();
@@ -203,71 +224,72 @@ exports.recursiveUpload = async params => {
     rootFolder = syncPath + "/**/*";
   }
 
+  // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+  await accountModel.syncStart(account.id);
+
   // This function will list all files/folders/sub-folders recursively.
-  glob(rootFolder, async (error, localFilePathList) => {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart(account.id);
+  let localFilePathList = glob.sync(rootFolder);
 
-    // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-    if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
-      localFilePathList.unshift(params.sync_path);
-    }
+  // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
+  if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
+    localFilePathList.unshift(params.sync_path);
+  }
 
-    let counter = 0;
-    // Iterate through each file and perform certain task
-    for (let filePath of localFilePathList) {
-      counter++;
-      // Get the DB record of the filePath
-      let recordExists = await nodeModel.getOneByFilePath({
+  let counter = 0;
+  // Iterate through each file and perform certain task
+  for (let filePath of localFilePathList) {
+    counter++;
+    // Get the DB record of the filePath
+    let recordExists = await nodeModel.getOneByFilePath({
+      account: account,
+      filePath: filePath
+    });
+
+    // CASE 1: Check if file is available on disk but missing in DB (New node was created).
+    // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
+    if (!recordExists) {
+      await remote.upload({
         account: account,
-        filePath: filePath
+        filePath: filePath,
+        rootNodeId: rootNodeId,
+        broadcast: true
       });
-
-      // CASE 1: Check if file is available on disk but missing in DB (New node was created).
-      // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
-      if (!recordExists) {
-        await remote.upload({
-          account: account,
-          filePath: filePath,
-          rootNodeId: rootNodeId,
-          broadcast: true
-        });
-        continue;
-      }
-
-      // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
-      // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
-      fileModifiedTime = _base.getFileModifiedTime(filePath);
-
-      if (recordExists && fileModifiedTime != recordExists.file_update_at) {
-        console.log(
-          "Uploading " +
-            filePath +
-            " since " +
-            recordExists.file_update_at +
-            " notequal " +
-            fileModifiedTime
-        );
-
-        await remote.upload({
-          account: account,
-          filePath: filePath,
-          rootNodeId: rootNodeId
-        });
-        continue;
-      }
-    } // Filelist iteration end
-
-    // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
-    // Delete node from server and once response received, delete record from DB.
-    if (counter === localFilePathList.length) {
-      await this.recursiveDelete({
-        account: account
-      });
-      // Set the sync completed time and also set issync flag to off
-      await accountModel.syncComplete(account.id);
+      continue;
     }
-  });
+
+    // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
+    // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
+    fileModifiedTime = _base.getFileModifiedTime(filePath);
+
+    if (recordExists && Math.abs(fileModifiedTime - recordExists.file_update_at)  > 2 ) {
+      console.log(
+        "Uploading local changes of " +
+          filePath +
+          " since " +
+          new Date(recordExists.file_update_at * 1000).toLocaleString() +
+          " notequal " +
+          new Date(fileModifiedTime * 1000).toLocaleString()
+      );
+
+      // Upload the local changes to the server.
+      await remote.upload({
+        account: account,
+        filePath: filePath,
+        rootNodeId: rootNodeId
+      });
+      continue;
+    }
+  } // Filelist iteration end
+
+  // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
+  // Delete node from server and once response received, delete record from DB.
+  if (counter === localFilePathList.length) {
+    await this.recursiveDelete({
+      account: account
+    });
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
+  }
 };
 
 /**
@@ -283,29 +305,29 @@ exports.recursiveDelete = async params => {
     return;
   }
 
+  // Start the sync
+  await accountModel.syncStart(account.id);
+
   // This function will list all files/folders/sub-folders recursively.
-  glob(account.sync_path + "/**/*", async (error, localFilePathList) => {
-    // Start the sync
-    await accountModel.syncStart(account.id);
+  let localFilePathList = glob.sync(account.sync_path + "/**/*");
 
-    let missingFiles = await nodeModel.getMissingFiles({
-      account: account,
-      fileList: localFilePathList,
-      column: "node_id"
-    });
-
-    for (const missingNode of missingFiles) {
-      // Delete the node from the server, once thats done it will delete the record from the DB as well
-      await remote.deleteServerNode({
-        account: account,
-        deletedNodeId: missingNode,
-        broadcast: true
-      });
-    }
-
-    // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+  let missingFiles = await nodeModel.getMissingFiles({
+    account: account,
+    fileList: localFilePathList,
+    column: "node_id"
   });
+
+  for (const missingNode of missingFiles) {
+    // Delete the node from the server, once thats done it will delete the record from the DB as well
+    await remote.deleteServerNode({
+      account: account,
+      deletedNodeId: missingNode,
+      broadcast: true
+    });
+  }
+
+  // Set the sync completed time and also set issync flag to off
+  await accountModel.syncComplete(account.id);
 };
 
 /**

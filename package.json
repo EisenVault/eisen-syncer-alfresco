@@ -58,6 +58,7 @@
     "node-machine-id": "^1.1.10",
     "request-promise-native": "^1.0.5",
     "rxjs": "^6.0.0",
+    "simple-node-logger": "^0.93.37",
     "socket.io-client": "^2.1.1",
     "sqlite3": "^4.0.0",
     "validator": "^10.1.0",

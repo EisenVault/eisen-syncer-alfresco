@@ -1,3 +1,4 @@
+const logger = require("simple-node-logger");
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
 
@@ -11,7 +12,7 @@ exports.getAll = async () => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .from("log_errors")
     .innerJoin("accounts", "log_errors.account_id", "accounts.id")
@@ -28,7 +29,7 @@ exports.getAllByAccountId = async accountId => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .from("log_errors")
     .innerJoin("accounts", "log_errors.account_id", "accounts.id")
@@ -46,7 +47,7 @@ exports.getOne = async id => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .first()
     .from("log_errors")
@@ -61,22 +62,31 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, description) => {
-  let eventId = await db
-    .insert({
-      account_id: accountId,
-      description: String(description),
-      created_at: new Date().getTime()
-    })
-    .into("log_errors");
+  const log = logger.createSimpleFileLogger(
+    path.join(__dirname.replace("models", "logs"), "error.log")
+  );
+  try {
+    let eventId = await db
+      .insert({
+        account_id: accountId,
+        description: String(description),
+        created_at: new Date().getTime()
+      })
+      .into("log_errors");
 
-  // Delete old records
-  let count = await this.getCount();
-  if (count.total > MIN_THRESHOLD) {
-    let removableId = eventId[0] - MIN_THRESHOLD;
-    exports.deleteAllLessThan(removableId);
+    // Delete old records
+    let count = await this.getCount();
+    if (count.total > MIN_THRESHOLD) {
+      let removableId = eventId[0] - MIN_THRESHOLD;
+      exports.deleteAllLessThan(removableId);
+    }
+
+    log.info(description);
+
+    return eventId;
+  } catch (error) {
+    log.info(String(error));
   }
-
-  return eventId;
 };
 
 exports.deleteAllLessThan = async id => {

@@ -51,7 +51,7 @@ app.on("ready", () => {
             pathname: path.join(__dirname + "/dist/index.html"),
             protocol: "file:",
             slashes: true,
-            hash: "/"
+            hash: "/account-new"
           })
         );
         mainWindow.show();
