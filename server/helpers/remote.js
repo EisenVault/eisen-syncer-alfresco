@@ -8,6 +8,7 @@ const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
+const env = require('../config/env');
 
 /**
  *
@@ -23,7 +24,7 @@ exports.getNodeCount = async params => {
 
   if (!account) {
     throw new Error("Account not found");
-  }
+  } 
 
   var options = {
     method: "GET",
@@ -91,7 +92,7 @@ exports.deleteServerNode = async params => {
   let account = params.account;
   let deletedNodeId = params.deletedNodeId;
   let broadcast = params.broadcast || false;
-  let socket = io.connect(process.env.SERVICE_URL);
+  let socket = io.connect(env.SERVICE_URL);
 
   var options = {
     resolveWithFullResponse: true,
@@ -237,7 +238,7 @@ exports.upload = async params => {
     throw new Error("Account not found");
   }
 
-  let socket = io.connect(process.env.SERVICE_URL);
+  let socket = io.connect(env.SERVICE_URL);
 
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {

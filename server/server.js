@@ -1,12 +1,12 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-require("dotenv").config();
 const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
 const machineID = require("node-machine-id");
+const env = require("./config/env");
 const app = express();
 
 // Middlewares
@@ -37,7 +37,7 @@ app.use("/nodes", require("./routes/node"));
 watcher.watchAll();
 
 // Listen to event notifications from the socket service
-let socket = io.connect(process.env.SERVICE_URL);
+let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
   data = typeof data === "object" ? data : JSON.parse(data);
@@ -58,9 +58,9 @@ socket.on("sync-notification", async data => {
 });
 
 try {
-  app.listen(process.env.SERVER_PORT, () => {
-    console.log("server running on " + process.env.SERVER_PORT);
+  app.listen(env.SERVER_PORT, () => {
+    console.log("server running on " + env.SERVER_PORT);
   });
 } catch (error) {
-  console.log(`Port ${process.env.SERVER_PORT} is already in use`);
+  console.log(`Port ${env.SERVER_PORT} is already in use`);
 }

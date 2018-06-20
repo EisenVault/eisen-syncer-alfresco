@@ -31,6 +31,11 @@ exports.recursiveDownload = async params => {
   // Declare a container that will hold all node ids that are fetched from the server
   if (typeof this.recursiveDownload.serverFileList == "undefined") {
     this.recursiveDownload.serverFileList = [];
+
+    this.recursiveDownload.serverNodes = await remote.getNodeCount({
+      account: account,
+      nodeId: account.watch_node
+    });
   }
 
   try {
@@ -121,62 +126,50 @@ exports.recursiveDownload = async params => {
       }
     } // End forloop
 
-    // If the iteration is the end of the current folder structure...
-    if (counter === childrens.list.entries.length) {
-      // We will check if this is end of the iteration
-      let serverNodes = await remote.getNodeCount({
-        account: account,
-        nodeId: account.watch_node
-      });
+    // We will check if this is end of the iteration
+    if (
+      this.recursiveDownload.serverNodes.node_count ==
+      _.uniq(this.recursiveDownload.serverFileList).length
+    ) {
+      if (_.uniq(this.recursiveDownload.serverFileList).length == 0) {
+        // If there are no nodes available in the server, we will remove all files on the local and all db records
+        let allFiles = await nodeModel.getAll({
+          account: account
+        });
 
-      if (
-        serverNodes.node_count ==
-        _.uniq(this.recursiveDownload.serverFileList).length
-      ) {
-        console.log("Finished downloading");
-
-        if (_.uniq(this.recursiveDownload.serverFileList).length == 0) {
-
-          // If there are no nodes available in the server, we will remove all files on the local and all db records
-          let allFiles = await nodeModel.getAll({
-            account: account
-          });
-
-          // Iterate through all the files in the DB that are NOT deleted, and delete each one of them
-          for (let record of allFiles) {
-            fs.removeSync(record.file_path);
-          }
-
-          await nodeModel.deleteAll({
-            account: account
-          });
-
-        } else {
-          // For every missing nodes on the server, we will remove from the local as well.
-          missingFiles = await nodeModel.getMissingFiles({
-            account: account,
-            fileList: _.uniq(this.recursiveDownload.serverFileList)
-          });
-
-          for (const missingFile of missingFiles) {
-            console.log("DELETING", missingFile);
-
-            // Delete the file/folder first
-            fs.removeSync(missingFile);
-
-            // Then remove the entry from the DB
-            await nodeModel.deleteByPath({
-              account: account,
-              filePath: missingFile
-            });
-          }
+        // Iterate through all the files in the DB that are NOT deleted, and delete each one of them
+        for (let record of allFiles) {
+          fs.removeSync(record.file_path);
         }
 
-        // Start watcher now
-        watcher.watchAll();
-        // Set the sync completed time and also set issync flag to off
-        await accountModel.syncComplete(account.id);
+        await nodeModel.deleteAll({
+          account: account
+        });
+      } else {
+        // For every missing nodes on the server, we will remove from the local as well.
+        missingFiles = await nodeModel.getMissingFiles({
+          account: account,
+          fileList: _.uniq(this.recursiveDownload.serverFileList)
+        });
+
+        for (const missingFile of missingFiles) {
+          console.log("DELETING", missingFile);
+
+          // Delete the file/folder first
+          fs.removeSync(missingFile);
+
+          // Then remove the entry from the DB
+          await nodeModel.deleteByPath({
+            account: account,
+            filePath: missingFile
+          });
+        }
       }
+
+      // Start watcher now
+      watcher.watchAll();
+      // Set the sync completed time and also set issync flag to off
+      await accountModel.syncComplete(account.id);
     }
   } catch (error) {
     console.log(error);
