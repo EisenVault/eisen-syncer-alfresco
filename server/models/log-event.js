@@ -1,3 +1,5 @@
+const log = require("electron-log");
+const path = require("path");
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
 
@@ -8,7 +10,7 @@ exports.getAll = async () => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .from("log_events")
     .innerJoin("accounts", "log_events.account_id", "accounts.id")
@@ -22,7 +24,7 @@ exports.getAllByAccountId = async accountId => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .from("log_events")
     .innerJoin("accounts", "log_events.account_id", "accounts.id")
@@ -37,7 +39,7 @@ exports.getOne = async id => {
       "accounts.instance_url",
       "accounts.username",
       "accounts.sync_path",
-      "accounts.sync_enabled",
+      "accounts.sync_enabled"
     )
     .first()
     .from("log_events")
@@ -67,6 +69,8 @@ exports.add = async (accountId, type, description) => {
     let removableId = eventId[0] - MIN_THRESHOLD;
     this.deleteAllLessThan(removableId);
   }
+
+  log.info(description);
 
   return eventId;
 };

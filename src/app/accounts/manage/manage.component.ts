@@ -4,6 +4,18 @@ import { Router } from "@angular/router";
 import { SyncerService } from "../../services/syncer.service";
 import { ElectronService } from "ngx-electron";
 
+interface IAccounts {
+  id: number;
+  instance_url: string;
+  username: string;
+  watch_node: string;
+  sync_path: string;
+  sync_enabled: number;
+  sync_frequency: number;
+  sync_in_progress: number;
+  last_synced_at: number;
+}
+
 @Component({
   selector: "app-manage",
   templateUrl: "./manage.component.html",
@@ -24,46 +36,53 @@ export class ManageComponent implements OnInit {
     // Load all accounts
     this._getAccounts();
 
-    // Refresh the account data every 10 seconds to see if any sync is still in progress
-    setInterval(() => {
-      this._accountService.getAccounts().subscribe(accounts => {
+    // When the app loads, lets try and sync the files from and to server.
+    this._accountService
+      .getAccounts("sync_enabled=1")
+      .subscribe((accounts: IAccounts[]) => {
         this.accounts = accounts;
 
         for (let account of this.accounts) {
-          let lastSyncInMinutes = this.differenceInMinutes(
-            account.last_synced_at
-          );
-          console.log("lastSyncInMinutes", lastSyncInMinutes);
+          // This is for the spinning loader icon
+          let index = this.showAccountLoaders.indexOf(account.id);
+          if (index == -1) {
+            this.showAccountLoaders.push(account.id);
+          }
 
-          if (
-            account.sync_enabled == 1 &&
-            account.sync_in_progress == 0 &&
-            lastSyncInMinutes >= account.sync_frequency
-          ) {
+          // Fire the Delete, then Download then upload api...
+          this._syncerService.syncDelete(account.id).subscribe(response => {
             let index = this.showAccountLoaders.indexOf(account.id);
-            if (index == -1) {
-              this.showAccountLoaders.push(account.id);
-            }
+            this.showAccountLoaders.splice(index, 1);
 
-            // Fire the download api and then the upload api...
             this._syncerService
               .syncDownloads(account.id)
               .subscribe(response => {
-                console.log("rseponse after download complete", response);
-
-                let index = this.showAccountLoaders.indexOf(account.id);
-                this.showAccountLoaders.splice(index, 1);
-
                 this._syncerService
                   .syncUploads(account.id)
                   .subscribe(response => {
                     this._getAccounts();
+                  }); // End Upload subscribe
+              }); // End Download subscribe
+          }); // End Delete
 
-                    console.log("rseponse after upload complete", response);
-                  });
-              }); // End download subscribe
+          console.log("Firing:", account.instance_url);
+        } // End forloop
+      });
 
-            console.log("Firing:", account.instance_url);
+    // For every x seconds, we will make a request to the account api and check which accounts are still syncing, so that we can attach loaders for those accounts
+    setInterval(() => {
+      console.log("setInterval...");
+
+      this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
+        for (let account of accounts) {
+          console.log("account.sync_in_progress", account.sync_in_progress);
+
+          // This is for the spinning loader icon
+          let index = this.showAccountLoaders.indexOf(account.id);
+          if (index == -1 && account.sync_in_progress == 1) {
+            this.showAccountLoaders.push(account.id);
+          } else if (account.sync_in_progress == 0) {
+            this.showAccountLoaders.splice(index, 1);
           }
         } // End forloop
       });
@@ -107,10 +126,5 @@ export class ManageComponent implements OnInit {
         .deleteAccount(accountId)
         .subscribe(response => this._getAccounts());
     }
-  }
-
-  differenceInMinutes(time) {
-    let now = Date.now();
-    return Math.round((now - time) / 1000 / 60);
   }
 }

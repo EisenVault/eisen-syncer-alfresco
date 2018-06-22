@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <title>Notification Simulator</title>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            let message = document.getElementById('message');
+            let action = document.getElementById('action');
+            let button = document.getElementById('btn');
+
+            let socket = io.connect('http://localhost:3002');
+
+            socket.on('notification', data => {
+                console.log(data);
+            });
+
+            button.addEventListener('click', () => {
+                socket.emit('notification', message.value);
+            });
+
+        });
+
+    </script>
+</head>
+
+<body>
+
+    <label for="message">
+            JSON:
+    </label>
+    <BR>
+
+        <textarea name="" id="message" cols="100" rows="20">
+{
+    "instance_url" : "https://www.edms.cf",
+
+    "username" : "admin@soubhik",
+
+    "node_id" : "0594f1eb-0af4-4409-8067-666ffabcfafa",
+
+    "action" : "CREATE",
+
+    "is_file" : "false",
+
+    "is_folder" : "true",
+
+    "path" : "/Company Home/Sites/engineering/documentLibrary/hello"
+}
+        </textarea>
+    <BR>
+    <BR>
+    <button id="btn">Send</button>
+</body>
+
+</html>

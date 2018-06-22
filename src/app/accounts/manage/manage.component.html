@@ -48,8 +48,8 @@
               <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
             </td>
             <td>
-              <div *ngIf="isLoading(account) || account.sync_in_progress == 1; else synccomplete">
-                <img src="/assets/imgs/spinner.gif" alt="">
+              <div *ngIf="isLoading(account); else synccomplete">
+                <img src="./assets/imgs/spinner.gif" alt="">
               </div>
               <ng-template #synccomplete>
                 <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>

@@ -1,14 +1,14 @@
 const fs = require("fs");
 const path = require("path");
-const crypt = require("../config/crypt");
-const btoa = require("btoa");
 const request = require("request-promise-native");
-const accountModel = require("../models/account");
+const io = require("socket.io-client");
+const machineID = require("node-machine-id");
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
-const token = require("../helpers/token");
-const syncer = require("../helpers/syncer");
+const token = require("./token");
+const _base = require("./syncers/_base");
+const env = require('../config/env');
 
 /**
  *
@@ -24,7 +24,7 @@ exports.getNodeCount = async params => {
 
   if (!account) {
     throw new Error("Account not found");
-  }
+  } 
 
   var options = {
     method: "GET",
@@ -41,7 +41,7 @@ exports.getNodeCount = async params => {
     let response = await request(options);
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -77,7 +77,7 @@ exports.getChildren = async params => {
     let response = await request(options);
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -91,6 +91,8 @@ exports.getChildren = async params => {
 exports.deleteServerNode = async params => {
   let account = params.account;
   let deletedNodeId = params.deletedNodeId;
+  let broadcast = params.broadcast || false;
+  let socket = io.connect(env.SERVICE_URL);
 
   var options = {
     resolveWithFullResponse: true,
@@ -105,14 +107,34 @@ exports.deleteServerNode = async params => {
   };
 
   try {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.syncStart(account.id);
     let response = await request(options);
 
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
-
     if (response.statusCode == 204) {
+      console.log("Deleted", deletedNodeId);
+
+      // Find the path of the node id, so that we can broadcast it to other clients.
+      let record = await nodeModel.getOneByNodeId({
+        account: account,
+        nodeId: deletedNodeId
+      });
+
+      // Broadcast a notification so that other clients get notified and can download the stuff on their local
+      if (broadcast === true) {
+        socket.emit("sync-notification", {
+          machine_id: machineID.machineIdSync(),
+          instance_url: account.instance_url,
+          username: account.username,
+          node_id: deletedNodeId,
+          action: "DELETE",
+          is_file: "false",
+          is_folder: "false",
+          path: `documentLibrary/${record.file_path.replace(
+            account.sync_path + "/",
+            ""
+          )}`
+        });
+      }
+
       // Delete the record from the DB
       await nodeModel.delete({
         account: account,
@@ -120,7 +142,7 @@ exports.deleteServerNode = async params => {
       });
 
       // Add an event log
-      eventLogModel.add(
+      await eventLogModel.add(
         account.id,
         "DELETE_NODE",
         `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
@@ -137,11 +159,8 @@ exports.deleteServerNode = async params => {
         nodeId: deletedNodeId
       });
     } else {
-      errorLogModel.add(account.id, error);
+      await errorLogModel.add(account.id, error);
     }
-
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
   }
 };
 
@@ -172,43 +191,29 @@ exports.download = async params => {
   };
 
   try {
-    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    accountModel.syncStart(account.id);
+    await request(options).pipe(fs.createWriteStream(destinationPath));
 
-    console.log("Downloading", destinationPath);
-
-    let response = await request(options).pipe(
-      fs.createWriteStream(destinationPath)
-    );
-
-    fs.watchFile(destinationPath, function() {
-      fs.stat(destinationPath, function(err, stats) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
-      });
-    });
+    console.log("DOWNLOADED", destinationPath);
 
     // Add refrence to the nodes table
-    nodeModel.add({
+    await nodeModel.add({
       account: account,
       nodeId: sourceNodeId,
       filePath: destinationPath,
-      fileUpdateAt: syncer.getFileModifiedTime(destinationPath),
+      fileUpdateAt: _base.getFileModifiedTime(destinationPath),
       isFolder: false,
       isFile: true
     });
 
     // Add an event log
-    eventLogModel.add(
+    await eventLogModel.add(
       account.id,
       "DOWNLOAD_FILE",
       `Downloading File: ${destinationPath} from ${account.instance_url}`
     );
     return params;
   } catch (error) {
-    errorLogModel.add(account.id, error);
-    // Set the sync completed time and also set issync flag to off
-    accountModel.syncComplete(account.id);
+    await errorLogModel.add(account.id, error);
   }
 };
 
@@ -226,11 +231,14 @@ exports.upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
+  let broadcast = params.broadcast || false;
   let options = {};
 
   if (!account) {
     throw new Error("Account not found");
   }
+
+  let socket = io.connect(env.SERVICE_URL);
 
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
@@ -261,29 +269,40 @@ exports.upload = async params => {
     };
 
     try {
-      // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-      accountModel.syncStart(account.id);
-
       let response = await request(options);
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
         console.log("Uploaded Folder", params.filePath);
+
+        // Broadcast a notification so that other clients get notified and can download the stuff on their local
+        if (broadcast === true) {
+          socket.emit("sync-notification", {
+            machine_id: machineID.machineIdSync(),
+            instance_url: account.instance_url,
+            username: account.username,
+            node_id: response.entry.id,
+            action: "CREATE",
+            is_file: "false",
+            is_folder: "true",
+            path: relativePath
+              ? `documentLibrary/${relativePath}/${directoryName}`
+              : `documentLibrary/${directoryName}`
+          });
+        }
 
         // Add a record in the db
         await nodeModel.add({
           account: account,
           nodeId: response.entry.id,
           filePath: params.filePath,
-          fileUpdateAt: syncer.getFileModifiedTime(params.filePath),
+          fileUpdateAt: _base.getFileModifiedTime(params.filePath),
           isFolder: true,
           isFile: false
         });
 
         // Add an event log
-        eventLogModel.add(
+        await eventLogModel.add(
           account.id,
           "UPLOAD_FOLDER",
           `Uploaded Folder: ${filePath} to ${account.instance_url}`
@@ -291,13 +310,11 @@ exports.upload = async params => {
         return response.entry.id;
       }
     } catch (error) {
+      // Ignore "duplicate" status codes
       if (error.statusCode != 409) {
         // Add an error log
-        errorLogModel.add(account.id, error);
+        await errorLogModel.add(account.id, error);
       }
-
-      // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
     }
 
     return false;
@@ -330,30 +347,41 @@ exports.upload = async params => {
     };
 
     try {
-      // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-      accountModel.syncStart(account.id);
       let response = await request(options);
-
       response = JSON.parse(response.body);
       let refId = response.nodeRef.split("workspace://SpacesStore/");
 
       if (refId[1]) {
-        // Set the sync completed time and also set issync flag to off
-        accountModel.syncComplete(account.id);
         console.log("Uploaded File", filePath);
+
+        // Broadcast a notification so that other clients get notified and can download the stuff on their local
+        if (broadcast === true) {
+          socket.emit("sync-notification", {
+            machine_id: machineID.machineIdSync(),
+            instance_url: account.instance_url,
+            username: account.username,
+            node_id: refId[1],
+            action: "CREATE",
+            is_file: "true",
+            is_folder: "false",
+            path: uploadDirectory
+              ? `documentLibrary/${uploadDirectory}/${path.basename(filePath)}`
+              : `documentLibrary/${path.basename(filePath)}`
+          });
+        }
 
         // Add a record in the db
         await nodeModel.add({
           account: account,
           nodeId: refId[1],
           filePath: params.filePath,
-          fileUpdateAt: syncer.getFileModifiedTime(filePath),
+          fileUpdateAt: _base.getFileModifiedTime(filePath),
           isFolder: false,
           isFile: true
         });
 
         // Add an event log
-        eventLogModel.add(
+        await eventLogModel.add(
           account.id,
           "UPLOAD_FILE",
           `Uploaded File: ${filePath} to ${account.instance_url}`
@@ -363,9 +391,7 @@ exports.upload = async params => {
 
       return false;
     } catch (error) {
-      errorLogModel.add(account.id, error);
-      // Set the sync completed time and also set issync flag to off
-      accountModel.syncComplete(account.id);
+      await errorLogModel.add(account.id, error);
     }
   }
 

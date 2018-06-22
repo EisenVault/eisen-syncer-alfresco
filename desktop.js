@@ -41,9 +41,6 @@ app.on("ready", () => {
   // Add tray context menu
   let trayMenuItems = [
     {
-      label: "Syncing changes"
-    },
-    {
       label: "Add a remote folder",
       click() {
         mainWindow.loadURL(
@@ -51,7 +48,7 @@ app.on("ready", () => {
             pathname: path.join(__dirname + "/dist/index.html"),
             protocol: "file:",
             slashes: true,
-            hash: "/"
+            hash: "/account-new"
           })
         );
         mainWindow.show();

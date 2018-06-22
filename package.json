@@ -3,28 +3,65 @@
   "version": "0.0.0",
   "author": "Soubhik Chatterjee <soubhik.chatterjee@eisenvault.com>",
   "description": "A dropbox like desktop syncer",
+  "homepage": "https://www.eisenvault.com",
+  "repository": "https://github.com/EisenVault",
   "license": "MIT",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --open",
-    "build": "ng build",
+    "build": "ng build --prod --build-optimizer",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "el": "ng build && electron .",
+    "el": "ng build --prod --build-optimizer && electron .",
     "rebuild": "electron-rebuild -f -w sqlite3",
-    "dist-mac":"electron-builder --x64 --mac",
     "elr": "electron-rebuild -f -w sqlite3 && ng build --prod && electron .",
-    "pack":"build --dir",
-    "dist":"build -m",
-    "postinstall": "electron-builder install-app-deps",
-    "package-mac": "ng build && electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/darwin/icon.icns --prune=true --out=release-builds",
-    "package-win": "ng build && electron-packager . eisen-syncer --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win32/icon.ico --prune=true --out=release-builds --version-string.CompanyName=EisenVault --version-string.FileDescription=CE --version-string.ProductName=\"Eisen Syncer\"",
-    "package-linux": "ng build && electron-packager . eisen-syncer --overwrite --asar.unpackDir=server/database --platform=linux --arch=x64 --icon=src/assets/icons/linux/icon.png --prune=true --out=release-builds"
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist-linux": "build --linux",
+    "dist-mac": "build -m",
+    "dist-win": "build -w",
+    "postinstall": "electron-builder install-app-deps ",
+    "package-mac": "ng build --prod --build-optimizer && electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/darwin/icon.icns --prune=true --out=release-builds",
+    "package-win": "ng build --prod --build-optimizer && electron-packager . eisen-syncer --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win32/icon.ico --prune=true --out=release-builds --version-string.CompanyName=EisenVault --version-string.FileDescription=CE --version-string.ProductName=\"Eisen Syncer\"",
+    "package-linux": "ng build --prod --build-optimizer && electron-packager . eisen-syncer --overwrite  --asar=false --platform=linux --arch=x64 --icon=src/assets/icons/linux/icon.png --prune=true --out=release-builds"
   },
   "build": {
     "appId": "com.eisenvault.syncer",
-    "productName":"Desktop Syncer"
+    "productName": "Desktop Syncer",
+    "copyright": "Copyright © 2018 Argali Knowledge Services Pvt. Ltd.",
+    "asar": true,
+    "asarUnpack": "server/database",
+    "linux": {
+      "category": "Utility",
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    }
   },
   "main": "desktop.js",
   "private": true,
@@ -44,13 +81,19 @@
     "core-js": "^2.5.4",
     "cors": "^2.8.4",
     "cryptr": "^3.0.0",
+    "electron-log": "^2.2.15",
     "express": "^4.16.3",
+    "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
     "knex": "^0.14.6",
     "lodash": "^4.17.10",
+    "mkdirp": "^0.5.1",
     "ngx-electron": "^1.0.4",
+    "node-machine-id": "^1.1.10",
+    "request": "^2.87.0",
     "request-promise-native": "^1.0.5",
     "rxjs": "^6.0.0",
+    "socket.io-client": "^2.1.1",
     "sqlite3": "^4.0.0",
     "validator": "^10.1.0",
     "watch": "^1.0.2",
