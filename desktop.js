@@ -41,9 +41,6 @@ app.on("ready", () => {
   // Add tray context menu
   let trayMenuItems = [
     {
-      label: "Syncing changes"
-    },
-    {
       label: "Add a remote folder",
       click() {
         mainWindow.loadURL(

@@ -1,4 +1,4 @@
-const logger = require("simple-node-logger");
+const log = require("electron-log");
 const path = require("path");
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
@@ -54,10 +54,6 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, type, description) => {
-  const log = logger.createSimpleFileLogger(
-    path.join(__dirname.replace("models", "logs"), "event.log")
-  );
-
   let eventId = await db
     .insert({
       account_id: accountId,
