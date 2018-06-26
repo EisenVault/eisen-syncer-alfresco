@@ -4,12 +4,13 @@
 /dist
 /tmp
 /out-tsc
+release-builds/
+__installers/
+build/
 
 # dependencies
 /node_modules
 service/node_modules
-release-builds/
-build/
 
 # IDEs and editors
 /.idea
