@@ -1,1 +1,36 @@
-<router-outlet></router-outlet>
+<div class="wrapper-inner">
+    <div class="left-nav">
+        <ul>
+            <li>
+                <a title="Manage Accounts" routerLink="/account/manage">
+                    <i class="fas fa-user-cog"></i>
+                </a>
+            </li>
+            <li>
+                <a title="Add Remote Folder" routerLink="/account-new">
+                    <i class="fas fa-plus-circle"></i>
+                </a>
+            </li>
+            <li>
+                <a title="Settings" routerLink="/settings">
+                    <i class="fas fa-cogs"></i>
+                </a>
+            </li>
+            <li>
+                <a title="About EisenSync" routerLink="/about">
+                    <i class="fas fa-info-circle"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="col-right">
+        <div class="container-fluid content">
+            <router-outlet></router-outlet>
+        </div>
+        <div class="container-fluid footer">
+            <footer>
+                <img src="./assets/logos/128.png" /> Copyright © 2018 Argali Knowledge Services Pvt. Ltd.
+            </footer>
+        </div>
+    </div>
+</div>

@@ -1,68 +1,61 @@
+<h3>Which remote folder do you want to sync?
+  <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/account/manage">
+    <i class="fas fa-user-cog"></i>
+    Manage Accounts
+  </a>
+</h3>
+
+<div class="clearfix">&nbsp;</div>
+
 <div class="row">
-  <div class="col-md-3 left-nav">
-    <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
+  <div class="col-md-6">
+    <button *ngIf="showLevelUp" class="btn btn-default btn-sm" (click)="loadNodes(parentNodeId)">Level Up
+      <i class="fas fa-level-up-alt"></i>
+    </button>
   </div>
-  <div class="col-md-9 centered">
-    <h3>Which remote folder do you want to sync?
-      <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/account/manage">
-        <i class="fas fa-user-cog"></i>
-        Manage Accounts
-      </a>
-    </h3>
-
-    <div class="clearfix">&nbsp;</div>
-
-    <div class="row">
-      <div class="col-md-6">
-        <button *ngIf="showLevelUp" class="btn btn-default btn-sm" (click)="loadNodes(parentNodeId)">Level Up
-          <i class="fas fa-level-up-alt"></i>
-        </button>
-      </div>
-      <div class="col-md-6">
-        <button *ngIf="showNodes" class="btn btn-default btn-sm float-right" (click)="loadSites()">Back to Sites</button>
-      </div>
-    </div>
-
-    <hr>
-    <div class="alert alert-info" *ngIf="sites.length == 0 && nodes.length == 0">
-      <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
-    </div>
-    <div *ngIf="showSites">
-      <h6>Select a Site</h6>
-      <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
-        <a class="list-group-item list-group-item-action flex-column align-items-start">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ site.entry.title }}</h5>
-          </div>
-        </a>
-      </div>
-    </div>
-     <div *ngIf="showNodes">
-      <h6>Select a Folder</h6>
-      <div class="list-group pointer" *ngFor="let node of nodes">
-        <a class="list-group-item list-group-item-action flex-column align-items-start">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">
-              <input type="radio" name="node" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
-              <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
-            </h5>
-          </div>
-        </a>
-      </div>
-      <div class="alert alert-danger" *ngIf="nodes.length == 0">
-        No folders here...
-      </div>
-    </div>
-
-    <div class="mt-5">
-      <button type="button" class="btn btn-danger" (click)="goBack()">
-        <i class="fas fa-chevron-circle-left"></i>
-        Back to Account Settings
-      </button>
-      <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="!selectedNode">
-        <i class="fas fa-check-circle"></i>
-        Finish
-      </button>
-    </div>
+  <div class="col-md-6">
+    <button *ngIf="showNodes" class="btn btn-default btn-sm float-right" (click)="loadSites()">Back to Sites</button>
   </div>
+</div>
+
+<hr>
+<div class="alert alert-info" *ngIf="sites.length == 0 && nodes.length == 0">
+  <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
+</div>
+<div *ngIf="showSites">
+  <h6>Select a Site</h6>
+  <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
+    <a class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{ site.entry.title }}</h5>
+      </div>
+    </a>
+  </div>
+</div>
+<div *ngIf="showNodes">
+  <h6>Select a Folder</h6>
+  <div class="list-group pointer" *ngFor="let node of nodes">
+    <a class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">
+          <input type="radio" name="node" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
+          <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
+        </h5>
+      </div>
+    </a>
+  </div>
+  <div class="alert alert-danger" *ngIf="nodes.length == 0">
+    No folders here...
+  </div>
+</div>
+
+<div class="mt-5">
+  <button type="button" class="btn btn-danger" (click)="goBack()">
+    <i class="fas fa-chevron-circle-left"></i>
+    Back to Account Settings
+  </button>
+  <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="!selectedNode">
+    <i class="fas fa-check-circle"></i>
+    Finish
+  </button>
 </div>

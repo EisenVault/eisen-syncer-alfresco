@@ -1,77 +1,58 @@
-<div class="row">
-  <div class="col-md-3 left-nav">
-    <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
+<div class="d-flex">
+  <div class="mr-auto p-2">
+    <h3>
+      Manage Accounts</h3>
   </div>
-  <div class="col-md-9 centered">
+</div>
 
-    <div class="d-flex">
-      <div class="mr-auto p-2">
-        <h3>
-          Manage Accounts</h3>
-      </div>
-      <div class="p-2">
-        <a class="btn btn-outline-success" href="#" role="button" routerLink="/account-new">
-          <i class="fas fa-user-plus"></i>
-          New Account
-        </a>
-      </div>
-      <div class="p-2">
-        <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/settings">
-          <i class="fas fa-cogs"></i>
-          Manage Settings
-        </a>
-      </div>
-    </div>
-
-    <hr>
-    <div class="mt-5">
-      <div class="alert alert-success" role="alert" *ngIf="isSaved">
-        Account settings saved successfully!
-      </div>
-      <table class="table">
-        <thead class="thead-dark">
-          <tr>
-            <th scope="col">Instance URL</th>
-            <th scope="col">Username</th>
-            <th scope="col">Sync Path</th>
-            <th scope="col">Auto Sync</th>
-            <th scope="col">Last Synced</th>
-            <th scope="col">Manage</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let account of accounts">
-            <td>{{ account.instance_url }}</td>
-            <td>{{ account.username }}</td>
-            <td>{{ account.sync_path }}</td>
-            <td>
-              <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
-            </td>
-            <td>
-              <div *ngIf="isLoading(account); else synccomplete">
-                <img src="./assets/imgs/spinner.gif" alt="">
-              </div>
-              <ng-template #synccomplete>
-                <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
-                <ng-template #nosynctime>
-                  <span class="badge badge-danger">Unsynced</span>
-                </ng-template>
-              </ng-template>
-            </td>
-            <td>
-              <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account.id)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account.id)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="accounts && accounts.length < 1">
-            <td colspan="6" align="center">You have not yet added any accounts. Would you like to <a routerLink="/account-new">add one</a>?</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+<hr>
+<div class="mt-5">
+  <div class="alert alert-success" role="alert" *ngIf="isSaved">
+    Account settings saved successfully!
   </div>
+  <table class="table">
+    <thead class="thead-dark">
+      <tr>
+        <th scope="col">Instance URL</th>
+        <th scope="col">Username</th>
+        <th scope="col">Sync Path</th>
+        <th scope="col">Auto Sync</th>
+        <th scope="col">Last Synced</th>
+        <th scope="col">Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let account of accounts">
+        <td>{{ account.instance_url }}</td>
+        <td>{{ account.username }}</td>
+        <td>{{ account.sync_path }}</td>
+        <td>
+          <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
+        </td>
+        <td>
+          <div *ngIf="isLoading(account); else synccomplete">
+            <img src="./assets/imgs/spinner.gif" alt="">
+          </div>
+          <ng-template #synccomplete>
+            <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
+            <ng-template #nosynctime>
+              <span class="badge badge-danger">Unsynced</span>
+            </ng-template>
+          </ng-template>
+        </td>
+        <td>
+          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account.id)">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account.id)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+      <tr *ngIf="accounts && accounts.length < 1">
+        <td colspan="6" align="center">You have not yet added any accounts. Would you like to
+          <a routerLink="/account-new">add one</a>?</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
