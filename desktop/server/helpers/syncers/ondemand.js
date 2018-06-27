@@ -42,7 +42,7 @@ exports.recursiveDownload = async params => {
     await accountModel.syncStart(account.id);
 
     // Stop watcher for a while
-    watcher.unwatchAll();
+    // watcher.unwatchAll();
 
     // Get all the child items of the given nodeid
     let childrens = await remote.getChildren({
@@ -53,7 +53,7 @@ exports.recursiveDownload = async params => {
     // If no children are found, no point in proceeding further, so bailout!
     if (!childrens) {
       // Start watcher now
-      watcher.watchAll();
+      // watcher.watchAll();
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
       return;
@@ -136,8 +136,6 @@ exports.recursiveDownload = async params => {
     } // End forloop
 
     // We will check if this is end of the iteration
-    console.log( 'cunt',this.recursiveDownload.serverNodes.node_count,  _.uniq(this.recursiveDownload.serverFileList).length );
-    
     if (
       this.recursiveDownload.serverNodes.node_count ==
       _.uniq(this.recursiveDownload.serverFileList).length
@@ -188,7 +186,7 @@ exports.recursiveDownload = async params => {
       
 
       // Start watcher now
-      watcher.watchAll();
+      // watcher.watchAll();
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
     }

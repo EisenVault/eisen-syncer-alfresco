@@ -3,12 +3,6 @@
     <h3 *ngIf="!accountId">Add a new Account</h3>
     <h3 *ngIf="accountId > 0">Edit Account</h3>
   </div>
-  <div class="a">
-    <a class="btn btn-outline-info" href="#" role="button" routerLink="/">
-      <i class="fas fa-user-cog"></i>
-      Manage Accounts
-    </a>
-  </div>
 </div>
 
 <hr>
@@ -96,7 +90,7 @@
       </div>
     </div>
 
-    <div class="col">
+    <div class="col hide">
       <div class="form-group">
         <label for="frequency">Sync Frequency</label>
         <select class="form-control" id="frequency" [(ngModel)]="sync_frequency" name="sync_frequency">

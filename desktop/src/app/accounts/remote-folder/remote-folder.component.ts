@@ -4,6 +4,7 @@ import { SiteService } from "../../services/site.service";
 import { NodeService } from "../../services/node.service";
 import { ParentNodeService } from "../../services/parent-node.service";
 import { AccountService } from "../../services/account.service";
+import { SyncerService } from "../../services/syncer.service";
 
 @Component({
   selector: "app-remote-folder",
@@ -26,6 +27,7 @@ export class RemoteFolderComponent implements OnInit {
     private _siteService: SiteService,
     private _nodeService: NodeService,
     private _accountService: AccountService,
+    private _syncerService: SyncerService,
     private _parentNodeService: ParentNodeService
   ) {}
 
@@ -94,6 +96,10 @@ export class RemoteFolderComponent implements OnInit {
       .updateWatchNode(this.accountId, this.selectedNode)
       .subscribe(
         response => {
+          // Start syncing
+          this._syncerService.start(this.accountId);
+
+          // Move to the next screen
           this._router.navigate(["account-finalize", this.accountId]);
         },
         error => console.log(error)

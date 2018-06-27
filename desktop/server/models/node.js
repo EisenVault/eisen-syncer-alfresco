@@ -210,6 +210,24 @@ exports.getMissingFiles = async params => {
   return missingFiles;
 };
 
+
+exports.updateModifiedTime = async params => {
+  let account = params.account;
+  let filePath = params.filePath;
+  let fileUpdateAt = params.fileUpdateAt;
+
+  try {
+    return await db("nodes")
+      .update({
+        file_update_at: fileUpdateAt
+      })
+      .where("account_id", account.id)
+      .where("file_path", filePath);
+  } catch (error) {
+    return await errorLogModel.add(account, error);
+  }
+};
+
 /**
  *
  * @param object params
