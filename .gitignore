@@ -1,15 +1,15 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
 # compiled output
-/dist
-/tmp
-/out-tsc
-release-builds/
-__installers/
-build/
+/desktop/dist
+/desktop/tmp
+/desktop/out-tsc
+/desktop/release-builds/
+/desktop/__installers/
+/desktop/build/
 
 # dependencies
-/node_modules
+/desktop/node_modules
 service/node_modules
 
 # IDEs and editors
