@@ -18,7 +18,7 @@ const env = require("../config/env");
  *  nodeId: string
  * }
  */
-exports.getNodeCount = async params => {
+exports.getNodeList = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
@@ -31,7 +31,8 @@ exports.getNodeCount = async params => {
     url:
       account.instance_url +
       "/alfresco/s/com/eisenvault/totalNodesCount/" +
-      nodeId,
+      nodeId +
+      "/shownodes",
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
