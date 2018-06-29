@@ -18,7 +18,7 @@ exports.create = async params => {
     params.username
   );
 
-  if (account.sync_enabled == 0) {
+  if (!account || account.sync_enabled == 0) {
     return;
   }
 
@@ -82,7 +82,7 @@ exports.update = async params => {
     params.username
   );
 
-  if (account.sync_enabled == 0) {
+  if (!account || account.sync_enabled == 0) {
     return;
   }
 
@@ -165,7 +165,7 @@ exports.delete = async params => {
     params.username
   );
 
-  if (account.sync_enabled == 0) {
+  if (!account || account.sync_enabled == 0) {
     return;
   }
 
