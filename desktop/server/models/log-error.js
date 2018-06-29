@@ -78,11 +78,11 @@ exports.add = async (accountId, description) => {
       exports.deleteAllLessThan(removableId);
     }
 
-    log.info(description);
+    log.warn(description);
 
     return eventId;
   } catch (error) {
-    log.info(String(error));
+    log.warn(String(error));
   }
 };
 

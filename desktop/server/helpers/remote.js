@@ -8,7 +8,7 @@ const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
-const env = require('../config/env');
+const env = require("../config/env");
 
 /**
  *
@@ -24,7 +24,7 @@ exports.getNodeCount = async params => {
 
   if (!account) {
     throw new Error("Account not found");
-  } 
+  }
 
   var options = {
     method: "GET",
@@ -311,7 +311,14 @@ exports.upload = async params => {
       }
     } catch (error) {
       // Ignore "duplicate" status codes
-      if (error.statusCode != 409) {
+      if (error.statusCode == 409) {
+        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+        nodeModel.updateModifiedTime({
+          account: account,
+          filePath: filePath,
+          fileUpdateAt: _base.getFileModifiedTime(params.filePath)
+        });
+      } else {
         // Add an error log
         await errorLogModel.add(account.id, error);
       }

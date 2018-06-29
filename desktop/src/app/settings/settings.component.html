@@ -1,31 +1,19 @@
-<div class="row">
-  <div class="col-md-3 left-nav">
-    <img src="./assets/logos/white128.png" alt="EisenVault" class="img-fluid">
-  </div>
-  <div class="col-md-9 centered">
-    <h3>Edit Settings
-      <a class="btn btn-outline-info float-right" href="#" role="button" routerLink="/account/manage">
-        <i class="fas fa-user-cog"></i>
-        Manage Accounts
-      </a>
-    </h3>
-    <hr>
-    <div class="alert alert-success" role="alert" *ngIf="isSaved">
-        Settings saved successfully!
+<h3>Edit Settings</h3>
+<hr>
+<div class="alert alert-success" role="alert" *ngIf="isSaved">
+  Settings saved successfully!
+</div>
+<div class="mt-5">
+  <form>
+    <div class="form-group">
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="startup_launch" name="startup_launch" [(ngModel)]="startup_launch">
+        <label class="form-check-label" for="startup_launch">Launch on startup?</label>
+      </div>
+      <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
+        <i class="fas fa-save"></i>
+        Save
+      </button>
     </div>
-    <div class="mt-5">
-      <form>
-        <div class="form-group">
-          <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="startup_launch" name="startup_launch" [(ngModel)]="startup_launch" >
-            <label class="form-check-label" for="startup_launch">Launch on startup?</label>
-          </div>
-          <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
-            <i class="fas fa-save"></i>
-            Save
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+  </form>
 </div>

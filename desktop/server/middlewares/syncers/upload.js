@@ -5,10 +5,7 @@ const accountModel = require("../../models/account");
 module.exports = async (request, response, next) => {
   let errors = [];
 
-  if (
-    _.isNil(request.body.account_id) ||
-    !_.isNumber(request.body.account_id)
-  ) {
+  if (_.isNil(request.body.account_id)) {
     errors.push({ account_id: "Account ID is mandatory" });
   }
 

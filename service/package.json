@@ -1,7 +1,7 @@
 {
   "name": "socket-service",
   "version": "1.0.0",
-  "description": "A Socket based notification service for desktop syncer",
+  "description": "A Socket based notification service for eisensync",
   "main": "service.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

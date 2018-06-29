@@ -4,7 +4,7 @@
 /desktop/dist
 /desktop/tmp
 /desktop/out-tsc
-/desktop/release-builds/
+/desktop/__release-builds/
 /desktop/__installers/
 /desktop/build/
 

@@ -8,6 +8,24 @@ import { environment } from "../../environments/environment";
 export class SyncerService {
   constructor(private _httpClient: HttpClient) {}
 
+  start(accountId: number) {
+
+    // Fire the Delete, then Download then upload api...
+    return this.syncDelete(accountId).subscribe(response => {
+
+      this.syncDownloads(accountId)
+        .subscribe(response => {
+          this.syncUploads(accountId)
+            .subscribe(response => {
+              
+              return true;
+              
+            }); // End Upload subscribe
+        }); // End Download subscribe
+    }); // End Delete
+
+  }
+
   syncDelete(accountId: number){
     return this._httpClient.delete(environment.apiUrl + "/syncer/" + accountId);
   }

@@ -32,7 +32,7 @@ app.on("ready", () => {
     width: 1024,
     height: 650,
     title: "Eisen Syncer - Syncing files made simple",
-    icon: path.join(__dirname, "src/assets/logos/rounded.png")
+    icon: path.join(__dirname, "src/assets/logos/256.png")
   });
 
   // Load system tray

@@ -12,21 +12,66 @@ $btn-default-color: #4c5157;
 $btn-bg: #d73953;
 $box-shadow-color: #888888;
 $input-prepend-bg: #e9ebee;
+$footer-color: #888888;
 
 body {
   background-color: $body-bg;
 }
 
+.wrapper-inner {
+  display: flex;
+  flex-direction: row;
+}
+
 .left-nav {
   background-color: $nav-bg;
   height: 100vh;
+  width: 3vw;
+  min-width: 4em;
 
-  img {
-    position: relative;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
+  ul {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    margin-top: 1em;
+    font-size: 2rem;
+    padding: 0;
+    width: 100%;
+    align-items: center;
+
+    li {
+      margin: 0;
+      padding: 0;
+      margin-bottom: 2rem;
+
+      a {
+        color: #ffffff;
+      }
+    }
+  }
+}
+
+.col-right {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .content {
+    flex: 1 0 auto;
+  }
+
+  .footer {
+    align-items: baseline;
+    footer {
+      color: $footer-color;
+      font-size: 0.75em;
+      text-align: center;
+      margin-top: 3rem;
+
+      img {
+        width: 2em;
+      }
+    }
   }
 }
 
