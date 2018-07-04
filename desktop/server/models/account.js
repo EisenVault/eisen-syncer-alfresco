@@ -71,6 +71,15 @@ exports.findByInstance = async (instance_url, username) => {
     .where("username", username);
 };
 
+exports.findByEnabledSyncInstance = async instance_url => {
+  return await db
+    .select("*")
+    .first()
+    .from("accounts")
+    .where("instance_url", instance_url)
+    .where("sync_enabled", 1);
+};
+
 exports.addAccount = async request => {
   return await db
     .insert({

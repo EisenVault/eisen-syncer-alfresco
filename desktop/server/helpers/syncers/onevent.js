@@ -13,12 +13,9 @@ const _base = require("./_base");
 
 exports.create = async params => {
   let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByInstance(
-    instance_url,
-    params.username
-  );
+  let account = await accountModel.findByEnabledSyncInstance(instance_url);
 
-  if (!account || account.sync_enabled == 0) {
+  if (!account) {
     return;
   }
 
@@ -77,12 +74,9 @@ exports.create = async params => {
 // Update the file
 exports.update = async params => {
   let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByInstance(
-    instance_url,
-    params.username
-  );
+  let account = await accountModel.findByEnabledSyncInstance(instance_url);
 
-  if (!account || account.sync_enabled == 0) {
+  if (!account) {
     return;
   }
 
@@ -160,19 +154,27 @@ exports.update = async params => {
 
 exports.delete = async params => {
   let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByInstance(
-    instance_url,
-    params.username
-  );
+  let account = await accountModel.findByEnabledSyncInstance(instance_url);
 
-  if (!account || account.sync_enabled == 0) {
+  if (!account) {
     return;
   }
 
-  let path = _getPath(account, params.path);
-
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
+
+  let record = await nodeModel.getOneByNodeId({
+    account: account,
+    nodeId: params.node_id
+  });
+
+  if (!record) {
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
+    return;
+  }
+
+  let path = _getPath(account, record.file_path);
 
   if (account.sync_path != path) {
     fs.removeSync(path);
@@ -180,9 +182,9 @@ exports.delete = async params => {
 
   try {
     // Then remove the entry from the DB
-    await nodeModel.deleteAllByFileOrFolderPath({
+    await nodeModel.delete({
       account: account,
-      path: path
+      nodeId: path
     });
 
     // Set the sync completed time and also set issync flag to off

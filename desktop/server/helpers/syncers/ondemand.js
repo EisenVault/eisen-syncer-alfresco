@@ -42,7 +42,7 @@ exports.recursiveDownload = async params => {
         nodeId: node.id
       });
 
-      let currentPath = node.path_name.split('documentLibrary/')[1];
+      let currentPath = destinationPath + '/' + node.path_name.split('documentLibrary/')[1];
 
       // Case 1: Check If the remote node is NOT present on local
       if (!fs.existsSync(currentPath)) {
@@ -74,7 +74,7 @@ exports.recursiveDownload = async params => {
           // let fileModifiedDate = record.file_update_at;
           let fileModifiedDate = _base.getFileLatestTime(record);
 
-          console.log( 'nodeModifiedDate,fileModifiedDate', nodeModifiedDate, fileModifiedDate );
+          console.log( 'nodeModifiedDate,fileModifiedDate', nodeModifiedDate, node.modified_at, fileModifiedDate );
           
           // If the server file time is greater, download the remote file (since server node is newer version)
           if (nodeModifiedDate > fileModifiedDate) {
@@ -145,14 +145,14 @@ exports.recursiveUpload = async params => {
   for (let filePath of localFilePathList) {
     counter++;
     // Get the DB record of the filePath
-    let recordExists = await nodeModel.getOneByFilePath({
+    let record = await nodeModel.getOneByFilePath({
       account: account,
       filePath: filePath
     });
 
     // CASE 1: Check if file is available on disk but missing in DB (New node was created).
     // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
-    if (!recordExists) {
+    if (!record) {
       await remote.upload({
         account: account,
         filePath: filePath,
@@ -167,14 +167,14 @@ exports.recursiveUpload = async params => {
     fileModifiedTime = _base.getFileModifiedTime(filePath);
 
     if (
-      recordExists &&
-      Math.abs(fileModifiedTime - recordExists.file_update_at) > 2
+      record &&
+      Math.abs(fileModifiedTime - record.file_update_at) >= 2
     ) {
       console.log(
         "Uploading local changes of " +
           filePath +
           " since " +
-          new Date(recordExists.file_update_at * 1000).toLocaleString() +
+          new Date(record.file_update_at * 1000).toLocaleString() +
           " notequal " +
           new Date(fileModifiedTime * 1000).toLocaleString()
       );
