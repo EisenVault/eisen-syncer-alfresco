@@ -281,7 +281,6 @@ exports.upload = async params => {
           socket.emit("sync-notification", {
             machine_id: machineID.machineIdSync(),
             instance_url: account.instance_url,
-            username: account.username,
             node_id: response.entry.id,
             action: "CREATE",
             is_file: "false",

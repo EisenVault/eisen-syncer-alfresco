@@ -1,13 +1,11 @@
 const fs = require("fs-extra");
 const path = require("path");
-const _ = require("lodash");
 const mkdirp = require("mkdirp");
 
 const accountModel = require("../../models/account");
 const remote = require("../remote");
 const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
-const eventLogModel = require("../../models/log-event");
 const watcher = require("../watcher");
 const _base = require("./_base");
 
