@@ -31,10 +31,26 @@ exports.recursiveDownload = async params => {
     // Start the sync
     await accountModel.syncStart(account.id);
 
-    let response = await remote.getNodeList({
+    // let response = await remote.getNodeList({
+    //   account: account,
+    //   nodeId: sourceNodeId
+    // });
+
+    let response = await _downloadChunks({
       account: account,
-      nodeId: sourceNodeId
+      nodeId: sourceNodeId,
+      skipCount: 0
     });
+
+
+    while(response.metadata.hasMoreItems === "true") {
+      response = await _downloadChunks({
+        account: account,
+        nodeId: sourceNodeId,
+        skipCount: 0
+      });
+    }
+    
 
     for (const node of response.nodes) {
       let record = await nodeModel.getOneByNodeId({
@@ -42,7 +58,8 @@ exports.recursiveDownload = async params => {
         nodeId: node.id
       });
 
-      let currentPath = destinationPath + '/' + node.path_name.split('documentLibrary/')[1];
+      let currentPath =
+        destinationPath + "/" + node.path_name.split("documentLibrary/")[1];
 
       // Case 1: Check If the remote node is NOT present on local
       if (!fs.existsSync(currentPath)) {
@@ -74,8 +91,13 @@ exports.recursiveDownload = async params => {
           // let fileModifiedDate = record.file_update_at;
           let fileModifiedDate = _base.getFileLatestTime(record);
 
-          console.log( 'nodeModifiedDate,fileModifiedDate', nodeModifiedDate, node.modified_at, fileModifiedDate );
-          
+          console.log(
+            "nodeModifiedDate,fileModifiedDate",
+            nodeModifiedDate,
+            node.modified_at,
+            fileModifiedDate
+          );
+
           // If the server file time is greater, download the remote file (since server node is newer version)
           if (nodeModifiedDate > fileModifiedDate) {
             await _createItemOnLocal({
@@ -166,10 +188,7 @@ exports.recursiveUpload = async params => {
     // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
     fileModifiedTime = _base.getFileModifiedTime(filePath);
 
-    if (
-      record &&
-      Math.abs(fileModifiedTime - record.file_update_at) >= 2
-    ) {
+    if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
       console.log(
         "Uploading local changes of " +
           filePath +
@@ -316,4 +335,14 @@ _createItemOnLocal = async params => {
     console.log(error);
     await errorLogModel.add(account.id, error);
   }
+};
+
+_downloadChunks = async params => {
+  let response = await remote.getNodeList({
+    account: params.account,
+    nodeId: params.nodeId,
+    skipCount: params.skipCount
+  });
+
+  return response;
 };

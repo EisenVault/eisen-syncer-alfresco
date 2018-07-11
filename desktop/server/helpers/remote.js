@@ -21,10 +21,18 @@ const env = require("../config/env");
 exports.getNodeList = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
+  let maxItems = params.maxItems || 10;
+  let skipCount = params.skipCount || 0;
 
   if (!account) {
     throw new Error("Account not found");
   }
+
+  console.log( account.instance_url +
+    "/alfresco/s/com/eisenvault/totalNodesCount/" +
+    nodeId +
+    "/shownodes?maxItems=" + maxItems + "&skipCount=" + skipCount );
+  
 
   var options = {
     method: "GET",
@@ -32,7 +40,7 @@ exports.getNodeList = async params => {
       account.instance_url +
       "/alfresco/s/com/eisenvault/totalNodesCount/" +
       nodeId +
-      "/shownodes",
+      "/shownodes?maxItems=" + maxItems + "&skipCount=" + skipCount,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }

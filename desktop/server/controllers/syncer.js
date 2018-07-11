@@ -37,7 +37,7 @@ exports.download = async (request, response) => {
   console.log("DOWNLOAD START");
 
   let account = await accountModel.getOne(request.params.accountId);
-
+ 
   try {
     await ondemand.recursiveDownload({
       account: account,
