@@ -1,7 +1,6 @@
 const electron = require("electron");
 const url = require("url");
 const path = require("path");
-const server = require("./server/server");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 

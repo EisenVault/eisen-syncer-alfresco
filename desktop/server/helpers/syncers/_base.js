@@ -2,7 +2,7 @@ const fs = require("fs");
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.
- * 
+ *
  * @param object record
  * {
  *  record: <Object>

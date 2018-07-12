@@ -1,12 +1,10 @@
 const fs = require("fs-extra");
-const _ = require("lodash");
-const path = require("path");
+const mkdirp = require("mkdirp");
 const glob = require("glob");
 const accountModel = require("../../models/account");
 const remote = require("../remote");
 const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
-const watcher = require("../watcher");
 const _base = require("./_base");
 
 /**
@@ -31,97 +29,96 @@ exports.recursiveDownload = async params => {
     // Start the sync
     await accountModel.syncStart(account.id);
 
-    // let response = await remote.getNodeList({
-    //   account: account,
-    //   nodeId: sourceNodeId
-    // });
+    let response;
+    let skipCount = 0;
+    let maxItems = 100;
 
-    let response = await _downloadChunks({
-      account: account,
-      nodeId: sourceNodeId,
-      skipCount: 0
-    });
-
-
-    while(response.metadata.hasMoreItems === "true") {
+    while (true) {
       response = await _downloadChunks({
         account: account,
         nodeId: sourceNodeId,
-        skipCount: 0
-      });
-    }
-    
-
-    for (const node of response.nodes) {
-      let record = await nodeModel.getOneByNodeId({
-        account: account,
-        nodeId: node.id
+        skipCount: skipCount,
+        maxItems: maxItems
       });
 
-      let currentPath =
-        destinationPath + "/" + node.path_name.split("documentLibrary/")[1];
+      // Increase the skipcount
+      skipCount = skipCount + maxItems;
 
-      // Case 1: Check If the remote node is NOT present on local
-      if (!fs.existsSync(currentPath)) {
-        // Case 1.1 Check File reference is present in DB (perhaps file was renamed on server).
-        if (record) {
-          // Delete the old file
-          fs.removeSync(record.file_path);
-
-          // Delete Old record from DB and update DB and set new filename
-          await nodeModel.delete({
-            account: account,
-            nodeId: node.id
-          });
-        }
-
-        // Case 1.1/1.2 Download the file/folder on local (this will also add the new records in the DB)
-        await _createItemOnLocal({
-          node: node,
-          currentPath: currentPath,
+      for (const node of response.nodes) {
+        let record = await nodeModel.getOneByNodeId({
           account: account,
-          sourceNodeId: node.id
+          nodeId: node.id
         });
-      } else {
-        // Case 2: File present in local
-        if (record) {
-          // Convert the time to UTC and then get the unixtimestamp.
-          let nodeModifiedDate = _base.convertToUTC(node.modified_at);
 
-          // let fileModifiedDate = record.file_update_at;
-          let fileModifiedDate = _base.getFileLatestTime(record);
+        let currentPath =
+          destinationPath + "/" + node.path_name.split("documentLibrary/")[1];
 
-          console.log(
-            "nodeModifiedDate,fileModifiedDate",
-            nodeModifiedDate,
-            node.modified_at,
-            fileModifiedDate
-          );
+        // Case 1: Check If the remote node is NOT present on local
+        if (!fs.existsSync(currentPath)) {
+          // Case 1.1 Check File reference is present in DB (perhaps file was renamed on server).
+          if (record) {
+            // Delete the old file
+            fs.removeSync(record.file_path);
 
-          // If the server file time is greater, download the remote file (since server node is newer version)
-          if (nodeModifiedDate > fileModifiedDate) {
-            await _createItemOnLocal({
-              node: node,
-              currentPath: currentPath,
+            // Delete Old record from DB and update DB and set new filename
+            await nodeModel.delete({
               account: account,
-              sourceNodeId: node.id
+              nodeId: node.id
             });
+          }
+
+          // Case 1.1/1.2 Download the file/folder on local (this will also add the new records in the DB)
+          await _createItemOnLocal({
+            node: node,
+            currentPath: currentPath,
+            account: account,
+            sourceNodeId: node.id
+          });
+        } else {
+          // Case 2: File present in local
+          if (record) {
+            // Convert the time to UTC and then get the unixtimestamp.
+            let nodeModifiedDate = _base.convertToUTC(node.modified_at);
+
+            // let fileModifiedDate = record.file_update_at;
+            let fileModifiedDate = _base.getFileLatestTime(record);
 
             console.log(
-              "Downloading " +
-                currentPath +
-                " since " +
-                new Date(nodeModifiedDate * 1000).toLocaleString() +
-                " notequal " +
-                new Date(fileModifiedDate * 1000).toLocaleString()
+              "nodeModifiedDate,fileModifiedDate",
+              nodeModifiedDate,
+              node.modified_at,
+              fileModifiedDate
             );
+
+            // If the server file time is greater, download the remote file (since server node is newer version)
+            if (nodeModifiedDate > fileModifiedDate) {
+              await _createItemOnLocal({
+                node: node,
+                currentPath: currentPath,
+                account: account,
+                sourceNodeId: node.id
+              });
+
+              console.log(
+                "Downloading " +
+                  currentPath +
+                  " since " +
+                  new Date(nodeModifiedDate * 1000).toLocaleString() +
+                  " notequal " +
+                  new Date(fileModifiedDate * 1000).toLocaleString()
+              );
+            }
           }
         }
-      }
-    } // End forloop
-  } catch (error) {
-    console.log(error);
+      } // End forloop
 
+      if (response.metadata.hasMoreItems === "false") {
+        break;
+      }
+    }
+
+    await accountModel.syncComplete(account.id);
+  } catch (error) {
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -310,7 +307,7 @@ _createItemOnLocal = async params => {
     if (node.is_folder == "true") {
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
-        fs.mkdirSync(currentPath);
+        mkdirp.sync(currentPath);
       }
 
       // Add reference to the nodes table
@@ -338,11 +335,10 @@ _createItemOnLocal = async params => {
 };
 
 _downloadChunks = async params => {
-  let response = await remote.getNodeList({
+  return await remote.getNodeList({
     account: params.account,
     nodeId: params.nodeId,
-    skipCount: params.skipCount
+    skipCount: params.skipCount,
+    maxItems: params.maxItems
   });
-
-  return response;
 };

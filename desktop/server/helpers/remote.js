@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
 const io = require("socket.io-client");
 const machineID = require("node-machine-id");
@@ -28,19 +29,16 @@ exports.getNodeList = async params => {
     throw new Error("Account not found");
   }
 
-  console.log( account.instance_url +
-    "/alfresco/s/com/eisenvault/totalNodesCount/" +
-    nodeId +
-    "/shownodes?maxItems=" + maxItems + "&skipCount=" + skipCount );
-  
-
   var options = {
     method: "GET",
     url:
       account.instance_url +
       "/alfresco/s/com/eisenvault/totalNodesCount/" +
       nodeId +
-      "/shownodes?maxItems=" + maxItems + "&skipCount=" + skipCount,
+      "/shownodes?maxItems=" +
+      maxItems +
+      "&skipCount=" +
+      skipCount,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
@@ -200,9 +198,13 @@ exports.download = async params => {
   };
 
   try {
-    await request(options).pipe(fs.createWriteStream(destinationPath));
+    // Create the folder chain before downloading the file
+    let destinationDirectory = path.dirname(destinationPath);
+    if (!fs.existsSync(destinationDirectory)) {
+      mkdirp.sync(destinationDirectory);
+    }
 
-    console.log("DOWNLOADED", destinationPath);
+    await request(options).pipe(fs.createWriteStream(destinationPath));
 
     // Add refrence to the nodes table
     await nodeModel.add({

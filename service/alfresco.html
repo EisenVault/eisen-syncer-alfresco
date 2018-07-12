@@ -16,7 +16,7 @@
             let action = document.getElementById('action');
             let button = document.getElementById('btn');
 
-            let socket = io.connect('http://sync.eisenvault.net:3002');
+            let socket = io.connect('https://sync.eisenvault.net');
 
             socket.on('sync-notification', data => {
                 console.log(data);

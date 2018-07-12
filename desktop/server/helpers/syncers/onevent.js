@@ -1,7 +1,6 @@
 const fs = require("fs-extra");
 const path = require("path");
 const mkdirp = require("mkdirp");
-
 const accountModel = require("../../models/account");
 const remote = require("../remote");
 const nodeModel = require("../../models/node");
