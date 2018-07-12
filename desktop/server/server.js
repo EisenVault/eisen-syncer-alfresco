@@ -49,7 +49,7 @@ socket.on("sync-notification", async data => {
   if (data.action.toUpperCase() == "CREATE") {
     await onevent.create(data);
   }
-  if (data.action.toUpperCase() == "UPDATE") {
+  if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
     await onevent.update(data);
   }
   if (data.action.toUpperCase() == "DELETE") {
