@@ -181,7 +181,7 @@ exports.recursiveUpload = async params => {
       continue;
     }
 
-    // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
+    // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was localy updated/modified)
     // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
     fileModifiedTime = _base.getFileModifiedTime(filePath);
 
