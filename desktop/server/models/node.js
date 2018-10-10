@@ -185,7 +185,7 @@ exports.getAllByFolderPath = async params => {
 exports.getMissingFiles = async params => {
   let account = params.account;
   let fileList = params.fileList;
-  let column = params.column || "file_path";
+  let column = params.column; // Available options: node_id, file_path
 
   let missingFiles = [];
   let listCount = 0;

@@ -30,11 +30,12 @@ exports.recursiveDownload = async params => {
     await accountModel.syncStart(account.id);
 
     let response;
+    let availableNodeList = [];
     let skipCount = 0;
     let maxItems = 100;
 
     while (true) {
-      response = await _downloadChunks({
+      response = await remote.getNodeList({
         account: account,
         nodeId: sourceNodeId,
         skipCount: skipCount,
@@ -45,6 +46,10 @@ exports.recursiveDownload = async params => {
       skipCount = skipCount + maxItems;
 
       for (const node of response.nodes) {
+
+        // Store the node ids so that we can compare it with the db and delete the records on local that are deleted on the server.
+        availableNodeList.push(node.id);
+
         let record = await nodeModel.getOneByNodeId({
           account: account,
           nodeId: node.id
@@ -74,8 +79,10 @@ exports.recursiveDownload = async params => {
             account: account,
             sourceNodeId: node.id
           });
-        } else {
-          // Case 2: File present in local
+        }
+
+        // Case 2: File present on local
+        if (fs.existsSync(currentPath)) {
           if (record) {
             // Convert the time to UTC and then get the unixtimestamp.
             let nodeModifiedDate = _base.convertToUTC(node.modified_at);
@@ -101,21 +108,31 @@ exports.recursiveDownload = async params => {
 
               console.log(
                 "Downloading " +
-                  currentPath +
-                  " since " +
-                  new Date(nodeModifiedDate * 1000).toLocaleString() +
-                  " notequal " +
-                  new Date(fileModifiedDate * 1000).toLocaleString()
+                currentPath +
+                " since " +
+                new Date(nodeModifiedDate * 1000).toLocaleString() +
+                " notequal " +
+                new Date(fileModifiedDate * 1000).toLocaleString()
               );
             }
           }
         }
       } // End forloop
 
-      if (response.metadata.hasMoreItems === "false") {
-        break;
+      if (response.metadata.hasMoreItems === false) {
+        break; // End while loop
       }
     }
+
+    // Check if any node was deleted on the server, if so we need to delete the files on the local as well...
+    const missingFiles = nodeModel.getMissingFiles({
+      account: account.id,
+      fileList: availableNodeList,
+      column: "node_id"
+    });
+
+    console.log('missingfiles>>', missingFiles);
+
 
     await accountModel.syncComplete(account.id);
   } catch (error) {
@@ -175,8 +192,7 @@ exports.recursiveUpload = async params => {
       await remote.upload({
         account: account,
         filePath: filePath,
-        rootNodeId: rootNodeId,
-        broadcast: true
+        rootNodeId: rootNodeId
       });
       continue;
     }
@@ -188,11 +204,11 @@ exports.recursiveUpload = async params => {
     if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
       console.log(
         "Uploading local changes of " +
-          filePath +
-          " since " +
-          new Date(record.file_update_at * 1000).toLocaleString() +
-          " notequal " +
-          new Date(fileModifiedTime * 1000).toLocaleString()
+        filePath +
+        " since " +
+        new Date(record.file_update_at * 1000).toLocaleString() +
+        " notequal " +
+        new Date(fileModifiedTime * 1000).toLocaleString()
       );
 
       // Upload the local changes to the server.
@@ -217,6 +233,8 @@ exports.recursiveUpload = async params => {
 };
 
 /**
+ * Recursively delete all files from server that were deleted from local
+ * 
  * @param object params
  * {
  *  account: Account<Object>,
@@ -245,8 +263,7 @@ exports.recursiveDelete = async params => {
     // Delete the node from the server, once thats done it will delete the record from the DB as well
     await remote.deleteServerNode({
       account: account,
-      deletedNodeId: missingNode,
-      broadcast: true
+      deletedNodeId: missingNode
     });
   }
 
@@ -283,8 +300,7 @@ exports.deleteByPath = async params => {
       // Delete the node from the server, once thats done it will delete the record from the DB as well
       await remote.deleteServerNode({
         account: account,
-        deletedNodeId: record.node_id,
-        broadcast: true
+        deletedNodeId: record.node_id
       });
     }
     // Set the sync completed time and also set issync flag to off
@@ -304,7 +320,7 @@ _createItemOnLocal = async params => {
   let sourceNodeId = params.sourceNodeId;
 
   try {
-    if (node.is_folder == "true") {
+    if (node.is_folder === true) {
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
@@ -320,7 +336,7 @@ _createItemOnLocal = async params => {
         isFolder: true,
         isFile: false
       });
-    } else if (node.is_file == "true") {
+    } else if (node.is_file === true) {
       // If the child is a file, download it
       await remote.download({
         account: account,
@@ -332,13 +348,4 @@ _createItemOnLocal = async params => {
     console.log(error);
     await errorLogModel.add(account.id, error);
   }
-};
-
-_downloadChunks = async params => {
-  return await remote.getNodeList({
-    account: params.account,
-    nodeId: params.nodeId,
-    skipCount: params.skipCount,
-    maxItems: params.maxItems
-  });
 };

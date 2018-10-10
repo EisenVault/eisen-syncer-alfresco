@@ -2,7 +2,6 @@ import { Component, OnInit } from "@angular/core";
 import { AccountService } from "../../services/account.service";
 import { Router } from "@angular/router";
 import { SyncerService } from "../../services/syncer.service";
-import { ElectronService } from "ngx-electron";
 
 interface IAccounts {
   id: number;
@@ -23,14 +22,13 @@ interface IAccounts {
 })
 export class ManageComponent implements OnInit {
   public accounts;
-  public isSaved: boolean = false;
+  public isSaved = false;
   public showAccountLoaders: number[] = [];
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
-    private _electronService: ElectronService,
     private _router: Router
-  ) {}
+  ) { }
 
   ngOnInit() {
     // Load all accounts
@@ -42,24 +40,24 @@ export class ManageComponent implements OnInit {
       .subscribe((accounts: IAccounts[]) => {
         this.accounts = accounts;
 
-        for (let account of this.accounts) {
+        for (const account of this.accounts) {
           // This is for the spinning loader icon
-          let index = this.showAccountLoaders.indexOf(account.id);
-          if (index == -1) {
+          const index = this.showAccountLoaders.indexOf(account.id);
+          if (index === -1) {
             this.showAccountLoaders.push(account.id);
           }
 
           // Fire the Delete, then Download then upload api...
-          this._syncerService.syncDelete(account.id).subscribe(response => {
-            let index = this.showAccountLoaders.indexOf(account.id);
-            this.showAccountLoaders.splice(index, 1);
+          this._syncerService.syncDelete(account.id).subscribe(() => {
+            const position = this.showAccountLoaders.indexOf(account.id);
+            this.showAccountLoaders.splice(position, 1);
 
             this._syncerService
               .syncDownloads(account.id)
-              .subscribe(response => {
+              .subscribe(() => {
                 this._syncerService
                   .syncUploads(account.id)
-                  .subscribe(response => {
+                  .subscribe(() => {
                     this._getAccounts();
                   }); // End Upload subscribe
               }); // End Download subscribe
@@ -69,19 +67,20 @@ export class ManageComponent implements OnInit {
         } // End forloop
       });
 
-    // For every x seconds, we will make a request to the account api and check which accounts are still syncing, so that we can attach loaders for those accounts
+    // For every x seconds, we will make a request to the account api and check
+    // which accounts are still syncing, so that we can attach loaders for those accounts
     setInterval(() => {
       console.log("setInterval...");
 
       this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
-        for (let account of accounts) {
+        for (const account of accounts) {
           console.log("account.sync_in_progress", account.sync_in_progress);
 
           // This is for the spinning loader icon
-          let index = this.showAccountLoaders.indexOf(account.id);
-          if (index == -1 && account.sync_in_progress == 1) {
+          const index = this.showAccountLoaders.indexOf(account.id);
+          if (index === -1 && account.sync_in_progress === 1) {
             this.showAccountLoaders.push(account.id);
-          } else if (account.sync_in_progress == 0) {
+          } else if (account.sync_in_progress === 0) {
             this.showAccountLoaders.splice(index, 1);
           }
         } // End forloop
@@ -102,7 +101,7 @@ export class ManageComponent implements OnInit {
   update(e, accountId) {
     this._accountService
       .updateSync(accountId, e.target.checked)
-      .subscribe(response => {
+      .subscribe(() => {
         this.isSaved = true;
         setTimeout(() => {
           this.isSaved = false;

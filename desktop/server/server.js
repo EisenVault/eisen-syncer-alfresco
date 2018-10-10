@@ -5,7 +5,6 @@ const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
-const machineID = require("node-machine-id");
 const env = require("./config/env");
 const app = express();
 
@@ -41,8 +40,10 @@ let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
   data = typeof data === "object" ? data : JSON.parse(data);
+  let getBroadcastedInstance = await accountModel.findByEnabledSyncInstance(data.instance_url);
 
-  if (data.machine_id == machineID.machineIdSync()) {
+  // If broadcast instance url is not available in the accounts table, bailout!
+  if (data.instance_url !== getBroadcastedInstance.instance_url) {
     return;
   }
 

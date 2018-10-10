@@ -19,28 +19,32 @@
 </div>
 <div *ngIf="showSites">
   <h6>Select a Site</h6>
-  <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
-    <a class="list-group-item list-group-item-action flex-column align-items-start">
-      <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">{{ site.entry.title }}</h5>
-      </div>
-    </a>
+  <div class="list-container">
+    <div class="list-group pointer" *ngFor="let site of sites" (click)="loadNodes(site.entry.guid)">
+      <a class="list-group-item list-group-item-action flex-column align-items-start">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">{{ site.entry.title }}</h5>
+        </div>
+      </a>
+    </div>
   </div>
 </div>
 <div *ngIf="showNodes">
   <h6>Select a Folder</h6>
-  <div class="list-group pointer" *ngFor="let node of nodes">
-    <a class="list-group-item list-group-item-action flex-column align-items-start">
-      <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">
-          <input type="radio" name="node" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
-          <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
-        </h5>
-      </div>
-    </a>
-  </div>
-  <div class="alert alert-danger" *ngIf="nodes.length == 0">
-    No folders here...
+  <div class="list-container">
+    <div class="list-group pointer" *ngFor="let node of nodes">
+      <a class="list-group-item list-group-item-action flex-column align-items-start">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">
+            <input type="radio" name="node" value="true" (click)="addToList($event, node.entry.id)"> &nbsp;
+            <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
+          </h5>
+        </div>
+      </a>
+    </div>
+    <div class="alert alert-danger" *ngIf="nodes.length == 0">
+      No folders here...
+    </div>
   </div>
 </div>
 

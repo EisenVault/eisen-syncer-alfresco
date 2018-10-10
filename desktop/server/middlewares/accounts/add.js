@@ -70,6 +70,7 @@ module.exports = async (request, response, next) => {
 
     try {
       let response = await http(options);
+      
       if (!response.body.entry.id) {
         errors.push({
           username: ["Authentication to the server failed"]

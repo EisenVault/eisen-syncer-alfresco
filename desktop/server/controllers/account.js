@@ -1,6 +1,4 @@
-const express = require("express");
 const accountModel = require("../models/account");
-const validator = require("validator");
 const watcher = require("../helpers/watcher");
 
 exports.getAll = async (request, response) => {
@@ -24,7 +22,7 @@ exports.addAccount = async (request, response) => {
 };
 
 exports.updateAccount = async (request, response) => {
-  let accountId = await accountModel.updateAccount(request.params.id, request);
+  await accountModel.updateAccount(request.params.id, request);
   await watcher.watchAll();
   return response.status(200).json({
     account_id: request.params.id
@@ -32,14 +30,14 @@ exports.updateAccount = async (request, response) => {
 };
 
 exports.updateWatchNode = async (request, response) => {
-  let account = await accountModel.updateWatchNode(request.params.id, request);
+  await accountModel.updateWatchNode(request.params.id, request);
   return response.status(200).json({
     success: true
   });
 };
 
 exports.updateSync = async (request, response) => {
-  let account = await accountModel.updateSync(request.params.id, request);
+  await accountModel.updateSync(request.params.id, request);
   await watcher.watchAll();
   return response.status(200).json({
     success: true
@@ -47,7 +45,7 @@ exports.updateSync = async (request, response) => {
 };
 
 exports.updateSyncTime = async (request, response) => {
-  let account = await accountModel.syncComplete(request.params.id);
+  await accountModel.syncComplete(request.params.id);
   await watcher.watchAll();
 
   return response.status(200).json({

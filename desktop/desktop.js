@@ -3,12 +3,12 @@ const url = require("url");
 const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
+const {session} = require('electron');
 
 // Set environment
 process.env.NODE_ENV = "dev";
 
 let mainWindow, tray;
-
 let forceQuit = false;
 
 ipcMain.on("autolaunch", (event, arg) => {
@@ -26,6 +26,16 @@ ipcMain.on("autolaunch", (event, arg) => {
 
 // Listen for app to be ready
 app.on("ready", () => {
+
+  // Patch to fix the "failed to load dev-tools issue". See https://github.com/electron/electron/issues/13008#issuecomment-400261941
+  session.defaultSession.webRequest.onBeforeRequest({}, (details, callback) => {
+    if (details.url.indexOf('7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33') !== -1) {
+      callback({ redirectURL: details.url.replace('7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33', '57c9d07b416b5a2ea23d28247300e4af36329bdc') });
+    } else {
+      callback({ cancel: false });
+    }
+  });
+
   // Create main window
   mainWindow = new BrowserWindow({
     width: 1024,
@@ -97,7 +107,7 @@ app.on("ready", () => {
       }
     },
     {
-      label: "About " + app.getName(),
+      label: "About EisenSync",
       click() {
         mainWindow.loadURL(
           url.format({
@@ -133,19 +143,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function(e) {
+  mainWindow.on("close", function (e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function() {
+  mainWindow.on("closed", function () {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function() {
+  app.on("activate-with-no-open-windows", function () {
     mainWindow.show();
   });
 
@@ -164,7 +174,7 @@ if (process.platform == "darwin") {
 }
 
 // Add dev-tools if not in production
-if (process.env.NODE_ENV != "production") {
+if (process.env.NODE_ENV !== "production") {
   mainMenuTemplate.push({
     label: "Developer",
     submenu: [

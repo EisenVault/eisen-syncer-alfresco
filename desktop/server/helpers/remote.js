@@ -2,14 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
-const io = require("socket.io-client");
-const machineID = require("node-machine-id");
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
-const env = require("../config/env");
 
 /**
  *
@@ -98,8 +95,6 @@ exports.getChildren = async params => {
 exports.deleteServerNode = async params => {
   let account = params.account;
   let deletedNodeId = params.deletedNodeId;
-  let broadcast = params.broadcast || false;
-  let socket = io.connect(env.SERVICE_URL);
 
   var options = {
     resolveWithFullResponse: true,
@@ -118,29 +113,6 @@ exports.deleteServerNode = async params => {
 
     if (response.statusCode == 204) {
       console.log("Deleted", deletedNodeId);
-
-      // Find the path of the node id, so that we can broadcast it to other clients.
-      let record = await nodeModel.getOneByNodeId({
-        account: account,
-        nodeId: deletedNodeId
-      });
-
-      // Broadcast a notification so that other clients get notified and can download the stuff on their local
-      if (broadcast === true) {
-        socket.emit("sync-notification", {
-          machine_id: machineID.machineIdSync(),
-          instance_url: account.instance_url,
-          username: account.username,
-          node_id: deletedNodeId,
-          action: "DELETE",
-          is_file: "false",
-          is_folder: "false",
-          path: `documentLibrary/${record.file_path.replace(
-            account.sync_path + "/",
-            ""
-          )}`
-        });
-      }
 
       // Delete the record from the DB
       await nodeModel.delete({
@@ -242,14 +214,11 @@ exports.upload = async params => {
   let account = params.account;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
-  let broadcast = params.broadcast || false;
   let options = {};
 
   if (!account) {
     throw new Error("Account not found");
   }
-
-  let socket = io.connect(env.SERVICE_URL);
 
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
@@ -285,21 +254,6 @@ exports.upload = async params => {
 
       if (response.entry.id) {
         console.log("Uploaded Folder", params.filePath);
-
-        // Broadcast a notification so that other clients get notified and can download the stuff on their local
-        if (broadcast === true) {
-          socket.emit("sync-notification", {
-            machine_id: machineID.machineIdSync(),
-            instance_url: account.instance_url,
-            node_id: response.entry.id,
-            action: "CREATE",
-            is_file: "false",
-            is_folder: "true",
-            path: relativePath
-              ? `documentLibrary/${relativePath}/${directoryName}`
-              : `documentLibrary/${directoryName}`
-          });
-        }
 
         // Add a record in the db
         await nodeModel.add({
@@ -370,22 +324,6 @@ exports.upload = async params => {
 
       if (refId[1]) {
         console.log("Uploaded File", filePath);
-
-        // Broadcast a notification so that other clients get notified and can download the stuff on their local
-        if (broadcast === true) {
-          socket.emit("sync-notification", {
-            machine_id: machineID.machineIdSync(),
-            instance_url: account.instance_url,
-            username: account.username,
-            node_id: refId[1],
-            action: "CREATE",
-            is_file: "true",
-            is_folder: "false",
-            path: uploadDirectory
-              ? `documentLibrary/${uploadDirectory}/${path.basename(filePath)}`
-              : `documentLibrary/${path.basename(filePath)}`
-          });
-        }
 
         // Add a record in the db
         await nodeModel.add({

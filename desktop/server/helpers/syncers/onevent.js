@@ -26,7 +26,7 @@ exports.create = async params => {
 
   try {
     // If the node is a folder, we will create the folder and all its subfolders
-    if (params.is_folder === "true") {
+    if (params.is_folder === true) {
       mkdirp.sync(currentPath);
 
       // Add reference to the nodes table
@@ -44,7 +44,7 @@ exports.create = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === "true") {
+    } else if (params.is_file === true) {
       mkdirp.sync(path.dirname(currentPath));
 
       await remote.download({
@@ -92,7 +92,7 @@ exports.update = async params => {
 
   try {
     // If the node is a folder, we will create the folder
-    if (params.is_folder === "true" && currentPath !== oldRecord.file_path) {
+    if (params.is_folder === true && currentPath !== oldRecord.file_path) {
       // Rename the old folder to the new name
       fs.renameSync(oldRecord.file_path, currentPath);
 
@@ -117,7 +117,7 @@ exports.update = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === "true") {
+    } else if (params.is_file === true) {
       // Delete the old file
       fs.removeSync(oldRecord.file_path);
 
@@ -171,9 +171,10 @@ exports.delete = async params => {
     return;
   }
 
-  let path = _getPath(account, record.file_path);
+  let path = record.file_path;
 
-  if (account.sync_path != path) {
+  // Make sure you do not delete the root path by mistake
+  if (account.sync_path !== path) {
     fs.removeSync(path);
   }
 
@@ -181,7 +182,7 @@ exports.delete = async params => {
     // Then remove the entry from the DB
     await nodeModel.delete({
       account: account,
-      nodeId: path
+      nodeId: params.node_id
     });
 
     // Set the sync completed time and also set issync flag to off
