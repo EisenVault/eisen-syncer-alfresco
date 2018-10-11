@@ -42,6 +42,11 @@ exports.recursiveDownload = async params => {
         maxItems: maxItems
       });
 
+      if(!response) {
+        // Looks like there are no data available, lets break
+        break;
+      }
+
       // Increase the skipcount
       skipCount = skipCount + maxItems;
 
@@ -124,15 +129,25 @@ exports.recursiveDownload = async params => {
       }
     }
 
-    // Check if any node was deleted on the server, if so we need to delete the files on the local as well...
-    const missingFiles = nodeModel.getMissingFiles({
-      account: account.id,
+    // Case 3: Check if any node was deleted on the server, if so we need to delete the files on the local as well...
+    const missingFiles = await nodeModel.getMissingFiles({
+      account: account,
       fileList: availableNodeList,
       column: "node_id"
     });
 
-    console.log('missingfiles>>', missingFiles);
+    for (const iterator of missingFiles) {
 
+      // Check if the file on the local is not available on the server, if so lets delete the file on the local.
+      if (availableNodeList.indexOf(iterator) === -1) {
+        // Delete the file on local that was deleted on the server
+        const record = await nodeModel.getOneByNodeId({
+          account: account,
+          nodeId: iterator
+        });
+        fs.removeSync(record.file_path);
+      }
+    }
 
     await accountModel.syncComplete(account.id);
   } catch (error) {

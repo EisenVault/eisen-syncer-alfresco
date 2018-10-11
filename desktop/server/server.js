@@ -6,9 +6,13 @@ const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
 const env = require("./config/env");
+var bugsnag = require("bugsnag");
+bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
 // Middlewares
+app.use(bugsnag.errorHandler);
+app.use(bugsnag.requestHandler);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -43,7 +47,7 @@ socket.on("sync-notification", async data => {
   let getBroadcastedInstance = await accountModel.findByEnabledSyncInstance(data.instance_url);
 
   // If broadcast instance url is not available in the accounts table, bailout!
-  if (data.instance_url !== getBroadcastedInstance.instance_url) {
+  if (data.instance_url && data.instance_url !== getBroadcastedInstance.instance_url) {
     return;
   }
 

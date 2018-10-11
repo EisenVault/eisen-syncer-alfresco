@@ -36,7 +36,7 @@ export class ManageComponent implements OnInit {
 
     // When the app loads, lets try and sync the files from and to server.
     this._accountService
-      .getAccounts("sync_enabled=1")
+      .getAccounts('sync_enabled=1')
       .subscribe((accounts: IAccounts[]) => {
         this.accounts = accounts;
 
@@ -47,21 +47,8 @@ export class ManageComponent implements OnInit {
             this.showAccountLoaders.push(account.id);
           }
 
-          // Fire the Delete, then Download then upload api...
-          this._syncerService.syncDelete(account.id).subscribe(() => {
-            const position = this.showAccountLoaders.indexOf(account.id);
-            this.showAccountLoaders.splice(position, 1);
-
-            this._syncerService
-              .syncDownloads(account.id)
-              .subscribe(() => {
-                this._syncerService
-                  .syncUploads(account.id)
-                  .subscribe(() => {
-                    this._getAccounts();
-                  }); // End Upload subscribe
-              }); // End Download subscribe
-          }); // End Delete
+          // Process sync
+          this._processSync(account);
 
           console.log("Firing:", account.instance_url);
         } // End forloop
@@ -70,12 +57,8 @@ export class ManageComponent implements OnInit {
     // For every x seconds, we will make a request to the account api and check
     // which accounts are still syncing, so that we can attach loaders for those accounts
     setInterval(() => {
-      console.log("setInterval...");
-
       this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
         for (const account of accounts) {
-          console.log("account.sync_in_progress", account.sync_in_progress);
-
           // This is for the spinning loader icon
           const index = this.showAccountLoaders.indexOf(account.id);
           if (index === -1 && account.sync_in_progress === 1) {
@@ -88,6 +71,26 @@ export class ManageComponent implements OnInit {
     }, 10000);
   }
 
+
+  _processSync(account) {
+    // Fire the Delete, then Download then upload api...
+    this._syncerService.syncDelete(account.id).subscribe(() => {
+      const position = this.showAccountLoaders.indexOf(account.id);
+      this.showAccountLoaders.splice(position, 1);
+
+      this._syncerService
+        .syncDownloads(account.id)
+        .subscribe(() => {
+          this._syncerService
+            .syncUploads(account.id)
+            .subscribe(() => {
+              this._getAccounts();
+            }); // End Upload subscribe
+        }); // End Download subscribe
+    }); // End Delete
+
+  }
+
   isLoading(account) {
     return this.showAccountLoaders.indexOf(account.id) >= 0;
   }
@@ -98,10 +101,15 @@ export class ManageComponent implements OnInit {
       .subscribe(accounts => (this.accounts = accounts));
   }
 
-  update(e, accountId) {
+  update(e, account) {
     this._accountService
-      .updateSync(accountId, e.target.checked)
+      .updateSync(account.id, e.target.checked)
       .subscribe(() => {
+
+        if (e.target.checked === true) {
+          this._processSync(account);
+        }
+
         this.isSaved = true;
         setTimeout(() => {
           this.isSaved = false;
@@ -109,21 +117,21 @@ export class ManageComponent implements OnInit {
       });
   }
 
-  goToManageAccount(accountId) {
-    this._router.navigate(["account-new"], {
-      queryParams: { accountId: accountId }
+  goToManageAccount(account) {
+    this._router.navigate(['account-new'], {
+      queryParams: { accountId: account.id }
     });
   }
 
-  deleteAccount(accountId) {
+  deleteAccount(account) {
     if (
       confirm(
-        "This will delete the selected account but will not delete the folder or its contents. Continue?"
+        'This will delete the selected account but will not delete the folder or its contents. Continue?'
       )
     ) {
       this._accountService
-        .deleteAccount(accountId)
-        .subscribe(response => this._getAccounts());
+        .deleteAccount(account.id)
+        .subscribe(() => this._getAccounts());
     }
   }
 }

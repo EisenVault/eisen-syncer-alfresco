@@ -9,7 +9,7 @@ import { Account } from "../models/account";
 export class AccountService {
   constructor(private _http: HttpClient) {}
 
-  getAccounts(querystring = "") {
+  getAccounts(querystring = '') {
     return this._http.get(environment.apiUrl + "/accounts?" + querystring);
   }
 

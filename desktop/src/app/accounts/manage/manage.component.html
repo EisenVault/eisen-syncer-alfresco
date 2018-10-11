@@ -27,7 +27,7 @@
         <td>{{ account.username }}</td>
         <td>{{ account.sync_path }}</td>
         <td>
-          <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
+          <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account)">
         </td>
         <td>
           <div *ngIf="isLoading(account); else synccomplete">
@@ -41,10 +41,10 @@
           </ng-template>
         </td>
         <td>
-          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account.id)">
+          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account)">
             <i class="fas fa-edit"></i>
           </button>
-          <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account.id)">
+          <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account)">
             <i class="fas fa-trash"></i>
           </button>
         </td>
