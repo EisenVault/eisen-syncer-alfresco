@@ -4,25 +4,25 @@ const crypt = require("../config/crypt");
 exports.getAll = async syncEnabled => {
   try {
     return await db
-    .select(
-      "id",
-      "instance_url",
-      "username",
-      "watch_node",
-      "sync_path",
-      "sync_enabled",
-      "sync_frequency",
-      "sync_in_progress",
-      "last_synced_at"
-    )
-    .modify(queryBuilder => {
-      if (syncEnabled == 1) {
-        queryBuilder.where("sync_enabled", 1);
-      } else if (syncEnabled == 0) {
-        queryBuilder.where("sync_enabled", 0);
-      }
-    })
-    .from("accounts");
+      .select(
+        "id",
+        "instance_url",
+        "username",
+        "watch_node",
+        "sync_path",
+        "sync_enabled",
+        "sync_frequency",
+        "sync_in_progress",
+        "last_synced_at"
+      )
+      .modify(queryBuilder => {
+        if (syncEnabled == 1) {
+          queryBuilder.where("sync_enabled", 1);
+        } else if (syncEnabled == 0) {
+          queryBuilder.where("sync_enabled", 0);
+        }
+      })
+      .from("accounts");
   } catch (error) {
     return [{}];
   }
@@ -71,12 +71,26 @@ exports.findByInstance = async (instance_url, username) => {
     .where("username", username);
 };
 
-exports.findByEnabledSyncInstance = async instance_url => {
+exports.syncPathExists = async (sync_path, username =  null) => {
+  let query = await db
+    .select(['sync_path'])
+    .from("accounts")
+    .where("sync_path", sync_path);
+
+  if (username) {
+    query.whereNot("username", username);
+  }
+
+  return query;
+}
+
+exports.findByEnabledSyncInstance = async (instance_url, siteName) => {
   return await db
     .select("*")
     .first()
     .from("accounts")
     .where("instance_url", instance_url)
+    .where("site_name", siteName)
     .where("sync_enabled", 1);
 };
 
@@ -113,6 +127,7 @@ exports.updateAccount = async (accountId, request) => {
 exports.updateWatchNode = async (accountId, request) => {
   return await db("accounts")
     .update({
+      site_name: request.body.site_name,
       watch_node: request.body.watch_node,
       updated_at: new Date().getTime()
     })

@@ -1,6 +1,7 @@
 const validator = require("validator");
 const _ = require("lodash");
 const http = require("request-promise-native");
+const accountModel = require("../../models/account");
 
 module.exports = async (request, response, next) => {
   let errors = [];
@@ -41,6 +42,17 @@ module.exports = async (request, response, next) => {
     });
   }
 
+
+  // Sync path should be unique per account. That means no two same sync path can be added to two different accounts
+  // let syncPathAlreadyExists = await accountModel.syncPathExists(request.body.sync_path);
+  // console.log( 'syncPathAlreadyExists', syncPathAlreadyExists );
+  
+  // if (!_.isEmpty(syncPathAlreadyExists)) {
+  //   errors.push({
+  //     sync_path: ["Sync Path is already reserved with another account. Choose different sync path."]
+  //   });
+  // }
+
   if (
     _.isNil(request.body.sync_frequency) ||
     validator.isEmpty(String(request.body.sync_frequency))
@@ -70,7 +82,7 @@ module.exports = async (request, response, next) => {
 
     try {
       let response = await http(options);
-      
+
       if (!response.body.entry.id) {
         errors.push({
           username: ["Authentication to the server failed"]

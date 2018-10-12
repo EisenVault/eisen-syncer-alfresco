@@ -253,8 +253,6 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response.entry.id) {
-        console.log("Uploaded Folder", params.filePath);
-
         // Add a record in the db
         await nodeModel.add({
           account: account,
@@ -301,7 +299,8 @@ exports.upload = async params => {
     options = {
       resolveWithFullResponse: true,
       method: "POST",
-      url: account.instance_url + "/alfresco/service/api/upload",
+      // url: account.instance_url + "/alfresco/service/api/upload",
+      url: account.instance_url + `/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -310,9 +309,8 @@ exports.upload = async params => {
           value: fs.createReadStream(filePath),
           options: {}
         },
-        filename: path.basename(filePath),
-        destination: "workspace://SpacesStore/" + rootNodeId,
-        uploadDirectory: uploadDirectory,
+        name: path.basename(filePath),
+        relativePath: uploadDirectory,
         overwrite: "true"
       }
     };
@@ -320,17 +318,14 @@ exports.upload = async params => {
     try {
       let response = await request(options);
       response = JSON.parse(response.body);
-      let refId = response.nodeRef.split("workspace://SpacesStore/");
 
-      if (refId[1]) {
-        console.log("Uploaded File", filePath);
-
+      if (response.entry.id) {
         // Add a record in the db
         await nodeModel.add({
           account: account,
-          nodeId: refId[1],
+          nodeId: response.entry.id,
           filePath: params.filePath,
-          fileUpdateAt: _base.getFileModifiedTime(filePath),
+          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
           isFolder: false,
           isFile: true
         });
@@ -341,7 +336,7 @@ exports.upload = async params => {
           "UPLOAD_FILE",
           `Uploaded File: ${filePath} to ${account.instance_url}`
         );
-        return refId[1];
+        return response.entry.id;
       }
 
       return false;

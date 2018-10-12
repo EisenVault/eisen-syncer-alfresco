@@ -15,11 +15,12 @@ export class RemoteFolderComponent implements OnInit {
   public accountId;
   public sites = [];
   public nodes = [];
-  public showSites: boolean = false;
-  public showNodes: boolean = false;
-  public showLevelUp: boolean = false;
-  public selectedNode: string = '';
-  public parentNodeId: string = "";
+  public showSites = false;
+  public showNodes = false;
+  public showLevelUp = false;
+  public selectedNode = '';
+  public parentNodeId = '';
+  public selectedSiteName = '';
 
   constructor(
     private _router: Router,
@@ -29,7 +30,7 @@ export class RemoteFolderComponent implements OnInit {
     private _accountService: AccountService,
     private _syncerService: SyncerService,
     private _parentNodeService: ParentNodeService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this._route.paramMap.subscribe(params => {
@@ -57,8 +58,8 @@ export class RemoteFolderComponent implements OnInit {
       this.showSites = false;
       this.showNodes = true;
 
-      for (let item of (<any>response).list.entries) {
-        if (item.entry.name == "documentLibrary") {
+      for (const item of (<any>response).list.entries) {
+        if (item.entry.name === 'documentLibrary') {
           return (this.showLevelUp = false);
         }
       }
@@ -67,20 +68,21 @@ export class RemoteFolderComponent implements OnInit {
 
   _setParentId() {
     if (this.nodes && this.nodes.length > 0) {
-      let nodeId = this.nodes[0].entry.id;
+      const nodeId = this.nodes[0].entry.id;
 
       this._parentNodeService
         .getParents(this.accountId, nodeId)
         .subscribe(response => {
           if ((<any>response).list.entries.length > 0) {
             this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
+            this.selectedSiteName = (<any>response).list.entries[0].entry.name;
           }
         });
     }
   }
 
   addToList(e, nodeId) {
-    if (e.target.value == "true") {
+    if (e.target.value === 'true') {
       return this.selectedNode = nodeId;
     }
 
@@ -93,9 +95,9 @@ export class RemoteFolderComponent implements OnInit {
 
   finalize() {
     this._accountService
-      .updateWatchNode(this.accountId, this.selectedNode)
+      .updateWatchNode(this.accountId, this.selectedSiteName, this.selectedNode)
       .subscribe(
-        response => {
+        () => {
           // Start syncing
           this._syncerService.start(this.accountId);
 

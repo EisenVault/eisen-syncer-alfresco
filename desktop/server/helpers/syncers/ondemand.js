@@ -95,13 +95,6 @@ exports.recursiveDownload = async params => {
             // let fileModifiedDate = record.file_update_at;
             let fileModifiedDate = _base.getFileLatestTime(record);
 
-            console.log(
-              "nodeModifiedDate,fileModifiedDate",
-              nodeModifiedDate,
-              node.modified_at,
-              fileModifiedDate
-            );
-
             // If the server file time is greater, download the remote file (since server node is newer version)
             if (nodeModifiedDate > fileModifiedDate) {
               await _createItemOnLocal({
@@ -110,15 +103,6 @@ exports.recursiveDownload = async params => {
                 account: account,
                 sourceNodeId: node.id
               });
-
-              console.log(
-                "Downloading " +
-                currentPath +
-                " since " +
-                new Date(nodeModifiedDate * 1000).toLocaleString() +
-                " notequal " +
-                new Date(fileModifiedDate * 1000).toLocaleString()
-              );
             }
           }
         }
@@ -139,13 +123,8 @@ exports.recursiveDownload = async params => {
     for (const iterator of missingFiles) {
 
       // Check if the file on the local is not available on the server, if so lets delete the file on the local.
-      if (availableNodeList.indexOf(iterator) === -1) {
-        // Delete the file on local that was deleted on the server
-        const record = await nodeModel.getOneByNodeId({
-          account: account,
-          nodeId: iterator
-        });
-        fs.removeSync(record.file_path);
+      if (availableNodeList.indexOf(iterator.node_id) === -1) {
+        fs.removeSync(iterator.file_path);
       }
     }
 
@@ -187,7 +166,7 @@ exports.recursiveUpload = async params => {
   let localFilePathList = glob.sync(rootFolder);
 
   // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-  if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
+  if (params.sync_path && fs.existsSync(params.sync_path) && fs.statSync(params.sync_path).isDirectory()) {
     localFilePathList.unshift(params.sync_path);
   }
 
@@ -217,15 +196,6 @@ exports.recursiveUpload = async params => {
     fileModifiedTime = _base.getFileModifiedTime(filePath);
 
     if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
-      console.log(
-        "Uploading local changes of " +
-        filePath +
-        " since " +
-        new Date(record.file_update_at * 1000).toLocaleString() +
-        " notequal " +
-        new Date(fileModifiedTime * 1000).toLocaleString()
-      );
-
       // Upload the local changes to the server.
       await remote.upload({
         account: account,
@@ -274,11 +244,11 @@ exports.recursiveDelete = async params => {
     column: "node_id"
   });
 
-  for (const missingNode of missingFiles) {
+  for (const iterator of missingFiles) {
     // Delete the node from the server, once thats done it will delete the record from the DB as well
     await remote.deleteServerNode({
       account: account,
-      deletedNodeId: missingNode
+      deletedNodeId: iterator.node_id
     });
   }
 
@@ -347,12 +317,13 @@ _createItemOnLocal = async params => {
         nodeId: sourceNodeId,
         filePath: currentPath,
         fileUpdateAt: _base.convertToUTC(node.modified_at),
-        // fileUpdateAt: _base.getFileModifiedTime(currentPath),
         isFolder: true,
         isFile: false
       });
-    } else if (node.is_file === true) {
-      // If the child is a file, download it
+    } 
+    
+    // If the child is a file, download the file...
+    if (node.is_file === true) {
       await remote.download({
         account: account,
         sourceNodeId: sourceNodeId,

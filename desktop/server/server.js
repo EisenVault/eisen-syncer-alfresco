@@ -44,21 +44,27 @@ let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
   data = typeof data === "object" ? data : JSON.parse(data);
-  let getBroadcastedInstance = await accountModel.findByEnabledSyncInstance(data.instance_url);
+
+  if (!data.path) {
+    return;
+  }
+
+  let siteName = data.path.split('/')[3];
+  let getBroadcastedInstance = await accountModel.findByEnabledSyncInstance(data.instance_url, siteName);
 
   // If broadcast instance url is not available in the accounts table, bailout!
-  if (data.instance_url && data.instance_url !== getBroadcastedInstance.instance_url) {
+  if (!data || !getBroadcastedInstance || data.instance_url !== getBroadcastedInstance.instance_url) {
     return;
   }
 
   if (data.action.toUpperCase() == "CREATE") {
-    await onevent.create(data);
+    await onevent.create(getBroadcastedInstance, data);
   }
   if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
-    await onevent.update(data);
+    await onevent.update(getBroadcastedInstance, data);
   }
   if (data.action.toUpperCase() == "DELETE") {
-    await onevent.delete(data);
+    await onevent.delete(getBroadcastedInstance, data);
   }
 });
 

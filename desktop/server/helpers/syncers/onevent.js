@@ -8,14 +8,7 @@ const errorLogModel = require("../../models/log-error");
 const watcher = require("../watcher");
 const _base = require("./_base");
 
-exports.create = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
-
+exports.create = async (account, params) => {
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -44,7 +37,12 @@ exports.create = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === true) {
+    }
+
+    // If the node is a file, we will download the file
+    if (params.is_file === true) {
+
+      // Create the folder chain first...
       mkdirp.sync(path.dirname(currentPath));
 
       await remote.download({
@@ -69,14 +67,7 @@ exports.create = async params => {
 };
 
 // Update the file
-exports.update = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
-
+exports.update = async (account, params) => {
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -117,9 +108,14 @@ exports.update = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === true) {
+    }
+
+    // If the node is a file, we will download it
+    if (params.is_file === true) {
       // Delete the old file
-      fs.removeSync(oldRecord.file_path);
+      if (oldRecord) {
+        fs.removeSync(oldRecord.file_path);
+      }
 
       // Delete the old reference
       await nodeModel.delete({
@@ -149,14 +145,7 @@ exports.update = async params => {
   }
 };
 
-exports.delete = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
-
+exports.delete = async (account, params) => {
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
 

@@ -13,7 +13,7 @@ exports.getAll = async (request, response) => {
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       nodeId +
-      "/children?maxItems=9999&where=(isFolder=true)",
+      "/children?include=path&maxItems=9999&where=(isFolder=true)",
     headers: {
       authorization:
         "Basic " + await token.get(account)

@@ -194,7 +194,8 @@ exports.getMissingFiles = async params => {
 
     try {
       let result = await db
-        .pluck(column)
+        // .pluck(column)
+        .select(["node_id", "file_path"])
         .whereNotIn("file_path", chunk)
         .where("account_id", account.id)
         .where("is_deleted", 0)

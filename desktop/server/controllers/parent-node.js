@@ -7,7 +7,6 @@ exports.getAll = async (request, response) => {
   let nodeId = request.params.node_id;
   let account = await accountModel.getOneByAccountId(request.params.account_id);
 
-
   if (!account) {
     return response.status(401).json({ error: "Account not found" });
   }
@@ -18,7 +17,7 @@ exports.getAll = async (request, response) => {
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       nodeId +
-      "/parents",
+      "/parents?include=path",
     headers: {
       authorization:
         "Basic " + await token.get(account)
