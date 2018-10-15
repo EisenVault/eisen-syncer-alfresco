@@ -4,17 +4,17 @@ import { environment } from "../../environments/environment";
 import { Account } from "../models/account";
 
 @Injectable({
-  providedIn: "root"
+  providedIn: 'root'
 })
 export class AccountService {
   constructor(private _http: HttpClient) { }
 
   getAccounts(querystring = '') {
-    return this._http.get(environment.apiUrl + "/accounts?" + querystring);
+    return this._http.get(`${environment.apiUrl}/accounts?${querystring}`);
   }
 
   getAccount(accountId) {
-    return this._http.get(environment.apiUrl + "/accounts/" + accountId);
+    return this._http.get(`${environment.apiUrl}/accounts/${accountId}`);
   }
 
   addAccount(params) {
@@ -65,14 +65,14 @@ export class AccountService {
 
   updateSync(accountId, sync) {
     return this._http.put(
-      environment.apiUrl + "/accounts/" + accountId + "/sync",
+      `${environment.apiUrl}/accounts/${accountId}/sync`,
       {
         sync_enabled: sync
       }
     );
   }
 
-  deleteAccount(accountId) {
-    return this._http.delete(environment.apiUrl + "/accounts/" + accountId);
+  deleteAccount(accountId, forceDelete) {
+    return this._http.delete(`${environment.apiUrl}/accounts/${accountId}/force_delete/${forceDelete}`);
   }
 }

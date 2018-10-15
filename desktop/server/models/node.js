@@ -194,7 +194,6 @@ exports.getMissingFiles = async params => {
 
     try {
       let result = await db
-        // .pluck(column)
         .select(["node_id", "file_path"])
         .whereNotIn("file_path", chunk)
         .where("account_id", account.id)
@@ -311,6 +310,26 @@ exports.deleteAll = async params => {
         is_deleted: 1
       });
   } catch (error) {
-    await errorLogModel.add(account, error);
+    await errorLogModel.add(account.id, error);
+  }
+};
+
+
+/**
+ * Permanently delete all nodes by accountId
+ * 
+ * @param object params
+ * {
+ *  account: <Object>
+ * }
+ */
+exports.forceDeleteAll = async accountId => {
+  try {
+    await db("nodes")
+      .where("account_id", accountId)
+      .delete();
+
+  } catch (error) {
+    await errorLogModel.add(accountId, error);
   }
 };

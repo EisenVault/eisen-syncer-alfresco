@@ -1,7 +1,7 @@
 const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
-exports.getAll = async syncEnabled => {
+exports.getAll = async (syncEnabled, isDeleted = 0) => {
   try {
     return await db
       .select(
@@ -22,13 +22,14 @@ exports.getAll = async syncEnabled => {
           queryBuilder.where("sync_enabled", 0);
         }
       })
-      .from("accounts");
+      .from("accounts")
+      .where('is_deleted', isDeleted);
   } catch (error) {
     return [{}];
   }
 };
 
-exports.getOne = async id => {
+exports.getOne = async (id, isDeleted = 0) => {
   return await db
     .select(
       "id",
@@ -43,7 +44,8 @@ exports.getOne = async id => {
     )
     .first()
     .from("accounts")
-    .where("id", id);
+    .where("id", id)
+    .where('is_deleted', isDeleted);
 };
 
 exports.getPassword = async id => {
@@ -54,44 +56,67 @@ exports.getPassword = async id => {
     .where("id", id);
 };
 
-exports.getOneByAccountId = async id => {
+exports.getOneByAccountId = async (id, isDeleted = 0) => {
   return await db
     .select("*")
     .first()
     .from("accounts")
-    .where("id", id);
+    .where("id", id)
+    .where('is_deleted', isDeleted);
 };
 
-exports.findByInstance = async (instance_url, username) => {
+exports.findByInstance = async (instance_url, username, isDeleted = 0) => {
   return await db
     .select("*")
     .first()
     .from("accounts")
     .where("instance_url", instance_url)
-    .where("username", username);
+    .where("username", username)
+    .where('is_deleted', isDeleted);
 };
 
-exports.syncPathExists = async (sync_path, username =  null) => {
+exports.syncPathExists = async (sync_path, accountId = null, isDeleted = 0) => {
   let query = await db
     .select(['sync_path'])
+    .modify(queryBuilder => {
+      if (accountId) {
+        queryBuilder.whereNot("id", accountId);
+      }
+    })
     .from("accounts")
-    .where("sync_path", sync_path);
-
-  if (username) {
-    query.whereNot("username", username);
-  }
+    .where("sync_path", sync_path)
+    .where('is_deleted', isDeleted);
 
   return query;
 }
 
-exports.findByEnabledSyncInstance = async (instance_url, siteName) => {
+exports.findByInstanceSiteName = async (instance_url, siteName, isDeleted = 0) => {
   return await db
     .select("*")
-    .first()
     .from("accounts")
     .where("instance_url", instance_url)
     .where("site_name", siteName)
-    .where("sync_enabled", 1);
+    .where("sync_enabled", 1)
+    .where('is_deleted', isDeleted);
+};
+
+exports.findByInstanceNodeId = async (instance_url, nodeId, isDeleted = 0) => {
+  const nodes = await db
+    .pluck('account_id')
+    .from('nodes')
+    .where('node_id', nodeId);
+
+  if (nodes.length === 0) {
+    return [];
+  }
+
+  return await db
+    .select("*")
+    .from("accounts")
+    .whereIn("id", nodes)
+    .where("instance_url", instance_url)
+    .where("sync_enabled", 1)
+    .where('is_deleted', isDeleted);
 };
 
 exports.addAccount = async request => {
@@ -105,7 +130,8 @@ exports.addAccount = async request => {
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       created_at: new Date().getTime(),
-      updated_at: new Date().getTime()
+      updated_at: new Date().getTime(),
+      is_deleted: 0
     })
     .into("accounts");
 };
@@ -177,6 +203,14 @@ exports.updateToken = async (accountId, token) => {
 };
 
 exports.deleteAccount = async accountId => {
+  return await db("accounts")
+    .update({
+      is_deleted: 1,
+    })
+    .where("id", accountId);
+};
+
+exports.forceDelete = async accountId => {
   return await db("accounts")
     .delete()
     .where("id", accountId);

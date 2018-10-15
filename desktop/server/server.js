@@ -45,27 +45,43 @@ let socket = io.connect(env.SERVICE_URL);
 socket.on("sync-notification", async data => {
   data = typeof data === "object" ? data : JSON.parse(data);
 
-  if (!data.path) {
+  if (!data.path && !data.node_id) {
+    // The response should have atleast the path or the node_id
     return;
   }
 
-  let siteName = data.path.split('/')[3];
-  let getBroadcastedInstance = await accountModel.findByEnabledSyncInstance(data.instance_url, siteName);
+  if (data.action.toUpperCase() == 'DELETE') {
+    getBroadcastedAccounts = await accountModel.findByInstanceNodeId(data.instance_url, data.node_id);
+  } else {
+    let siteName = data.path.split('/')[3];
+    getBroadcastedAccounts = await accountModel.findByInstanceSiteName(data.instance_url, siteName);
+  }
 
-  // If broadcast instance url is not available in the accounts table, bailout!
-  if (!data || !getBroadcastedInstance || data.instance_url !== getBroadcastedInstance.instance_url) {
+  if (getBroadcastedAccounts.length === 0) {
     return;
   }
 
-  if (data.action.toUpperCase() == "CREATE") {
-    await onevent.create(getBroadcastedInstance, data);
+  for (const account of getBroadcastedAccounts) {
+
+    // For Create
+    if (data.action.toUpperCase() == "CREATE") {
+      await onevent.create(account, data);
+    }
+
+    // For Update and Move
+    if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
+      await onevent.update(account, data);
+    }
+
+    // For Delete
+    if (data.action.toUpperCase() == "DELETE") {
+      await onevent.delete(account, data);
+    }
   }
-  if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
-    await onevent.update(getBroadcastedInstance, data);
-  }
-  if (data.action.toUpperCase() == "DELETE") {
-    await onevent.delete(getBroadcastedInstance, data);
-  }
+
+
+
+
 });
 
 try {

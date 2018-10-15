@@ -31,16 +31,14 @@ export class ManageComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // Load all accounts
+
     this._getAccounts();
 
     // When the app loads, lets try and sync the files from and to server.
     this._accountService
       .getAccounts('sync_enabled=1')
       .subscribe((accounts: IAccounts[]) => {
-        this.accounts = accounts;
-
-        for (const account of this.accounts) {
+        for (const account of accounts) {
           // This is for the spinning loader icon
           const index = this.showAccountLoaders.indexOf(account.id);
           if (index === -1) {
@@ -57,17 +55,7 @@ export class ManageComponent implements OnInit {
     // For every x seconds, we will make a request to the account api and check
     // which accounts are still syncing, so that we can attach loaders for those accounts
     setInterval(() => {
-      this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
-        for (const account of accounts) {
-          // This is for the spinning loader icon
-          const index = this.showAccountLoaders.indexOf(account.id);
-          if (index === -1 && account.sync_in_progress === 1) {
-            this.showAccountLoaders.push(account.id);
-          } else if (account.sync_in_progress === 0) {
-            this.showAccountLoaders.splice(index, 1);
-          }
-        } // End forloop
-      });
+      this._getAccounts();
     }, 10000);
   }
 
@@ -98,7 +86,19 @@ export class ManageComponent implements OnInit {
   _getAccounts() {
     this._accountService
       .getAccounts()
-      .subscribe(accounts => (this.accounts = accounts));
+      .subscribe((accounts: IAccounts[]) => {
+        this.accounts = accounts;
+        for (const account of accounts) {
+          // This is for the spinning loader icon
+          const index = this.showAccountLoaders.indexOf(account.id);
+          if (index === -1 && account.sync_in_progress === 1) {
+            this.showAccountLoaders.push(account.id);
+          } else if (account.sync_in_progress === 0) {
+            this.showAccountLoaders.splice(index, 1);
+          }
+        } // End forloop
+
+      });
   }
 
   update(e, account) {
@@ -126,12 +126,15 @@ export class ManageComponent implements OnInit {
   deleteAccount(account) {
     if (
       confirm(
-        'This will delete the selected account but will not delete the folder or its contents. Continue?'
+        'Proceed with the account deletion process?'
       )
     ) {
+
+      const answer = confirm('Do you wish to remove the files from your local storage? (This will not delete the files from the server)');
       this._accountService
-        .deleteAccount(account.id)
+        .deleteAccount(account.id, answer)
         .subscribe(() => this._getAccounts());
+
     }
   }
 }

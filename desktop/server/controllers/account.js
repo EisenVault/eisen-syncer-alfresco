@@ -1,9 +1,11 @@
 const accountModel = require("../models/account");
+const nodeModel = require("../models/node");
 const watcher = require("../helpers/watcher");
+const fs = require("fs-extra");
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
-  return response.status(200).json(await accountModel.getAll(syncEnabled));
+  return response.status(200).json(await accountModel.getAll(syncEnabled, 0));
 };
 
 exports.getOne = async (request, response) => {
@@ -54,8 +56,27 @@ exports.updateSyncTime = async (request, response) => {
 };
 
 exports.deleteAccount = async (request, response) => {
-  let deleteAccount = await accountModel.deleteAccount(request.params.id);
-  await watcher.watchAll();
+  const accountId = request.params.id;
+  const forceDelete = request.params.force_delete;
+  let deleteAccount = null;
 
+  if (forceDelete === 'true') {
+    console.log('frcel delete');
+
+    // Permanantly delete account, files and all node data from the db
+    console.log( 'accountId', accountId );
+    const account = await accountModel.getOne(accountId);
+    console.log( 'account', account );
+    // Remove the files physically...
+    fs.removeSync(account.sync_path);
+
+    deleteAccount = await accountModel.forceDelete(accountId);
+    await nodeModel.forceDeleteAll(accountId);
+
+  } else {
+    deleteAccount = await accountModel.deleteAccount(accountId);
+  }
+
+  await watcher.watchAll();
   return response.status(200).json(deleteAccount);
 };
