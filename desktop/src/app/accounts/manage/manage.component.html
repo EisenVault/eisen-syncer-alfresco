@@ -6,6 +6,9 @@
 </div>
 
 <hr>
+<!-- Error alert message -->
+<div class="font-italic alert alert-danger" *ngIf="errors.sync_enabled">{{ errors.sync_enabled.join('') }}</div>
+
 <div class="mt-5">
   <div class="alert alert-success" role="alert" *ngIf="isSaved">
     Account settings saved successfully!
@@ -25,7 +28,9 @@
       <tr *ngFor="let account of accounts">
         <td>{{ account.instance_url }}</td>
         <td>{{ account.username }}</td>
-        <td>{{ account.sync_path }}</td>
+        <td>
+          <span title="{{ account.sync_path}}">{{ account.sync_path | slice:0:20 }}...</span>
+        </td>
         <td>
           <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account)">
         </td>

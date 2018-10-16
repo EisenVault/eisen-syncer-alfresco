@@ -17,7 +17,7 @@ exports.watch = account => {
     prev
   ) {
     if (typeof f == "object" && prev === null && curr === null) {
-      // Finished walking the tree     
+      // Finished walking the tree
     } else if (prev === null) {
       // f is a new file/folder
       if (watchlist.indexOf(f) == -1) {
@@ -55,7 +55,7 @@ exports.watch = account => {
 // remove a watchlist
 exports.unwatchAll = async () => {
   let accounts = await accountModel.getAll();
-  console.log( 'Watcher paused' );
+  console.log("Watcher paused");
 
   // Remove all watchers
   for (let account of accounts) {
@@ -69,8 +69,8 @@ exports.watchAll = async () => {
   // Remove all watchers first
   await this.unwatchAll();
 
-  console.log( 'Watcher started' );
-  
+  console.log("Watcher started");
+
   // Add new watchers
   accounts = await accountModel.getAll(1);
   for (let account of accounts) {

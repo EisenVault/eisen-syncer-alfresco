@@ -53,6 +53,40 @@ exports.getNodeList = async params => {
  *
  * @param object params
  * {
+ *  nodeId: string
+ * }
+ */
+exports.getNode = async params => {
+  let account = params.account;
+  let nodeId = params.nodeId;
+
+  if (!nodeId || !account) {
+    throw new Error("Invalid paramerters");
+  }
+
+  var options = {
+    method: "GET",
+    url:
+      account.instance_url +
+      "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
+      nodeId,
+    headers: {
+      authorization: "Basic " + (await token.get(account))
+    }
+  };
+
+  try {
+    let response = await request(options);
+    return JSON.parse(response);
+  } catch (error) {
+    await errorLogModel.add(account.id, error);
+  }
+};
+
+/**
+ *
+ * @param object params
+ * {
  *  account: Account<Object>,
  *  parentNodeId: ''
  * }
@@ -156,6 +190,7 @@ exports.download = async params => {
   let account = params.account;
   let sourceNodeId = params.sourceNodeId;
   let destinationPath = params.destinationPath;
+  let remoteFolderPath = params.remoteFolderPath;
 
   var options = {
     method: "GET",
@@ -178,12 +213,22 @@ exports.download = async params => {
 
     await request(options).pipe(fs.createWriteStream(destinationPath));
 
+    let modifiedDate = _base.getFileModifiedTime(destinationPath);
+    if (modifiedDate === 0) {
+      const node = await this.getNode({
+        account: account,
+        nodeId: sourceNodeId
+      });
+      modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
+    }
+
     // Add refrence to the nodes table
     await nodeModel.add({
       account: account,
       nodeId: sourceNodeId,
+      remoteFolderPath: remoteFolderPath,
       filePath: destinationPath,
-      fileUpdateAt: _base.getFileModifiedTime(destinationPath),
+      fileUpdateAt: modifiedDate,
       isFolder: false,
       isFile: true
     });
@@ -236,7 +281,7 @@ exports.upload = async params => {
         account.instance_url +
         "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
         rootNodeId +
-        "/children",
+        "/children?include=path",
       headers: {
         "content-type": "application/json",
         Authorization: "Basic " + (await token.get(account))
@@ -257,8 +302,9 @@ exports.upload = async params => {
         await nodeModel.add({
           account: account,
           nodeId: response.entry.id,
+          remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
-          fileUpdateAt: _base.getFileModifiedTime(params.filePath),
+          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
           isFolder: true,
           isFile: false
         });
@@ -299,8 +345,9 @@ exports.upload = async params => {
     options = {
       resolveWithFullResponse: true,
       method: "POST",
-      // url: account.instance_url + "/alfresco/service/api/upload",
-      url: account.instance_url + `/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children`,
+      url:
+        account.instance_url +
+        `/alfresco/api/-default-/public/alfresco/versions/1/nodes/-my-/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -310,7 +357,7 @@ exports.upload = async params => {
           options: {}
         },
         name: path.basename(filePath),
-        relativePath: uploadDirectory,
+        relativePath: "/" + uploadDirectory,
         overwrite: "true"
       }
     };
@@ -324,6 +371,7 @@ exports.upload = async params => {
         await nodeModel.add({
           account: account,
           nodeId: response.entry.id,
+          remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
           isFolder: false,

@@ -26,6 +26,7 @@ exports.create = async (account, params) => {
       await nodeModel.add({
         account: account,
         nodeId: params.node_id,
+        remoteFolderPath: path.dirname(params.path),
         filePath: currentPath,
         fileUpdateAt: _base.getFileModifiedTime(currentPath),
         isFolder: true,
@@ -48,7 +49,8 @@ exports.create = async (account, params) => {
       await remote.download({
         account: account,
         sourceNodeId: params.node_id,
-        destinationPath: currentPath
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(params.path)
       });
 
       // Start watcher now
@@ -97,6 +99,7 @@ exports.update = async (account, params) => {
       await nodeModel.add({
         account: account,
         nodeId: params.node_id,
+        remoteFolderPath: path.dirname(params.path),
         filePath: currentPath,
         fileUpdateAt: _base.getFileModifiedTime(currentPath),
         isFolder: true,
@@ -127,7 +130,8 @@ exports.update = async (account, params) => {
       await remote.download({
         account: account,
         sourceNodeId: params.node_id,
-        destinationPath: currentPath
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(params.path)
       });
 
       // Start watcher now

@@ -100,20 +100,13 @@ exports.findByInstanceSiteName = async (instance_url, siteName, isDeleted = 0) =
     .where('is_deleted', isDeleted);
 };
 
-exports.findByInstanceNodeId = async (instance_url, nodeId, isDeleted = 0) => {
-  const nodes = await db
-    .pluck('account_id')
-    .from('nodes')
-    .where('node_id', nodeId);
+exports.getNodes
 
-  if (nodes.length === 0) {
-    return [];
-  }
-
+exports.findByInstanceAccounts = async (instance_url, accounts, isDeleted = 0) => {
   return await db
     .select("*")
     .from("accounts")
-    .whereIn("id", nodes)
+    .whereIn("id", accounts)
     .where("instance_url", instance_url)
     .where("sync_enabled", 1)
     .where('is_deleted', isDeleted);
@@ -154,6 +147,7 @@ exports.updateWatchNode = async (accountId, request) => {
   return await db("accounts")
     .update({
       site_name: request.body.site_name,
+      watch_folder: request.body.watch_folder,
       watch_node: request.body.watch_node,
       updated_at: new Date().getTime()
     })

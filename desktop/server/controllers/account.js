@@ -60,19 +60,14 @@ exports.deleteAccount = async (request, response) => {
   const forceDelete = request.params.force_delete;
   let deleteAccount = null;
 
-  if (forceDelete === 'true') {
-    console.log('frcel delete');
-
+  if (forceDelete === "true") {
     // Permanantly delete account, files and all node data from the db
-    console.log( 'accountId', accountId );
     const account = await accountModel.getOne(accountId);
-    console.log( 'account', account );
     // Remove the files physically...
     fs.removeSync(account.sync_path);
 
     deleteAccount = await accountModel.forceDelete(accountId);
     await nodeModel.forceDeleteAll(accountId);
-
   } else {
     deleteAccount = await accountModel.deleteAccount(accountId);
   }

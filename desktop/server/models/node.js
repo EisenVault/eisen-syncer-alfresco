@@ -20,6 +20,7 @@ const LIMIT = 950;
 exports.add = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
+  let remoteFolderPath = params.remoteFolderPath;
   let filePath = params.filePath;
   let fileUpdateAt = params.fileUpdateAt;
   let isFolder = params.isFolder;
@@ -41,9 +42,10 @@ exports.add = async params => {
       .insert({
         account_id: account.id,
         node_id: nodeId,
+        remote_folder_path: remoteFolderPath,
         file_name: path.basename(filePath),
         file_path: filePath,
-        folder_path: path.dirname(filePath),
+        local_folder_path: path.dirname(filePath),
         file_update_at: fileUpdateAt,
         is_folder: isFolder,
         is_file: isFile,
@@ -103,6 +105,18 @@ exports.getAll = async params => {
   }
 };
 
+exports.getAllByNodeId = async nodeId => {
+  try {
+    return await db
+      .select("*")
+      .from("nodes")
+      .where("node_id", nodeId)
+      .where("is_deleted", 0);
+  } catch (error) {
+    await errorLogModel.add(account, error);
+  }
+};
+
 exports.getAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
@@ -114,7 +128,7 @@ exports.getAllByFileOrFolderPath = async params => {
       .where("account_id", account.id)
       .where("is_deleted", 0)
       .where("file_path", "LIKE", path + "%")
-      .orWhere("folder_path", path);
+      .orWhere("local_folder_path", path);
   } catch (error) {
     await errorLogModel.add(account, error);
   }
@@ -166,7 +180,7 @@ exports.getAllByFolderPath = async params => {
       .from("nodes")
       .where("account_id", account.id)
       .where("is_deleted", 0)
-      .where("folder_path", folderPath);
+      .where("local_folder_path", folderPath);
   } catch (error) {
     await errorLogModel.add(account, error);
   }
@@ -209,7 +223,6 @@ exports.getMissingFiles = async params => {
 
   return missingFiles;
 };
-
 
 exports.updateModifiedTime = async params => {
   let account = params.account;
@@ -284,7 +297,7 @@ exports.deleteAllByFileOrFolderPath = async params => {
     return await db("nodes")
       .where("account_id", account.id)
       .where("file_path", "LIKE", path + "%")
-      .orWhere("folder_path", path)
+      .orWhere("local_folder_path", path)
       .update({
         is_deleted: 1
       });
@@ -314,10 +327,9 @@ exports.deleteAll = async params => {
   }
 };
 
-
 /**
  * Permanently delete all nodes by accountId
- * 
+ *
  * @param object params
  * {
  *  account: <Object>
@@ -328,7 +340,6 @@ exports.forceDeleteAll = async accountId => {
     await db("nodes")
       .where("account_id", accountId)
       .delete();
-
   } catch (error) {
     await errorLogModel.add(accountId, error);
   }

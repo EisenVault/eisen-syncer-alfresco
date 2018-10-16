@@ -5,6 +5,7 @@ const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
+const nodeModel = require("./models/node");
 const env = require("./config/env");
 var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
@@ -50,11 +51,29 @@ socket.on("sync-notification", async data => {
     return;
   }
 
-  if (data.action.toUpperCase() == 'DELETE') {
-    getBroadcastedAccounts = await accountModel.findByInstanceNodeId(data.instance_url, data.node_id);
+  console.log("data", data);
+
+  if (data.action.toUpperCase() == "DELETE") {
+    // Since we are not gettting the deleted path from the socket service, we will have to look up in the nodes table to get the remote paths, and their account ids
+    var nodeRemotePaths = [];
+    var accounts = [];
+    const deletionNodes = await nodeModel.getAllByNodeId(data.node_id);
+    for (const iterator of deletionNodes) {
+      nodeRemotePaths.push(iterator.remote_folder_path);
+      accounts.push(iterator.account_id);
+    }
+
+    // Once we get the account ids, we will find all related accounts
+    getBroadcastedAccounts = await accountModel.findByInstanceAccounts(
+      data.instance_url,
+      accounts
+    );
   } else {
-    let siteName = data.path.split('/')[3];
-    getBroadcastedAccounts = await accountModel.findByInstanceSiteName(data.instance_url, siteName);
+    let siteName = data.path.split("/")[3];
+    getBroadcastedAccounts = await accountModel.findByInstanceSiteName(
+      data.instance_url,
+      siteName
+    );
   }
 
   if (getBroadcastedAccounts.length === 0) {
@@ -62,26 +81,34 @@ socket.on("sync-notification", async data => {
   }
 
   for (const account of getBroadcastedAccounts) {
-
-    // For Create
-    if (data.action.toUpperCase() == "CREATE") {
-      await onevent.create(account, data);
-    }
-
-    // For Update and Move
-    if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
-      await onevent.update(account, data);
-    }
-
-    // For Delete
+    // Perform checks so that the action may be taken only for the folders being watched...
     if (data.action.toUpperCase() == "DELETE") {
-      await onevent.delete(account, data);
+      for (const remotePath of nodeRemotePaths) {
+        // If the deleted path on the server is inside the watch_folder of the account, then we delete the local file only under that path...
+        if (remotePath.indexOf(account.watch_folder) !== -1) {
+          await onevent.delete(account, data);
+        }
+      }
+    } else {
+      // If the current path is not the watch folder of this account, then skip and go to next iteration.
+      if (data.path.indexOf(account.watch_folder) === -1) {
+        continue;
+      }
+
+      // For Create
+      if (data.action.toUpperCase() === "CREATE") {
+        await onevent.create(account, data);
+      }
+
+      // For Update and Move
+      if (
+        data.action.toUpperCase() === "UPDATE" ||
+        data.action.toUpperCase() === "MOVE"
+      ) {
+        await onevent.update(account, data);
+      }
     }
   }
-
-
-
-
 });
 
 try {

@@ -53,10 +53,11 @@ export class AccountService {
     );
   }
 
-  updateWatchNode(accountId, siteName, nodeId) {
+  updateWatchNode(accountId, siteName, watchFolder, nodeId) {
     return this._http.put(`${environment.apiUrl}/accounts/${accountId}/watchnode`,
       {
         site_name: siteName,
+        watch_folder: watchFolder,
         watch_node: nodeId
       }
     );

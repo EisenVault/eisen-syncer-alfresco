@@ -1,4 +1,5 @@
 const fs = require("fs-extra");
+const path = require("path");
 const mkdirp = require("mkdirp");
 const glob = require("glob");
 const accountModel = require("../../models/account");
@@ -42,7 +43,7 @@ exports.recursiveDownload = async params => {
         maxItems: maxItems
       });
 
-      if(!response) {
+      if (!response) {
         // Looks like there are no data available, lets break
         break;
       }
@@ -51,7 +52,6 @@ exports.recursiveDownload = async params => {
       skipCount = skipCount + maxItems;
 
       for (const node of response.nodes) {
-
         // Store the node ids so that we can compare it with the db and delete the records on local that are deleted on the server.
         availableNodeList.push(node.id);
 
@@ -121,7 +121,6 @@ exports.recursiveDownload = async params => {
     });
 
     for (const iterator of missingFiles) {
-
       // Check if the file on the local is not available on the server, if so lets delete the file on the local.
       if (availableNodeList.indexOf(iterator.node_id) === -1) {
         fs.removeSync(iterator.file_path);
@@ -166,7 +165,11 @@ exports.recursiveUpload = async params => {
   let localFilePathList = glob.sync(rootFolder);
 
   // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-  if (params.sync_path && fs.existsSync(params.sync_path) && fs.statSync(params.sync_path).isDirectory()) {
+  if (
+    params.sync_path &&
+    fs.existsSync(params.sync_path) &&
+    fs.statSync(params.sync_path).isDirectory()
+  ) {
     localFilePathList.unshift(params.sync_path);
   }
 
@@ -219,7 +222,7 @@ exports.recursiveUpload = async params => {
 
 /**
  * Recursively delete all files from server that were deleted from local
- * 
+ *
  * @param object params
  * {
  *  account: Account<Object>,
@@ -315,19 +318,21 @@ _createItemOnLocal = async params => {
       await nodeModel.add({
         account: account,
         nodeId: sourceNodeId,
+        remoteFolderPath: path.dirname(node.path_name),
         filePath: currentPath,
         fileUpdateAt: _base.convertToUTC(node.modified_at),
         isFolder: true,
         isFile: false
       });
-    } 
-    
+    }
+
     // If the child is a file, download the file...
     if (node.is_file === true) {
       await remote.download({
         account: account,
         sourceNodeId: sourceNodeId,
-        destinationPath: currentPath
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(node.path_name)
       });
     }
   } catch (error) {

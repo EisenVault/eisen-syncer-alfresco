@@ -17,7 +17,7 @@ export class InstanceInfoComponent implements OnInit {
   public password = '';
   public sync_path = '';
   public sync_frequency = 2;
-  public sync_enabled = true;
+  public sync_enabled = false;
   public file = '';
 
   constructor(
@@ -34,7 +34,7 @@ export class InstanceInfoComponent implements OnInit {
           if (response) {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
-            this.sync_enabled = (<any>response).sync_enabled;
+            this.sync_enabled = false;
             this.sync_path = (<any>response).sync_path;
             this.sync_frequency = (<any>response).sync_frequency;
           }
