@@ -39,3 +39,7 @@ exports.getFileModifiedTime = filePath => {
 exports.convertToUTC = time => {
   return Math.round(Date.parse(new Date(time).toUTCString()) / 1000);
 };
+
+exports.getCurrentTime = () => {
+  return Math.round(new Date().getTime() / 1000);
+};

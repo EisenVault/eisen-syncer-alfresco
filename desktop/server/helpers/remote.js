@@ -192,6 +192,16 @@ exports.download = async params => {
   let destinationPath = params.destinationPath;
   let remoteFolderPath = params.remoteFolderPath;
 
+  if (
+    !this.watchFolderGuard({
+      account,
+      filePath: destinationPath,
+      action: 'DOWNLOAD'
+    })
+  ) {
+    return;
+  }
+
   var options = {
     method: "GET",
     url:
@@ -229,6 +239,7 @@ exports.download = async params => {
       remoteFolderPath: remoteFolderPath,
       filePath: destinationPath,
       fileUpdateAt: modifiedDate,
+      lastDownloadedAt: _base.getCurrentTime(),      
       isFolder: false,
       isFile: true
     });
@@ -268,7 +279,8 @@ exports.upload = async params => {
   if (
     !this.watchFolderGuard({
       account,
-      filePath
+      filePath,
+      action: 'UPLOAD'
     })
   ) {
     return;
@@ -316,6 +328,7 @@ exports.upload = async params => {
           remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+          lastUploadedAt: _base.getCurrentTime(),
           isFolder: true,
           isFile: false
         });
@@ -385,6 +398,7 @@ exports.upload = async params => {
           remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+          lastUploadedAt: _base.getCurrentTime(),          
           isFolder: false,
           isFile: true
         });
@@ -419,7 +433,28 @@ exports.upload = async params => {
 };
 
 exports.watchFolderGuard = params => {
-  let { account, filePath } = params;
+  let { account, filePath, action } = params;
+
+  if(action.toUpperCase() === 'UPLOAD') {
+    // Check if the file was just downloaded, bail out!
+    const node = await nodeModel.getOneByFilePath({
+      account, filePath
+    });
+
+    if(_base.getCurrentTime() - node.last_downloaded_at <= 30) {
+      return false;
+    }
+
+  } else if(action.toUpperCase() === 'DOWNLOAD') {
+    // Check if the file was just uploaded, bail out!
+    const node = await nodeModel.getOneByFilePath({
+      account, filePath
+    });
+
+    if(_base.getCurrentTime() - node.last_uploaded_at <= 30) {
+      return false;
+    }
+  }
 
   // Only upload stuffs that are happening under the watched folder
   let watchFolder = account.watch_folder.split("documentLibrary").pop();
