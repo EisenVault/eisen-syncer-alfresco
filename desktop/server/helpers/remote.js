@@ -196,7 +196,7 @@ exports.download = async params => {
     !this.watchFolderGuard({
       account,
       filePath: destinationPath,
-      action: 'DOWNLOAD'
+      action: "DOWNLOAD"
     })
   ) {
     return;
@@ -231,7 +231,7 @@ exports.download = async params => {
       });
       modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
     }
-
+console.log('_base.getCurrentTime()', _base.getCurrentTime());
     // Add refrence to the nodes table
     await nodeModel.add({
       account: account,
@@ -239,7 +239,7 @@ exports.download = async params => {
       remoteFolderPath: remoteFolderPath,
       filePath: destinationPath,
       fileUpdateAt: modifiedDate,
-      lastDownloadedAt: _base.getCurrentTime(),      
+      lastDownloadedAt: _base.getCurrentTime(),
       isFolder: false,
       isFile: true
     });
@@ -280,7 +280,7 @@ exports.upload = async params => {
     !this.watchFolderGuard({
       account,
       filePath,
-      action: 'UPLOAD'
+      action: "UPLOAD"
     })
   ) {
     return;
@@ -398,7 +398,7 @@ exports.upload = async params => {
           remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),          
+          lastUploadedAt: _base.getCurrentTime(),
           isFolder: false,
           isFile: true
         });
@@ -432,26 +432,29 @@ exports.upload = async params => {
   return false;
 };
 
-exports.watchFolderGuard = params => {
+exports.watchFolderGuard = async params => {
   let { account, filePath, action } = params;
 
-  if(action.toUpperCase() === 'UPLOAD') {
+  if (action.toUpperCase() === "UPLOAD") {
     // Check if the file was just downloaded, bail out!
     const node = await nodeModel.getOneByFilePath({
-      account, filePath
+      account,
+      filePath
     });
 
-    if(_base.getCurrentTime() - node.last_downloaded_at <= 30) {
+    if (node && _base.getCurrentTime() - node.last_downloaded_at <= 30) {
+      console.log('Stopped from uploading...');
       return false;
     }
-
-  } else if(action.toUpperCase() === 'DOWNLOAD') {
+  } else if (action.toUpperCase() === "DOWNLOAD") {
     // Check if the file was just uploaded, bail out!
     const node = await nodeModel.getOneByFilePath({
-      account, filePath
+      account,
+      filePath
     });
 
-    if(_base.getCurrentTime() - node.last_uploaded_at <= 30) {
+    if (node && _base.getCurrentTime() - node.last_uploaded_at <= 30) {
+      console.log('Stopped from downloading...');
       return false;
     }
   }

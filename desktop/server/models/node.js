@@ -23,8 +23,8 @@ exports.add = async params => {
   let remoteFolderPath = params.remoteFolderPath;
   let filePath = params.filePath;
   let fileUpdateAt = params.fileUpdateAt || 0;
-  let fileUploadedAt = params.lastUploadedAt || 0;
-  let fileDownloadedAt = params.fileDownloadedAt || 0;
+  let lastUploadedAt = params.lastUploadedAt || 0;
+  let lastDownloadedAt = params.lastDownloadedAt || 0;
   let isFolder = params.isFolder;
   let isFile = params.isFile;
 
@@ -49,8 +49,8 @@ exports.add = async params => {
         file_path: filePath,
         local_folder_path: path.dirname(filePath),
         file_update_at: fileUpdateAt,
-        last_uploaded_at: fileUploadedAt,
-        last_downloaded_at: fileDownloadedAt,
+        last_uploaded_at: lastUploadedAt,
+        last_downloaded_at: lastDownloadedAt,
         is_folder: isFolder,
         is_file: isFile,
         is_deleted: 0
