@@ -9,6 +9,7 @@ exports.getAll = async (syncEnabled, isDeleted = 0) => {
         "instance_url",
         "username",
         "watch_node",
+        "watch_folder",
         "sync_path",
         "sync_enabled",
         "sync_frequency",
@@ -37,6 +38,7 @@ exports.getOne = async (id, isDeleted = 0) => {
       "username",
       "token",
       "watch_node",
+      "watch_folder",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
@@ -91,6 +93,8 @@ exports.syncPathExists = async (sync_path, accountId = null, isDeleted = 0) => {
 }
 
 exports.findByInstanceSiteName = async (instance_url, siteName, isDeleted = 0) => {
+  console.log('instance_url', instance_url);
+  console.log('siteName', siteName);
   return await db
     .select("*")
     .from("accounts")

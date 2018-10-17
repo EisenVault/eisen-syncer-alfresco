@@ -94,6 +94,7 @@
     "mkdirp": "^0.5.1",
     "ngx-electron": "^1.0.4",
     "node-machine-id": "^1.1.10",
+    "nodemon": "^1.18.4",
     "pm2": "^3.2.2",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5",

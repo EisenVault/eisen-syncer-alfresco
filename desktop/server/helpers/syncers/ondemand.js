@@ -156,6 +156,13 @@ exports.recursiveUpload = async params => {
   rootFolder = syncPath;
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
+  } else {
+    // If syncPath is a file, just upload it and bail out! 
+    return remote.upload({
+      account,
+      filePath: syncPath,
+      rootNodeId: rootNodeId
+    });
   }
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -271,7 +278,10 @@ exports.deleteByPath = async params => {
   let account = params.account;
   let filePath = params.filePath;
 
-  if (account.sync_enabled == 0) {
+  if (
+    account.sync_enabled == 0 ||
+    !remote.watchFolderGuard({ account, filePath })
+  ) {
     return;
   }
 

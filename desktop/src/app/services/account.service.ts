@@ -54,6 +54,8 @@ export class AccountService {
   }
 
   updateWatchNode(accountId, siteName, watchFolder, nodeId) {
+    console.log('nodeID', nodeId);
+    
     return this._http.put(`${environment.apiUrl}/accounts/${accountId}/watchnode`,
       {
         site_name: siteName,

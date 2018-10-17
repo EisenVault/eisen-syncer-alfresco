@@ -6,7 +6,7 @@ const watcher = require("../helpers/watcher");
 exports.upload = async (request, response) => {
   console.log("UPLOAD START");
   // Stop watcher for a while
-  watcher.unwatchAll();
+  // watcher.unwatchAll();
 
   let account = await accountModel.getOne(request.body.account_id);
 

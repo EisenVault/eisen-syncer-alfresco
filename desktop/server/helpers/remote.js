@@ -265,6 +265,15 @@ exports.upload = async params => {
     throw new Error("Account not found");
   }
 
+  if (
+    !this.watchFolderGuard({
+      account,
+      filePath
+    })
+  ) {
+    return;
+  }
+
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
@@ -273,6 +282,8 @@ exports.upload = async params => {
       0,
       relativePath.length - directoryName.length - 1
     );
+
+    console.log("relativePath", relativePath);
 
     options = {
       resolveWithFullResponse: true,
@@ -345,9 +356,9 @@ exports.upload = async params => {
     options = {
       resolveWithFullResponse: true,
       method: "POST",
-      url:
-        account.instance_url +
-        `/alfresco/api/-default-/public/alfresco/versions/1/nodes/-my-/children?include=path`,
+      url: `${
+        account.instance_url
+      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -357,7 +368,7 @@ exports.upload = async params => {
           options: {}
         },
         name: path.basename(filePath),
-        relativePath: "/" + uploadDirectory,
+        relativePath: uploadDirectory,
         overwrite: "true"
       }
     };
@@ -389,9 +400,49 @@ exports.upload = async params => {
 
       return false;
     } catch (error) {
-      await errorLogModel.add(account.id, error);
+      // Ignore "duplicate" status codes
+      if (error.statusCode == 409) {
+        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+        nodeModel.updateModifiedTime({
+          account: account,
+          filePath: filePath,
+          fileUpdateAt: _base.getFileModifiedTime(params.filePath)
+        });
+      } else {
+        // Add an error log
+        await errorLogModel.add(account.id, error);
+      }
     }
   }
 
   return false;
+};
+
+exports.watchFolderGuard = params => {
+  let { account, filePath } = params;
+
+  // Only upload stuffs that are happening under the watched folder
+  let watchFolder = account.watch_folder.split("documentLibrary").pop();
+  let relativeFilePath = filePath.replace(account.sync_path, "");
+
+  // Strip any starting slashes..
+  watchFolder =
+    watchFolder[0] === "/"
+      ? watchFolder.substring(1, watchFolder.length)
+      : watchFolder;
+
+  relativeFilePath =
+    relativeFilePath[0] === "/"
+      ? relativeFilePath.substring(1, relativeFilePath.length)
+      : relativeFilePath;
+
+  relativeFilePath = relativeFilePath.split("/")[0];
+
+  // If the folder or file being uploaded does not belong to the watched folder, bail out!
+  if (watchFolder !== relativeFilePath) {
+    console.log("bailed", relativeFilePath);
+    return false;
+  }
+
+  return true;
 };

@@ -18,10 +18,9 @@ export class RemoteFolderComponent implements OnInit {
   public showSites = false;
   public showNodes = false;
   public showLevelUp = false;
-  public selectedNode = '';
-  public parentNodeId = '';
-  public selectedSiteName = '';
-  private watchFolder = '';
+  public documentLibraryId = "";
+  public selectedSiteName = "";
+  public watchFolder = "";
 
   constructor(
     private _router: Router,
@@ -31,7 +30,7 @@ export class RemoteFolderComponent implements OnInit {
     private _accountService: AccountService,
     private _syncerService: SyncerService,
     private _parentNodeService: ParentNodeService
-  ) { }
+  ) {}
 
   ngOnInit() {
     this._route.paramMap.subscribe(params => {
@@ -42,7 +41,8 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadSites() {
-    this.selectedNode = '';
+    this.documentLibraryId = "";
+    this.watchFolder = "";
     this.showLevelUp = false;
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
@@ -57,55 +57,66 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadNodes(nodeId) {
-    this.selectedNode = '';
+    this.watchFolder = "";
     this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
       this.nodes = (<any>response).list.entries;
-      this._setParentId();
+      // this._setParentId();
       this.showLevelUp = true;
       this.showSites = false;
       this.showNodes = true;
 
       for (const item of (<any>response).list.entries) {
-        if (item.entry.nodeType === 'st:site' || item.entry.nodeType === 'st:sites') {
+        if (
+          item.entry.nodeType === "st:site" ||
+          item.entry.nodeType === "st:sites"
+        ) {
           return this.loadSites();
         }
-        if (item.entry.name === 'documentLibrary') {
+        if (item.entry.name === "documentLibrary") {
+          this.documentLibraryId = item.entry.id;
           return (this.showLevelUp = false);
         }
       }
     });
   }
 
-  _setParentId() {
-    if (this.nodes && this.nodes.length > 0) {
-      const nodeId = this.nodes[0].entry.id;
+  // _setParentId() {
+  //   if (this.nodes && this.nodes.length > 0) {
+  //     const nodeId = this.nodes[0].entry.id;
 
-      this._parentNodeService
-        .getParents(this.accountId, nodeId)
-        .subscribe(response => {
-          if ((<any>response).list.entries.length > 0) {
-            this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
-          }
-        });
-    }
-  }
+  //     this._parentNodeService
+  //       .getParents(this.accountId, nodeId)
+  //       .subscribe(response => {
+  //         if ((<any>response).list.entries.length > 0) {
+  //           this.documentLibraryId = (<any>response).list.entries[0].entry.parentId;
+  //         }
+  //       });
+  //   }
+  // }
 
   addToList(e, node) {
-    if (e.target.value === 'true') {
+    if (e.target.value === "true") {
       this.watchFolder = `${node.entry.path.name}/${node.entry.name}`;
-      return this.selectedNode = node.entry.id;
+      return;
     }
 
-    return '';
+    return "";
   }
 
   goBack() {
-    this._router.navigate(["account-new"], { queryParams: { accountId: this.accountId } });
+    this._router.navigate(["account-new"], {
+      queryParams: { accountId: this.accountId }
+    });
   }
 
   finalize() {
     this._accountService
-      .updateWatchNode(this.accountId, this.selectedSiteName, this.watchFolder, this.selectedNode)
+      .updateWatchNode(
+        this.accountId,
+        this.selectedSiteName,
+        this.watchFolder,
+        this.documentLibraryId
+      )
       .subscribe(
         () => {
           // Start syncing

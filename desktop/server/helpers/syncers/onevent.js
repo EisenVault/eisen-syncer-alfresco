@@ -15,7 +15,7 @@ exports.create = async (account, params) => {
   await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
-  watcher.unwatchAll();
+  // watcher.unwatchAll();
 
   try {
     // If the node is a folder, we will create the folder and all its subfolders
@@ -76,7 +76,7 @@ exports.update = async (account, params) => {
   await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
-  watcher.unwatchAll();
+  // watcher.unwatchAll();
 
   let oldRecord = await nodeModel.getOneByNodeId({
     account: account,
