@@ -81,34 +81,39 @@ socket.on("sync-notification", async data => {
   }
 
   for (const account of getBroadcastedAccounts) {
-    // Perform checks so that the action may be taken only for the folders being watched...
     if (data.action.toUpperCase() == "DELETE") {
+      // Perform checks so that the action may be taken only for the folders being watched...
       for (const remotePath of nodeRemotePaths) {
         // If the deleted path on the server is inside the watch_folder of the account, then we delete the local file only under that path...
         if (remotePath.indexOf(account.watch_folder) !== -1) {
           await onevent.delete(account, data);
         }
       }
-    } else {
+    }
+
+    if (data.action.toUpperCase() == "CREATE") {
       // If the current path is not the watch folder of this account, then skip and go to next iteration.
       if (data.path.indexOf(account.watch_folder) === -1) {
         continue;
       }
+      await onevent.create(account, data);
+    }
 
-      // For Create
-      if (data.action.toUpperCase() === "CREATE") {
-        await onevent.create(account, data);
-      }
-
-      // For Update and Move
-      if (
-        data.action.toUpperCase() === "UPDATE" ||
-        data.action.toUpperCase() === "MOVE"
-      ) {
-        await onevent.update(account, data);
-      }
+    if (
+      data.action.toUpperCase() === "UPDATE" ||
+      data.action.toUpperCase() === "MOVE"
+    ) {
+      await onevent.update(account, data);
     }
   }
+});
+
+process.on("uncaughtException", function(err) {
+  if (err.errno === "EADDRINUSE") {
+    console.log("change port baby");
+    console.log(err);
+  } else console.log(err);
+  process.exit(1);
 });
 
 try {

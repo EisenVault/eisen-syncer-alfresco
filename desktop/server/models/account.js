@@ -93,8 +93,6 @@ exports.syncPathExists = async (sync_path, accountId = null, isDeleted = 0) => {
 }
 
 exports.findByInstanceSiteName = async (instance_url, siteName, isDeleted = 0) => {
-  console.log('instance_url', instance_url);
-  console.log('siteName', siteName);
   return await db
     .select("*")
     .from("accounts")

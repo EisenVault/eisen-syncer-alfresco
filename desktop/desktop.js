@@ -1,12 +1,36 @@
 const electron = require("electron");
 const url = require("url");
 const path = require("path");
+var pm2 = require("pm2");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
-const {session} = require('electron');
+const { session } = require("electron");
 
 // Set environment
 process.env.NODE_ENV = "dev";
+
+// Start the backend server...
+pm2.connect(function(err) {
+  if (err) {
+    console.error(err);
+    process.exit(2);
+  }
+
+  pm2.start(
+    {
+      name: "eisensync",
+      script: "./server/server.js", // Script to be run
+      exec_mode: "cluster", // Allows your app to be clustered
+      instances: 1, // Optional: Scales your app by 4
+      max_memory_restart: "100M", // Optional: Restarts your app if it reaches 100Mo
+      noDaemonMode: true
+    },
+    function(err, apps) {
+      pm2.disconnect(); // Disconnects from PM2
+      if (err) throw err;
+    }
+  );
+});
 
 let mainWindow, tray;
 let forceQuit = false;
@@ -26,11 +50,17 @@ ipcMain.on("autolaunch", (event, arg) => {
 
 // Listen for app to be ready
 app.on("ready", () => {
-
   // Patch to fix the "failed to load dev-tools issue". See https://github.com/electron/electron/issues/13008#issuecomment-400261941
   session.defaultSession.webRequest.onBeforeRequest({}, (details, callback) => {
-    if (details.url.indexOf('7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33') !== -1) {
-      callback({ redirectURL: details.url.replace('7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33', '57c9d07b416b5a2ea23d28247300e4af36329bdc') });
+    if (
+      details.url.indexOf("7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33") !== -1
+    ) {
+      callback({
+        redirectURL: details.url.replace(
+          "7accc8730b0f99b5e7c0702ea89d1fa7c17bfe33",
+          "57c9d07b416b5a2ea23d28247300e4af36329bdc"
+        )
+      });
     } else {
       callback({ cancel: false });
     }
@@ -40,12 +70,12 @@ app.on("ready", () => {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 650,
-    title: "Eisen Syncer - Syncing files made simple",
+    title: "EisenSync - Syncing files made simple",
     icon: path.join(__dirname, "src/assets/logos/256.png")
   });
 
   // Load system tray
-  tray = new Tray(path.join(__dirname, "/src/assets/logos/rounded.png"));
+  tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
 
   // Add tray context menu
   let trayMenuItems = [
@@ -124,7 +154,15 @@ app.on("ready", () => {
       label: "Exit",
       click() {
         forceQuit = true;
-        app.quit();
+        
+        pm2.stop("eisensync", (errback) => {
+          console.log('errback', errback);
+        });
+
+        // Let pm2 stop the process after which we can quit the app gracefully...
+        setTimeout(() => {
+          app.quit();
+        }, 1000);
       }
     }
   ];
@@ -132,7 +170,6 @@ app.on("ready", () => {
   const trayMenu = Menu.buildFromTemplate(trayMenuItems);
   tray.setToolTip("Sync your files easily");
   tray.setContextMenu(trayMenu);
-
 
   // Load the html file into window
   mainWindow.loadURL(
@@ -143,19 +180,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function (e) {
+  mainWindow.on("close", function(e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function () {
+  mainWindow.on("closed", function() {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function () {
+  app.on("activate-with-no-open-windows", function() {
     mainWindow.show();
   });
 

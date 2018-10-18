@@ -193,11 +193,11 @@ exports.download = async params => {
   let remoteFolderPath = params.remoteFolderPath;
 
   if (
-    !this.watchFolderGuard({
+    (await this.watchFolderGuard({
       account,
       filePath: destinationPath,
       action: "DOWNLOAD"
-    })
+    })) === false
   ) {
     return;
   }
@@ -231,7 +231,7 @@ exports.download = async params => {
       });
       modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
     }
-console.log('_base.getCurrentTime()', _base.getCurrentTime());
+
     // Add refrence to the nodes table
     await nodeModel.add({
       account: account,
@@ -277,11 +277,11 @@ exports.upload = async params => {
   }
 
   if (
-    !this.watchFolderGuard({
+    (await this.watchFolderGuard({
       account,
       filePath,
       action: "UPLOAD"
-    })
+    })) === false
   ) {
     return;
   }
@@ -294,8 +294,6 @@ exports.upload = async params => {
       0,
       relativePath.length - directoryName.length - 1
     );
-
-    console.log("relativePath", relativePath);
 
     options = {
       resolveWithFullResponse: true,
@@ -435,26 +433,34 @@ exports.upload = async params => {
 exports.watchFolderGuard = async params => {
   let { account, filePath, action } = params;
 
-  if (action.toUpperCase() === "UPLOAD") {
+  if (action && action.toUpperCase() === "UPLOAD") {
     // Check if the file was just downloaded, bail out!
     const node = await nodeModel.getOneByFilePath({
       account,
       filePath
     });
 
-    if (node && _base.getCurrentTime() - node.last_downloaded_at <= 30) {
-      console.log('Stopped from uploading...');
+    if (node && _base.getCurrentTime() - node.last_downloaded_at <= 15) {
+      console.log(
+        "Stopped from uploading...",
+        _base.getCurrentTime() - node.last_downloaded_at,
+        filePath
+      );
       return false;
     }
-  } else if (action.toUpperCase() === "DOWNLOAD") {
+  } else if (action && action.toUpperCase() === "DOWNLOAD") {
     // Check if the file was just uploaded, bail out!
     const node = await nodeModel.getOneByFilePath({
       account,
       filePath
     });
 
-    if (node && _base.getCurrentTime() - node.last_uploaded_at <= 30) {
-      console.log('Stopped from downloading...');
+    if (node && _base.getCurrentTime() - node.last_uploaded_at <= 15) {
+      console.log(
+        "Stopped from downloading...",
+        _base.getCurrentTime() - node.last_uploaded_at,
+        filePath
+      );
       return false;
     }
   }
@@ -474,11 +480,11 @@ exports.watchFolderGuard = async params => {
       ? relativeFilePath.substring(1, relativeFilePath.length)
       : relativeFilePath;
 
-  relativeFilePath = relativeFilePath.split("/")[0];
+  relativeFilePath = relativeFilePath.split("/")[0];  
 
-  // If the folder or file being uploaded does not belong to the watched folder, bail out!
-  if (watchFolder !== relativeFilePath) {
-    console.log("bailed", relativeFilePath);
+  // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
+  if (watchFolder !== '' && watchFolder !== relativeFilePath) {
+    console.log("bailed", relativeFilePath, watchFolder);
     return false;
   }
 

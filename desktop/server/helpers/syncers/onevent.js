@@ -42,7 +42,6 @@ exports.create = async (account, params) => {
 
     // If the node is a file, we will download the file
     if (params.is_file === true) {
-
       // Create the folder chain first...
       mkdirp.sync(path.dirname(currentPath));
 

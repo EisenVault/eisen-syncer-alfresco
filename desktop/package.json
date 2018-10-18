@@ -25,7 +25,7 @@
     "i-win": "npm run build && build -w"
   },
   "build": {
-    "appId": "com.eisenvault.syncer",
+    "appId": "com.eisenvault.sync",
     "productName": "EisenSync",
     "copyright": "Copyright © 2018 Argali Knowledge Services Pvt. Ltd.",
     "asar": true,
@@ -62,6 +62,23 @@
         }
       ],
       "icon": "build/icon.ico"
+    },
+    "dmg": {
+      "icon": "build/icon.icns",
+      "iconSize": 100,
+      "contents": [
+        {
+          "x": 380,
+          "y": 280,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 110,
+          "y": 280,
+          "type": "file"
+        }
+      ]
     }
   },
   "main": "desktop.js",
