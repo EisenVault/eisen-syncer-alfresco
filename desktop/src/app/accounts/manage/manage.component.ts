@@ -1,7 +1,7 @@
-import { Component, OnInit } from "@angular/core";
-import { AccountService } from "../../services/account.service";
-import { Router } from "@angular/router";
-import { SyncerService } from "../../services/syncer.service";
+import { Component, OnInit } from '@angular/core';
+import { AccountService } from '../../services/account.service';
+import { Router } from '@angular/router';
+import { SyncerService } from '../../services/syncer.service';
 
 interface IAccounts {
   id: number;
@@ -16,48 +16,58 @@ interface IAccounts {
 }
 
 @Component({
-  selector: "app-manage",
-  templateUrl: "./manage.component.html",
-  styleUrls: ["./manage.component.scss"]
+  selector: 'app-manage',
+  templateUrl: './manage.component.html',
+  styleUrls: ['./manage.component.scss']
 })
 export class ManageComponent implements OnInit {
   public accounts;
+  public isAppLoading = true;
   public isSaved = false;
   public showAccountLoaders: number[] = [];
   public errors: any = {};
+  public miscError = '';
 
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
     private _router: Router
-  ) {}
+  ) { }
 
   ngOnInit() {
-    this._getAccounts();
-
-    // When the app loads, lets try and sync the files from and to server.
-    this._accountService
-      .getAccounts("sync_enabled=1")
-      .subscribe((accounts: IAccounts[]) => {
-        for (const account of accounts) {
-          // This is for the spinning loader icon
-          const index = this.showAccountLoaders.indexOf(account.id);
-          if (index === -1) {
-            this.showAccountLoaders.push(account.id);
-          }
-
-          // Process sync
-          this._processSync(account);
-
-          console.log("Firing:", account.instance_url);
-        } // End forloop
-      });
-
-    // For every x seconds, we will make a request to the account api and check
-    // which accounts are still syncing, so that we can attach loaders for those accounts
-    setInterval(() => {
+    // Start the process after a while
+    setTimeout(() => {
       this._getAccounts();
-    }, 10000);
+
+      // When the app loads, lets try and sync the files from and to server.
+      this._accountService
+        .getAccounts('sync_enabled=1')
+        .subscribe((accounts: IAccounts[]) => {
+          for (const account of accounts) {
+            // This is for the spinning loader icon
+            const index = this.showAccountLoaders.indexOf(account.id);
+            if (index === -1) {
+              this.showAccountLoaders.push(account.id);
+            }
+
+            // Process sync
+            this._processSync(account);
+
+            console.log('Firing:', account.instance_url);
+          } // End forloop
+          this.isAppLoading = false;
+        }, error => {
+          console.log('error', error);
+          this.isAppLoading = false;
+          this.miscError = 'Cannot connect to the backend service.';
+        });
+
+      // For every x seconds, we will make a request to the account api and check
+      // which accounts are still syncing, so that we can attach loaders for those accounts
+      setInterval(() => {
+        this._getAccounts();
+      }, 10000);
+    }, 2000);
   }
 
   _processSync(account) {
@@ -107,9 +117,11 @@ export class ManageComponent implements OnInit {
       },
       error => {
         if (error.status === 400) {
-          for (const e of error.error.errors) {
-            for (const errorField in e) {
-              this.errors[errorField] = e[errorField];
+          for (const errors of error.error.errors) {
+            for (const errorField in errors) {
+              if (errorField) {
+                this.errors[errorField] = e[errorField];
+              }
             }
           }
         } else {
@@ -125,15 +137,15 @@ export class ManageComponent implements OnInit {
   }
 
   goToManageAccount(account) {
-    this._router.navigate(["account-new"], {
+    this._router.navigate(['account-new'], {
       queryParams: { accountId: account.id }
     });
   }
 
   deleteAccount(account) {
-    if (confirm("Proceed with the account deletion process?")) {
+    if (confirm('Proceed with the account deletion process?')) {
       const answer = confirm(
-        "Do you wish to remove the files from your local storage? (This will not delete the files from the server)"
+        'Do you wish to remove the files from your local storage? (This will not delete the files from the server)'
       );
       this._accountService
         .deleteAccount(account.id, answer)

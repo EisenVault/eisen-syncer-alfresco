@@ -8,6 +8,10 @@ const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
 const _base = require("./_base");
 
+// Loggers
+const errorLog = require('../logger').errorlog;
+const successlog = require('../logger').successlog;
+
 /**
  *
  * @param object params
@@ -129,6 +133,7 @@ exports.recursiveDownload = async params => {
 
     await accountModel.syncComplete(account.id);
   } catch (error) {
+    errorlog.error(`Error Message : ${error}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -304,7 +309,7 @@ exports.deleteByPath = async params => {
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
   } catch (error) {
-    console.log(error);
+    errorlog.error(`Error Message : ${error}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -346,7 +351,7 @@ _createItemOnLocal = async params => {
       });
     }
   } catch (error) {
-    console.log(error);
+    errorlog.error(`Error Message : ${error}`);
     await errorLogModel.add(account.id, error);
   }
 };

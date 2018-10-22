@@ -120,6 +120,8 @@
     "sqlite3": "^4.0.0",
     "validator": "^10.1.0",
     "watch": "^1.0.2",
+    "winston": "^3.1.0",
+    "winston-daily-rotate-file": "^3.3.3",
     "zone.js": "^0.8.26"
   },
   "devDependencies": {

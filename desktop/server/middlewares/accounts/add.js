@@ -45,8 +45,6 @@ module.exports = async (request, response, next) => {
 
   // Sync path should be unique per account. That means no two same sync path can be added to two different accounts
   let syncPathAlreadyExists = await accountModel.syncPathExists(request.body.sync_path, request.params.id);
-  console.log('syncPathAlreadyExists', syncPathAlreadyExists);
-
   if (!_.isEmpty(syncPathAlreadyExists)) {
     errors.push({
       sync_path: ["Sync Path is already reserved with another account. Choose different sync path."]

@@ -8,6 +8,10 @@ const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
 
+// Loggers
+const errorLog = require('../helpers/logger').errorlog;
+const successlog = require('../helpers/logger').successlog;
+
 /**
  *
  * @param object params
@@ -146,7 +150,7 @@ exports.deleteServerNode = async params => {
     let response = await request(options);
 
     if (response.statusCode == 204) {
-      console.log("Deleted", deletedNodeId);
+      successlog.info("Deleted", deletedNodeId);
 
       // Delete the record from the DB
       await nodeModel.delete({
@@ -369,7 +373,7 @@ exports.upload = async params => {
       method: "POST",
       url: `${
         account.instance_url
-      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
+        }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -441,11 +445,6 @@ exports.watchFolderGuard = async params => {
     });
 
     if (node && _base.getCurrentTime() - node.last_downloaded_at <= 15) {
-      console.log(
-        "Stopped from uploading...",
-        _base.getCurrentTime() - node.last_downloaded_at,
-        filePath
-      );
       return false;
     }
   } else if (action && action.toUpperCase() === "DOWNLOAD") {
@@ -456,11 +455,6 @@ exports.watchFolderGuard = async params => {
     });
 
     if (node && _base.getCurrentTime() - node.last_uploaded_at <= 15) {
-      console.log(
-        "Stopped from downloading...",
-        _base.getCurrentTime() - node.last_uploaded_at,
-        filePath
-      );
       return false;
     }
   }
@@ -480,11 +474,10 @@ exports.watchFolderGuard = async params => {
       ? relativeFilePath.substring(1, relativeFilePath.length)
       : relativeFilePath;
 
-  relativeFilePath = relativeFilePath.split("/")[0];  
+  relativeFilePath = relativeFilePath.split("/")[0];
 
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
   if (watchFolder !== '' && watchFolder !== relativeFilePath) {
-    console.log("bailed", relativeFilePath, watchFolder);
     return false;
   }
 

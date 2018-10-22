@@ -11,6 +11,10 @@ var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
+// Loggers
+const errorLog = require('./helpers/logger').errorlog;
+const successlog = require('./helpers/logger').successlog;
+
 // Middlewares
 app.use(bugsnag.errorHandler);
 app.use(bugsnag.requestHandler);
@@ -51,7 +55,7 @@ socket.on("sync-notification", async data => {
     return;
   }
 
-  console.log("data", data);
+  logger.log("data", data);
 
   if (data.action.toUpperCase() == "DELETE") {
     // Since we are not gettting the deleted path from the socket service, we will have to look up in the nodes table to get the remote paths, and their account ids
@@ -108,18 +112,11 @@ socket.on("sync-notification", async data => {
   }
 });
 
-process.on("uncaughtException", function(err) {
-  if (err.errno === "EADDRINUSE") {
-    console.log("change port baby");
-    console.log(err);
-  } else console.log(err);
+process.on("uncaughtException", function (error) {
+  errorLog.error(`Error Message : ${error}`);
   process.exit(1);
 });
 
-try {
-  app.listen(env.SERVER_PORT, () => {
-    console.log("server running on " + env.SERVER_PORT);
-  });
-} catch (error) {
-  console.log(`Port ${env.SERVER_PORT} is already in use`);
-}
+app.listen(env.SERVER_PORT, () => {
+  successlog.info(`server running on: ${env.SERVER_PORT}`);
+});

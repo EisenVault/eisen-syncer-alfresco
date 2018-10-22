@@ -2,9 +2,13 @@ const ondemand = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 
+// Loggers
+const errorLog = require('../helpers/logger').errorlog;
+const successlog = require('../helpers/logger').successlog;
+
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-  console.log("UPLOAD START");
+  successlog.info("UPLOAD START");
   // Stop watcher for a while
   // watcher.unwatchAll();
 
@@ -18,7 +22,7 @@ exports.upload = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    console.log("UPLOAD END");
+    successlog.info("UPLOAD END");
 
     return response
       .status(200)
@@ -34,10 +38,10 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  console.log("DOWNLOAD START");
+  successlog.info("DOWNLOAD START");
 
   let account = await accountModel.getOne(request.params.accountId);
- 
+
   try {
     await ondemand.recursiveDownload({
       account: account,
@@ -47,7 +51,7 @@ exports.download = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    console.log("DOWNLOAD END");
+    successlog.info("DOWNLOAD END");
 
     return response.status(200).json({ success: true });
   } catch (error) {
@@ -64,7 +68,7 @@ exports.delete = async (request, response) => {
   let account = await accountModel.getOne(request.params.accountId);
 
   try {
-    console.log("DELETE START");
+    successlog.info("DELETE START");
 
     await ondemand.recursiveDelete({
       account: account
@@ -72,11 +76,11 @@ exports.delete = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    console.log("DELETE END");
+    successlog.info("DELETE END");
 
     return response.status(200).json(account);
   } catch (error) {
-    console.log("error", error);
+    errorLog.error(error);
     // Start watcher now
     watcher.watchAll();
     return response
