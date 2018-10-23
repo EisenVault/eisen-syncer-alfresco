@@ -20,9 +20,9 @@ pm2.connect(function(err) {
     {
       name: "eisensync",
       script: "./server/server.js", // Script to be run
-      exec_mode: "cluster", // Allows your app to be clustered
-      instances: 1, // Optional: Scales your app by 4
-      max_memory_restart: "100M", // Optional: Restarts your app if it reaches 100Mo
+      exec_mode: "fork",
+      instances: 1, 
+      max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
       noDaemonMode: true
     },
     function(err, apps) {
@@ -154,7 +154,7 @@ app.on("ready", () => {
       label: "Exit",
       click() {
         forceQuit = true;
-        
+
         pm2.stop("eisensync", (errback) => {
           console.log('errback', errback);
         });
@@ -180,19 +180,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function(e) {
+  mainWindow.on("close", function (e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function() {
+  mainWindow.on("closed", function () {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function() {
+  app.on("activate-with-no-open-windows", function () {
     mainWindow.show();
   });
 

@@ -2,13 +2,12 @@ const ondemand = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 
-// Loggers
-const errorLog = require('../helpers/logger').errorlog;
-const successlog = require('../helpers/logger').successlog;
+// Logger
+const { logger } = require('../helpers/logger');
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-  successlog.info("UPLOAD START");
+  logger.info("UPLOAD START");
   // Stop watcher for a while
   // watcher.unwatchAll();
 
@@ -22,7 +21,7 @@ exports.upload = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    successlog.info("UPLOAD END");
+    logger.info("UPLOAD END");
 
     return response
       .status(200)
@@ -38,7 +37,7 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  successlog.info("DOWNLOAD START");
+  logger.info("DOWNLOAD START");
 
   let account = await accountModel.getOne(request.params.accountId);
 
@@ -51,7 +50,7 @@ exports.download = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    successlog.info("DOWNLOAD END");
+    logger.info("DOWNLOAD END");
 
     return response.status(200).json({ success: true });
   } catch (error) {
@@ -68,7 +67,7 @@ exports.delete = async (request, response) => {
   let account = await accountModel.getOne(request.params.accountId);
 
   try {
-    successlog.info("DELETE START");
+    logger.info("DELETE START...");
 
     await ondemand.recursiveDelete({
       account: account
@@ -76,11 +75,11 @@ exports.delete = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-    successlog.info("DELETE END");
+    logger.info("DELETE END");
 
     return response.status(200).json(account);
   } catch (error) {
-    errorLog.error(error);
+    logger.error('error while deleting file ' + JSON.stringify(error));
     // Start watcher now
     watcher.watchAll();
     return response

@@ -1,5 +1,6 @@
 var bugsnag = require("bugsnag");
 const log = require("electron-log");
+const { logger } = require('../helpers/logger');
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
 
@@ -80,11 +81,13 @@ exports.add = async (accountId, description) => {
     }
 
     log.warn(description);
+    logger.info(description);
     bugsnag.notify(description.toString());
 
     return eventId;
   } catch (error) {
     log.warn(String(error));
+    logger.error(String(error));
   }
 };
 

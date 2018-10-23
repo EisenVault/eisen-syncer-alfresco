@@ -11,9 +11,8 @@ var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
-// Loggers
-const errorLog = require('./helpers/logger').errorlog;
-const successlog = require('./helpers/logger').successlog;
+// Logger
+const { logger } = require('./helpers/logger');
 
 // Middlewares
 app.use(bugsnag.errorHandler);
@@ -55,7 +54,7 @@ socket.on("sync-notification", async data => {
     return;
   }
 
-  logger.log("data", data);
+  logger.info(JSON.stringify(data));
 
   if (data.action.toUpperCase() == "DELETE") {
     // Since we are not gettting the deleted path from the socket service, we will have to look up in the nodes table to get the remote paths, and their account ids
@@ -113,10 +112,10 @@ socket.on("sync-notification", async data => {
 });
 
 process.on("uncaughtException", function (error) {
-  errorLog.error(`Error Message : ${error}`);
+  logger.error(`Error Message : ${error}`);
   process.exit(1);
 });
 
 app.listen(env.SERVER_PORT, () => {
-  successlog.info(`server running on: ${env.SERVER_PORT}`);
+  logger.info(`server running on: ${env.SERVER_PORT}`);
 });

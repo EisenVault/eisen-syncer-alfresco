@@ -27,6 +27,7 @@ export class ManageComponent implements OnInit {
   public showAccountLoaders: number[] = [];
   public errors: any = {};
   public miscError = '';
+  readonly INTERVAL = 7000;
 
   constructor(
     private _accountService: AccountService,
@@ -35,7 +36,6 @@ export class ManageComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // Start the process after a while
     setTimeout(() => {
       this._getAccounts();
 
@@ -49,25 +49,19 @@ export class ManageComponent implements OnInit {
             if (index === -1) {
               this.showAccountLoaders.push(account.id);
             }
-
             // Process sync
             this._processSync(account);
-
-            console.log('Firing:', account.instance_url);
           } // End forloop
-          this.isAppLoading = false;
         }, error => {
           console.log('error', error);
-          this.isAppLoading = false;
-          this.miscError = 'Cannot connect to the backend service.';
         });
+    }, 5000);
 
-      // For every x seconds, we will make a request to the account api and check
-      // which accounts are still syncing, so that we can attach loaders for those accounts
-      setInterval(() => {
-        this._getAccounts();
-      }, 10000);
-    }, 2000);
+    // For every x seconds, we will make a request to the account api and check
+    // which accounts are still syncing, so that we can attach loaders for those accounts
+    setInterval(() => {
+      this._getAccounts();
+    }, this.INTERVAL);
   }
 
   _processSync(account) {
@@ -85,12 +79,16 @@ export class ManageComponent implements OnInit {
   }
 
   isLoading(account) {
-    return this.showAccountLoaders.indexOf(account.id) >= 0;
+    let accountLastSync = account.last_synced_at ? account.last_synced_at : new Date().getTime();
+    return Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15;
+    // return this.showAccountLoaders.indexOf(account.id) >= 0;
   }
 
   _getAccounts() {
     this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
       this.accounts = accounts;
+      this.miscError = '';
+      this.isAppLoading = false;
       for (const account of accounts) {
         // This is for the spinning loader icon
         const index = this.showAccountLoaders.indexOf(account.id);
@@ -100,6 +98,9 @@ export class ManageComponent implements OnInit {
           this.showAccountLoaders.splice(index, 1);
         }
       } // End forloop
+    }, error => {
+      this.isAppLoading = false;
+      this.miscError = 'Cannot connect to the backend service.';
     });
   }
 

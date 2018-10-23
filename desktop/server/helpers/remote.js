@@ -8,9 +8,8 @@ const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
 
-// Loggers
-const errorLog = require('../helpers/logger').errorlog;
-const successlog = require('../helpers/logger').successlog;
+// Logger
+const { logger } = require('./logger');
 
 /**
  *
@@ -150,7 +149,7 @@ exports.deleteServerNode = async params => {
     let response = await request(options);
 
     if (response.statusCode == 204) {
-      successlog.info("Deleted", deletedNodeId);
+      logger.info(`Deleted id: ${deletedNodeId}`);
 
       // Delete the record from the DB
       await nodeModel.delete({
@@ -477,7 +476,8 @@ exports.watchFolderGuard = async params => {
   relativeFilePath = relativeFilePath.split("/")[0];
 
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
-  if (watchFolder !== '' && watchFolder !== relativeFilePath) {
+  if (watchFolder !== '' && watchFolder !== relativeFilePath) { 
+    logger.info(`Bailed ${relativeFilePath}`);
     return false;
   }
 

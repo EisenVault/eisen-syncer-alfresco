@@ -8,9 +8,8 @@ const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
 const _base = require("./_base");
 
-// Loggers
-const errorLog = require('../logger').errorlog;
-const successlog = require('../logger').successlog;
+// Logger
+const { logger } = require('../logger');
 
 /**
  *
@@ -133,7 +132,7 @@ exports.recursiveDownload = async params => {
 
     await accountModel.syncComplete(account.id);
   } catch (error) {
-    errorlog.error(`Error Message : ${error}`);
+    logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -259,6 +258,8 @@ exports.recursiveDelete = async params => {
     column: "node_id"
   });
 
+  console.log('missingFiles', missingFiles);
+
   for (const iterator of missingFiles) {
     // Delete the node from the server, once thats done it will delete the record from the DB as well
     await remote.deleteServerNode({
@@ -309,7 +310,7 @@ exports.deleteByPath = async params => {
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
   } catch (error) {
-    errorlog.error(`Error Message : ${error}`);
+    logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -351,7 +352,7 @@ _createItemOnLocal = async params => {
       });
     }
   } catch (error) {
-    errorlog.error(`Error Message : ${error}`);
+    logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
   }
 };

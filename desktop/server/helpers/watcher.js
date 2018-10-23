@@ -2,9 +2,8 @@ const watch = require("watch");
 const fs = require("fs");
 const syncer = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
-// Loggers
-const errorLog = require('../helpers/logger').errorlog;
-const successlog = require('../helpers/logger').successlog;
+// Logger
+const { logger } = require('./logger');
 
 // Add a new watcher
 exports.watch = account => {
@@ -29,7 +28,7 @@ exports.watch = account => {
           type = "directory";
         }
         _upload(account, f);
-        successlog.info(f + " is a new " + type);
+        logger.info(`${f} is a new ${type}`);
       }
 
       watchlist.push(f);
@@ -37,14 +36,14 @@ exports.watch = account => {
       // f was removed
       if (watchlist.indexOf(f) == -1) {
         _delete(account, f);
-        successlog.info(f + " was removed");
+        logger.info(`${f} was removed`);
       }
       watchlist.push(f);
     } else {
       // f was changed
       if (watchlist.indexOf(f) == -1) {
         _upload(account, f);
-        successlog.info(f + " was changed");
+        logger.info(`${f} was changed`);
       }
       watchlist.push(f);
     }
@@ -58,7 +57,7 @@ exports.watch = account => {
 // remove a watchlist
 exports.unwatchAll = async () => {
   let accounts = await accountModel.getAll();
-  successlog.info("Watcher paused");
+  logger.info("Watcher paused");
 
   // Remove all watchers
   for (let account of accounts) {
@@ -70,9 +69,9 @@ exports.watchAll = async () => {
   let accounts = await accountModel.getAll();
 
   // Remove all watchers first
-  await this.unwatchAll();
+  // await this.unwatchAll();
 
-  successlog.info("Watcher started");
+  logger.info("Watcher started");
 
   // Add new watchers
   accounts = await accountModel.getAll(1);
