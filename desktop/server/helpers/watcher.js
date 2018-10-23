@@ -2,6 +2,7 @@ const watch = require("watch");
 const fs = require("fs");
 const syncer = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
+const remote = require("./remote");
 // Logger
 const { logger } = require('./logger');
 
@@ -81,11 +82,20 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, syncPath) {
-  await syncer.recursiveUpload({
-    account: account,
-    sync_path: syncPath,
-    rootNodeId: account.watch_node
-  });
+  if (fs.statSync(syncPath).isFile()) {
+    // If syncPath is a file, just upload it and bail out! 
+    return remote.upload({
+      account,
+      filePath: syncPath,
+      rootNodeId: account.watch_node
+    });
+  } else {
+    await syncer.recursiveUpload({
+      account: account,
+      sync_path: syncPath,
+      rootNodeId: account.watch_node
+    });
+  }
 }
 
 async function _delete(account, filePath) {

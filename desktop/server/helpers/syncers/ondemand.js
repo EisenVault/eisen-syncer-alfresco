@@ -160,13 +160,6 @@ exports.recursiveUpload = async params => {
   rootFolder = syncPath;
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
-  } else {
-    // If syncPath is a file, just upload it and bail out! 
-    return remote.upload({
-      account,
-      filePath: syncPath,
-      rootNodeId: rootNodeId
-    });
   }
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -202,6 +195,7 @@ exports.recursiveUpload = async params => {
         filePath: filePath,
         rootNodeId: rootNodeId
       });
+      logger.info('Uploading since new file');
       continue;
     }
 
@@ -216,6 +210,7 @@ exports.recursiveUpload = async params => {
         filePath: filePath,
         rootNodeId: rootNodeId
       });
+      logger.info('Uploading since file was modified');
       continue;
     }
   } // Filelist iteration end
@@ -228,6 +223,7 @@ exports.recursiveUpload = async params => {
     });
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
+    logger.info('Deleting since file was deleted on local');
   }
 };
 
@@ -258,14 +254,13 @@ exports.recursiveDelete = async params => {
     column: "node_id"
   });
 
-  console.log('missingFiles', missingFiles);
-
   for (const iterator of missingFiles) {
     // Delete the node from the server, once thats done it will delete the record from the DB as well
     await remote.deleteServerNode({
       account: account,
       deletedNodeId: iterator.node_id
     });
+    logger.info(`Deleted missing file: ${iterator}`);
   }
 
   // Set the sync completed time and also set issync flag to off
