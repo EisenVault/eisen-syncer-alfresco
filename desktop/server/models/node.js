@@ -2,6 +2,7 @@ const { db } = require("../config/db");
 const path = require("path");
 const errorLogModel = require("./log-error");
 const _ = require("lodash");
+const { logger } = require('../helpers/logger');
 const LIMIT = 950;
 
 /**

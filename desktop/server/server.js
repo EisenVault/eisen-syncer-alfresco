@@ -47,6 +47,7 @@ watcher.watchAll();
 let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
+  return;
   data = typeof data === "object" ? data : JSON.parse(data);
 
   if (!data.path && !data.node_id) {

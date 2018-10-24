@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { logger } = require('../logger');
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.

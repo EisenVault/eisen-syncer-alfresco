@@ -10,10 +10,20 @@
         <input type="checkbox" class="form-check-input" id="startup_launch" name="startup_launch" [(ngModel)]="startup_launch">
         <label class="form-check-label" for="startup_launch">Launch on startup?</label>
       </div>
-      <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
-        <i class="fas fa-save"></i>
-        Save
-      </button>
     </div>
+    <div class="form-group mt-2">
+      <label for="sync_interval">Sync Interval (minutes)</label>
+      <select name="sync_interval" class="form-control" id="sync_interval" [(ngModel)]="sync_interval">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
+      <i class="fas fa-save"></i>
+      Save
+    </button>
   </form>
 </div>

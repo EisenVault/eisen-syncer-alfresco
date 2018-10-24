@@ -194,11 +194,13 @@ exports.download = async params => {
   let sourceNodeId = params.sourceNodeId;
   let destinationPath = params.destinationPath;
   let remoteFolderPath = params.remoteFolderPath;
+  let nodeModifiedAt = params.nodeModifiedAt || 0;
 
   if (
     (await this.watchFolderGuard({
       account,
       filePath: destinationPath,
+      nodeModifiedAt,
       action: "DOWNLOAD"
     })) === false
   ) {
@@ -321,6 +323,8 @@ exports.upload = async params => {
       let response = await request(options);
       response = JSON.parse(response.body);
 
+      logger.info(`remoteupload: ${params.filePath} ${_base.convertToUTC(response.entry.modifiedAt)}`);
+
       if (response.entry.id) {
         // Add a record in the db
         await nodeModel.add({
@@ -434,26 +438,46 @@ exports.upload = async params => {
 };
 
 exports.watchFolderGuard = async params => {
-  let { account, filePath, action } = params;
+  const INTERVAL = 10;
+  let { account, filePath, nodeModifiedAt, action } = params;
 
+  // UPLOAD Guard
   if (action && action.toUpperCase() === "UPLOAD") {
-    // Check if the file was just downloaded, bail out!
-    const node = await nodeModel.getOneByFilePath({
+    const record = await nodeModel.getOneByFilePath({
       account,
       filePath
     });
 
-    if (node && _base.getCurrentTime() - node.last_downloaded_at <= 15) {
+    // Check if the file was just downloaded, bail out!
+    if (record && _base.getCurrentTime() - record.last_downloaded_at <= INTERVAL) {
+      logger.info(`Upload blocked 1: ${filePath}`);
       return false;
     }
-  } else if (action && action.toUpperCase() === "DOWNLOAD") {
-    // Check if the file was just uploaded, bail out!
-    const node = await nodeModel.getOneByFilePath({
+
+    // If the file was already uploaded, bail out!
+    if (record && _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <= INTERVAL) {
+      logger.info(`Upload blocked 2: ${record.file_path}`);
+      return false;
+    }
+  }
+
+  // DOWNLOAD Guard
+  if (action && action.toUpperCase() === "DOWNLOAD") {
+    const record = await nodeModel.getOneByFilePath({
       account,
       filePath
     });
+    // Check if the file was just uploaded, bail out!
+    if (record && _base.getCurrentTime() - record.last_uploaded_at <= INTERVAL) {
+      logger.info(`Download blocked 1: ${filePath}`);
 
-    if (node && _base.getCurrentTime() - node.last_uploaded_at <= 15) {
+      return false;
+    }
+
+    // If the file was already downloaded, bail out!
+    if (record && _base.convertToUTC(nodeModifiedAt) - record.last_downloaded_at <= INTERVAL) {
+      logger.info(`Download blocked 2: ${filePath}`);
+
       return false;
     }
   }
@@ -476,7 +500,7 @@ exports.watchFolderGuard = async params => {
   relativeFilePath = relativeFilePath.split("/")[0];
 
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
-  if (watchFolder !== '' && watchFolder !== relativeFilePath) { 
+  if (watchFolder !== '' && watchFolder !== relativeFilePath) {
     logger.info(`Bailed ${relativeFilePath}`);
     return false;
   }

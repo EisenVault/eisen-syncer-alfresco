@@ -9,6 +9,7 @@ const watcher = require("../watcher");
 const _base = require("./_base");
 
 exports.create = async (account, params) => {
+  return;
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -69,6 +70,8 @@ exports.create = async (account, params) => {
 
 // Update the file
 exports.update = async (account, params) => {
+  return;
+
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
@@ -149,6 +152,8 @@ exports.update = async (account, params) => {
 };
 
 exports.delete = async (account, params) => {
+  return;
+
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
 

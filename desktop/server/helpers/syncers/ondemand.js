@@ -84,8 +84,7 @@ exports.recursiveDownload = async params => {
           await _createItemOnLocal({
             node: node,
             currentPath: currentPath,
-            account: account,
-            sourceNodeId: node.id
+            account: account
           });
         }
 
@@ -94,17 +93,15 @@ exports.recursiveDownload = async params => {
           if (record) {
             // Convert the time to UTC and then get the unixtimestamp.
             let nodeModifiedDate = _base.convertToUTC(node.modified_at);
-
-            // let fileModifiedDate = record.file_update_at;
             let fileModifiedDate = _base.getFileLatestTime(record);
 
             // If the server file time is greater, download the remote file (since server node is newer version)
             if (nodeModifiedDate > fileModifiedDate) {
+              logger.info(`Downloading latest remote file ${currentPath} ... nodeModifiedDate: ${nodeModifiedDate} and fileModifiedDate: ${fileModifiedDate}`);
               await _createItemOnLocal({
                 node: node,
                 currentPath: currentPath,
-                account: account,
-                sourceNodeId: node.id
+                account: account
               });
             }
           }
@@ -195,7 +192,6 @@ exports.recursiveUpload = async params => {
         filePath: filePath,
         rootNodeId: rootNodeId
       });
-      logger.info('Uploading since new file');
       continue;
     }
 
@@ -205,12 +201,12 @@ exports.recursiveUpload = async params => {
 
     if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
       // Upload the local changes to the server.
+      logger.info(`File locally changed ${filePath}`);
       await remote.upload({
         account: account,
         filePath: filePath,
         rootNodeId: rootNodeId
       });
-      logger.info('Uploading since file was modified');
       continue;
     }
   } // Filelist iteration end
@@ -223,7 +219,6 @@ exports.recursiveUpload = async params => {
     });
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
-    logger.info('Deleting since file was deleted on local');
   }
 };
 
@@ -260,7 +255,7 @@ exports.recursiveDelete = async params => {
       account: account,
       deletedNodeId: iterator.node_id
     });
-    logger.info(`Deleted missing file: ${iterator}`);
+    logger.info(`Deleted missing file: ${iterator.stringify()}`);
   }
 
   // Set the sync completed time and also set issync flag to off
@@ -281,7 +276,7 @@ exports.deleteByPath = async params => {
 
   if (
     account.sync_enabled == 0 ||
-    !remote.watchFolderGuard({ account, filePath })
+    await remote.watchFolderGuard({ account, filePath }) === false
   ) {
     return;
   }
@@ -316,7 +311,6 @@ _createItemOnLocal = async params => {
   let account = params.account;
   let node = params.node;
   let currentPath = params.currentPath;
-  let sourceNodeId = params.sourceNodeId;
 
   try {
     if (node.is_folder === true) {
@@ -328,7 +322,7 @@ _createItemOnLocal = async params => {
       // Add reference to the nodes table
       await nodeModel.add({
         account: account,
-        nodeId: sourceNodeId,
+        nodeId: node.id,
         remoteFolderPath: path.dirname(node.path_name),
         filePath: currentPath,
         fileUpdateAt: _base.convertToUTC(node.modified_at),
@@ -341,9 +335,10 @@ _createItemOnLocal = async params => {
     if (node.is_file === true) {
       await remote.download({
         account: account,
-        sourceNodeId: sourceNodeId,
+        sourceNodeId: node.id,
         destinationPath: currentPath,
-        remoteFolderPath: path.dirname(node.path_name)
+        remoteFolderPath: path.dirname(node.path_name),
+        nodeModifiedAt: node.modified_at
       });
     }
   } catch (error) {

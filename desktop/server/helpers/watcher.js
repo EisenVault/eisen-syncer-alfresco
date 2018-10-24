@@ -14,37 +14,45 @@ exports.watch = account => {
     return watchlist;
   }
 
+  var uniqueFileSet = new Set();
   watch.watchTree(account.sync_path, { ignoreDotFiles: true }, function (
     f,
     curr,
     prev
   ) {
-    if (typeof f == "object" && prev === null && curr === null) {
+
+    if (typeof f === "object" && prev === null && curr === null) {
       // Finished walking the tree
     } else if (prev === null) {
       // f is a new file/folder
-      if (watchlist.indexOf(f) == -1) {
-        let type = "file";
-        if (fs.lstatSync(f).isDirectory()) {
-          type = "directory";
+      setTimeout(() => {
+        if (watchlist.indexOf(f) === -1) {
+          let type = "file";
+          if (fs.lstatSync(f).isDirectory()) {
+            type = "directory";
+          }
+          _upload(account, f);
+          logger.info(`${f} is a new ${type}`);
         }
-        _upload(account, f);
-        logger.info(`${f} is a new ${type}`);
-      }
+      }, 1000);
 
       watchlist.push(f);
+
     } else if (curr.nlink === 0) {
       // f was removed
-      if (watchlist.indexOf(f) == -1) {
-        _delete(account, f);
-        logger.info(`${f} was removed`);
-      }
+      setTimeout(() => {
+        if (watchlist.indexOf(f) === -1) {
+          _delete(account, f);
+          logger.info(`${f} was removed`);
+        }
+      }, 1000);
       watchlist.push(f);
+
     } else {
       // f was changed
-      if (watchlist.indexOf(f) == -1) {
+      if (watchlist.indexOf(f) === -1) {
         _upload(account, f);
-        logger.info(`${f} was changed`);
+        logger.info(`${f} was changed...`);
       }
       watchlist.push(f);
     }
@@ -52,7 +60,7 @@ exports.watch = account => {
 
   setInterval(() => {
     watchlist = [];
-  }, 1000);
+  }, 1500);
 };
 
 // remove a watchlist
@@ -67,6 +75,9 @@ exports.unwatchAll = async () => {
 };
 
 exports.watchAll = async () => {
+
+  // Disabling the file watcher since the watch module is trigerring multuple change events.
+  return;
   let accounts = await accountModel.getAll();
 
   // Remove all watchers first

@@ -10,7 +10,7 @@ const { session } = require("electron");
 process.env.NODE_ENV = "dev";
 
 // Start the backend server...
-pm2.connect(function(err) {
+pm2.connect(function (err) {
   if (err) {
     console.error(err);
     process.exit(2);
@@ -21,11 +21,12 @@ pm2.connect(function(err) {
       name: "eisensync",
       script: "./server/server.js", // Script to be run
       exec_mode: "fork",
-      instances: 1, 
+      instances: 1,
       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
-      noDaemonMode: true
+      noDaemonMode: true,
+      watch: true
     },
-    function(err, apps) {
+    function (err, apps) {
       pm2.disconnect(); // Disconnects from PM2
       if (err) throw err;
     }
@@ -155,14 +156,14 @@ app.on("ready", () => {
       click() {
         forceQuit = true;
 
-        pm2.stop("eisensync", (errback) => {
-          console.log('errback', errback);
-        });
-
         // Let pm2 stop the process after which we can quit the app gracefully...
         setTimeout(() => {
           app.quit();
         }, 1000);
+
+        pm2.stop("eisensync", (errback) => {
+          console.log('errback', errback);
+        });
       }
     }
   ];

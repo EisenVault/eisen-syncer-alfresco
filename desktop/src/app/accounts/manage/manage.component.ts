@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { AccountService } from '../../services/account.service';
 import { Router } from '@angular/router';
 import { SyncerService } from '../../services/syncer.service';
+import { SettingService } from '../../services/setting.service';
+import { Setting } from '../../models/setting';
 
 interface IAccounts {
   id: number;
@@ -25,36 +27,31 @@ export class ManageComponent implements OnInit {
   public isAppLoading = true;
   public isSaved = false;
   public showAccountLoaders: number[] = [];
+  private enabledSyncAccounts: number[] = [];
   public errors: any = {};
   public miscError = '';
+  private syncInterval = 2;
   readonly INTERVAL = 7000;
 
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
+    private _settingService: SettingService,
     private _router: Router
   ) { }
 
   ngOnInit() {
+
     setTimeout(() => {
       this._getAccounts();
 
+      this._settingService.getSetting('SYNC_INTERVAL').subscribe((result: Setting) => {
+        this.syncInterval = Number(result.value);
+      });
+
       // When the app loads, lets try and sync the files from and to server.
-      this._accountService
-        .getAccounts('sync_enabled=1')
-        .subscribe((accounts: IAccounts[]) => {
-          for (const account of accounts) {
-            // This is for the spinning loader icon
-            const index = this.showAccountLoaders.indexOf(account.id);
-            if (index === -1) {
-              this.showAccountLoaders.push(account.id);
-            }
-            // Process sync
-            this._processSync(account);
-          } // End forloop
-        }, error => {
-          console.log('error', error);
-        });
+      this._runSyncEnabledAccounts();
+
     }, 5000);
 
     // For every x seconds, we will make a request to the account api and check
@@ -62,6 +59,29 @@ export class ManageComponent implements OnInit {
     setInterval(() => {
       this._getAccounts();
     }, this.INTERVAL);
+
+    // For every x minutes (defined in settings table), we will sync the data...
+    setInterval(() => {
+      this._runSyncEnabledAccounts();
+    }, this.syncInterval * 60000);
+  }
+
+  _runSyncEnabledAccounts() {
+    this._accountService
+      .getAccounts('sync_enabled=1')
+      .subscribe((accounts: IAccounts[]) => {
+        for (const account of accounts) {
+          // This is for the spinning loader icon
+          const index = this.showAccountLoaders.indexOf(account.id);
+          if (index === -1) {
+            this.showAccountLoaders.push(account.id);
+          }
+          // Process sync
+          this._processSync(account);
+        } // End forloop
+      }, error => {
+        console.log('error', error);
+      });
   }
 
   _processSync(account) {
@@ -79,9 +99,11 @@ export class ManageComponent implements OnInit {
   }
 
   isLoading(account) {
-    let accountLastSync = account.last_synced_at ? account.last_synced_at : new Date().getTime();
-    return Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15;
-    // return this.showAccountLoaders.indexOf(account.id) >= 0;
+    const accountLastSync = account.last_synced_at ? account.last_synced_at : new Date().getTime();
+    const index = this.enabledSyncAccounts.indexOf(account.id);
+
+    return (index !== -1 && Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
+      this.showAccountLoaders.indexOf(account.id) >= 0;
   }
 
   _getAccounts() {
@@ -109,6 +131,10 @@ export class ManageComponent implements OnInit {
       () => {
         if (e.target.checked === true) {
           this._processSync(account);
+          this.enabledSyncAccounts.push(account.id);
+        } else {
+          const index = this.enabledSyncAccounts.indexOf(account.id);
+          this.enabledSyncAccounts.slice(index, 1);
         }
 
         this.isSaved = true;
