@@ -10,7 +10,7 @@ const { session } = require("electron");
 process.env.NODE_ENV = "dev";
 
 // Start the backend server...
-pm2.connect(function (err) {
+pm2.connect(function(err) {
   if (err) {
     console.error(err);
     process.exit(2);
@@ -26,7 +26,7 @@ pm2.connect(function (err) {
       noDaemonMode: true,
       watch: true
     },
-    function (err, apps) {
+    function(err, apps) {
       pm2.disconnect(); // Disconnects from PM2
       if (err) throw err;
     }
@@ -161,8 +161,8 @@ app.on("ready", () => {
           app.quit();
         }, 1000);
 
-        pm2.stop("eisensync", (errback) => {
-          console.log('errback', errback);
+        pm2.stop("eisensync", errback => {
+          console.log("errback", errback);
         });
       }
     }
@@ -181,19 +181,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function (e) {
+  mainWindow.on("close", function(e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function () {
+  mainWindow.on("closed", function() {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function () {
+  app.on("activate-with-no-open-windows", function() {
     mainWindow.show();
   });
 

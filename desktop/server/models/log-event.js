@@ -70,8 +70,8 @@ exports.add = async (accountId, type, description) => {
     this.deleteAllLessThan(removableId);
   }
 
-  log.warn(description);
-  logger.info(description);
+  //log.warn(description);
+  //logger.info(description);
 
   return eventId;
 };

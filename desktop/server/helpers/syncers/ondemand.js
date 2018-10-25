@@ -9,7 +9,7 @@ const errorLogModel = require("../../models/log-error");
 const _base = require("./_base");
 
 // Logger
-const { logger } = require('../logger');
+const { logger } = require("../logger");
 
 /**
  *
@@ -22,8 +22,8 @@ const { logger } = require('../logger');
  */
 exports.recursiveDownload = async params => {
   let account = params.account;
-  let sourceNodeId = params.sourceNodeId;
-  let destinationPath = params.destinationPath;
+  let sourceNodeId = params.sourceNodeId; // the nodeid to download
+  let destinationPath = params.destinationPath; // where on local to download
 
   if (account.sync_enabled == 0) {
     return;
@@ -63,29 +63,76 @@ exports.recursiveDownload = async params => {
           nodeId: node.id
         });
 
-        let currentPath =
-          destinationPath + "/" + node.path_name.split("documentLibrary/")[1];
+        const nodePathName = node.path_name.split("documentLibrary/")[1];
+        let currentPath = `${destinationPath}/${nodePathName}`;
 
-        // Case 1: Check If the remote node is NOT present on local
+        // Case 1.0: Check If the remote node is NOT present on local. Following scenarios are possible
+        // Scenario 1: perhaps new file was created on server.
+        // Scenario 2: perhaps the file was renamed on server.
+        // Scenario 3: perhaps the file was deleted on local but not on the server.
+
         if (!fs.existsSync(currentPath)) {
-          // Case 1.1 Check File reference is present in DB (perhaps file was renamed on server).
-          if (record) {
-            // Delete the old file
-            fs.removeSync(record.file_path);
-
-            // Delete Old record from DB and update DB and set new filename
-            await nodeModel.delete({
-              account: account,
-              nodeId: node.id
+          // Handle scenario 1. Perhaps new file was created on server.
+          if (!record) {
+            // Looks like the file was CREATED on server, we should download it then...
+            await _createItemOnLocal({
+              node: node,
+              currentPath: currentPath,
+              account: account
             });
+            continue;
           }
 
-          // Case 1.1/1.2 Download the file/folder on local (this will also add the new records in the DB)
-          await _createItemOnLocal({
-            node: node,
-            currentPath: currentPath,
-            account: account
-          });
+          // Handle Scenario 2: perhaps the file was RENAMED on server.
+          if (record && record.file_name !== path.basename(currentPath)) {
+            // Delete the old file from local
+            logger.info(
+              `RENAMED on local: record: ${
+                record.file_path
+              } basename: ${path.basename(currentPath)}`
+            );
+
+            if (record.is_file === 1) {
+              fs.removeSync(record.file_path);
+
+              // Delete Old record from DB and update DB and set new filename
+              await nodeModel.delete({
+                account: account,
+                nodeId: node.id
+              });
+
+              // Download the renamed file now...
+              await _createItemOnLocal({
+                node: node,
+                currentPath: currentPath,
+                account: account
+              });
+            }else {
+              // Download the entire folder
+              await exports.recursiveDownload({
+                account,
+                sourceNodeId: node.id,
+                destinationPath: ''
+              });
+            }
+
+            continue;
+          }
+
+          // Handle Scenario 3: perhaps the file was DELETED on local but not on the server.
+          if (record && record.node_id === node.id) {
+            logger.info(
+              `DELETED on server: record: ${record.node_id} ... node.id: ${
+                node.id
+              } ... ${currentPath}`
+            );
+
+            await remote.deleteServerNode({
+              account,
+              deletedNodeId: record.node_id
+            });
+            continue;
+          }
         }
 
         // Case 2: File present on local
@@ -97,12 +144,12 @@ exports.recursiveDownload = async params => {
 
             // If the server file time is greater, download the remote file (since server node is newer version)
             if (nodeModifiedDate > fileModifiedDate) {
-              logger.info(`Downloading latest remote file ${currentPath} ... nodeModifiedDate: ${nodeModifiedDate} and fileModifiedDate: ${fileModifiedDate}`);
               await _createItemOnLocal({
                 node: node,
                 currentPath: currentPath,
                 account: account
               });
+              continue;
             }
           }
         }
@@ -113,20 +160,7 @@ exports.recursiveDownload = async params => {
       }
     }
 
-    // Case 3: Check if any node was deleted on the server, if so we need to delete the files on the local as well...
-    const missingFiles = await nodeModel.getMissingFiles({
-      account: account,
-      fileList: availableNodeList,
-      column: "node_id"
-    });
-
-    for (const iterator of missingFiles) {
-      // Check if the file on the local is not available on the server, if so lets delete the file on the local.
-      if (availableNodeList.indexOf(iterator.node_id) === -1) {
-        fs.removeSync(iterator.file_path);
-      }
-    }
-
+    availableNodeList = [];
     await accountModel.syncComplete(account.id);
   } catch (error) {
     logger.error(`Error Message : ${JSON.stringify(error)}`);
@@ -155,6 +189,7 @@ exports.recursiveUpload = async params => {
   }
 
   rootFolder = syncPath;
+  // Check if the path is a folder, if so we will list all file/folders under it.
   if (fs.statSync(rootFolder).isDirectory()) {
     rootFolder = syncPath + "/**/*";
   }
@@ -198,10 +233,9 @@ exports.recursiveUpload = async params => {
     // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was localy updated/modified)
     // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
     fileModifiedTime = _base.getFileModifiedTime(filePath);
-
-    if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
+    // if (record && Math.abs(fileModifiedTime - record.last_uploaded_at) >= 2) {
+    if (record && fileModifiedTime > record.last_uploaded_at) {
       // Upload the local changes to the server.
-      logger.info(`File locally changed ${filePath}`);
       await remote.upload({
         account: account,
         filePath: filePath,
@@ -209,14 +243,26 @@ exports.recursiveUpload = async params => {
       });
       continue;
     }
+
+    // CASE 3: File was deleted from the server, but not deleted from local
+    if (
+      record &&
+      (record.last_uploaded_at > 0 || record.last_downloaded_at > 0)
+    ) {
+      const isNodeExists = await remote.getNode({
+        account,
+        nodeId: record.node_id
+      });
+
+      if (!isNodeExists) {
+        logger.info(`Removed from local ${record.file_path}`);
+        fs.removeSync(record.file_path);
+      }
+    }
   } // Filelist iteration end
 
-  // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
-  // Delete node from server and once response received, delete record from DB.
   if (counter === localFilePathList.length) {
-    await this.recursiveDelete({
-      account: account
-    });
+    localFilePathList = [];
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
   }
@@ -231,6 +277,7 @@ exports.recursiveUpload = async params => {
  * }
  */
 exports.recursiveDelete = async params => {
+  return;
   let account = params.account;
 
   if (account.sync_enabled == 0) {
@@ -245,8 +292,7 @@ exports.recursiveDelete = async params => {
 
   let missingFiles = await nodeModel.getMissingFiles({
     account: account,
-    fileList: localFilePathList,
-    column: "node_id"
+    fileList: localFilePathList
   });
 
   for (const iterator of missingFiles) {
@@ -276,7 +322,7 @@ exports.deleteByPath = async params => {
 
   if (
     account.sync_enabled == 0 ||
-    await remote.watchFolderGuard({ account, filePath }) === false
+    (await remote.watchFolderGuard({ account, filePath })) === false
   ) {
     return;
   }
@@ -326,6 +372,7 @@ _createItemOnLocal = async params => {
         remoteFolderPath: path.dirname(node.path_name),
         filePath: currentPath,
         fileUpdateAt: _base.convertToUTC(node.modified_at),
+        lastDownloadedAt: _base.getCurrentTime(),
         isFolder: true,
         isFile: false
       });

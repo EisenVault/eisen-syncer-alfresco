@@ -1,6 +1,6 @@
 var bugsnag = require("bugsnag");
 const log = require("electron-log");
-const { logger } = require('../helpers/logger');
+const { logger } = require("../helpers/logger");
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
 
@@ -80,9 +80,11 @@ exports.add = async (accountId, description) => {
       exports.deleteAllLessThan(removableId);
     }
 
-    log.warn(description);
-    logger.info(description);
-    bugsnag.notify(description.toString());
+    if (description.indexOf("StatusCodeError: 404") === -1) {
+      log.warn(description);
+      logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
+      bugsnag.notify(description.toString());
+    }
 
     return eventId;
   } catch (error) {

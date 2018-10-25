@@ -9,7 +9,7 @@ const token = require("./token");
 const _base = require("./syncers/_base");
 
 // Logger
-const { logger } = require('./logger');
+const { logger } = require("./logger");
 
 /**
  *
@@ -161,7 +161,7 @@ exports.deleteServerNode = async params => {
       await eventLogModel.add(
         account.id,
         "DELETE_NODE",
-        `Deleting NodeId: ${deletedNodeId} from ${account.instance_url}`
+        `Deleted NodeId: ${deletedNodeId} from ${account.instance_url}`
       );
     }
 
@@ -234,7 +234,9 @@ exports.download = async params => {
         account: account,
         nodeId: sourceNodeId
       });
-      modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
+      if (node) {
+        modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
+      }
     }
 
     // Add refrence to the nodes table
@@ -253,7 +255,7 @@ exports.download = async params => {
     await eventLogModel.add(
       account.id,
       "DOWNLOAD_FILE",
-      `Downloading File: ${destinationPath} from ${account.instance_url}`
+      `Downloaded File: ${destinationPath} from ${account.instance_url}`
     );
     return params;
   } catch (error) {
@@ -323,9 +325,7 @@ exports.upload = async params => {
       let response = await request(options);
       response = JSON.parse(response.body);
 
-      logger.info(`remoteupload: ${params.filePath} ${_base.convertToUTC(response.entry.modifiedAt)}`);
-
-      if (response.entry.id) {
+      if (response && response.entry.id) {
         // Add a record in the db
         await nodeModel.add({
           account: account,
@@ -376,7 +376,7 @@ exports.upload = async params => {
       method: "POST",
       url: `${
         account.instance_url
-        }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
+      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -395,7 +395,7 @@ exports.upload = async params => {
       let response = await request(options);
       response = JSON.parse(response.body);
 
-      if (response.entry.id) {
+      if (response && response.entry.id) {
         // Add a record in the db
         await nodeModel.add({
           account: account,
@@ -449,14 +449,21 @@ exports.watchFolderGuard = async params => {
     });
 
     // Check if the file was just downloaded, bail out!
-    if (record && _base.getCurrentTime() - record.last_downloaded_at <= INTERVAL) {
-      logger.info(`Upload blocked 1: ${filePath}`);
+    if (
+      record &&
+      _base.getCurrentTime() - record.last_downloaded_at <= INTERVAL
+    ) {
+      // logger.info(`Upload blocked 1: ${filePath}`);
       return false;
     }
 
     // If the file was already uploaded, bail out!
-    if (record && _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <= INTERVAL) {
-      logger.info(`Upload blocked 2: ${record.file_path}`);
+    if (
+      record &&
+      _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
+        INTERVAL
+    ) {
+      // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
     }
   }
@@ -468,16 +475,20 @@ exports.watchFolderGuard = async params => {
       filePath
     });
     // Check if the file was just uploaded, bail out!
-    if (record && _base.getCurrentTime() - record.last_uploaded_at <= INTERVAL) {
-      logger.info(`Download blocked 1: ${filePath}`);
-
+    if (
+      record &&
+      _base.getCurrentTime() - record.last_uploaded_at <= INTERVAL
+    ) {
+      // logger.info(`Download blocked 1: ${filePath}`);
       return false;
     }
 
     // If the file was already downloaded, bail out!
-    if (record && _base.convertToUTC(nodeModifiedAt) - record.last_downloaded_at <= INTERVAL) {
-      logger.info(`Download blocked 2: ${filePath}`);
-
+    if (
+      record &&
+      _base.convertToUTC(nodeModifiedAt) - record.last_downloaded_at <= INTERVAL
+    ) {
+      // logger.info(`Download blocked 2: ${filePath}`);
       return false;
     }
   }
@@ -500,8 +511,8 @@ exports.watchFolderGuard = async params => {
   relativeFilePath = relativeFilePath.split("/")[0];
 
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
-  if (watchFolder !== '' && watchFolder !== relativeFilePath) {
-    logger.info(`Bailed ${relativeFilePath}`);
+  if (watchFolder !== "" && watchFolder !== relativeFilePath) {
+    //logger.info(`Bailed ${relativeFilePath}`);
     return false;
   }
 

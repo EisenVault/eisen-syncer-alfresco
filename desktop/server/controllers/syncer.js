@@ -64,6 +64,7 @@ exports.download = async (request, response) => {
 
 // Delete records from DB for files that do not exists on local
 exports.delete = async (request, response) => {
+  return;
   let account = await accountModel.getOne(request.params.accountId);
 
   try {

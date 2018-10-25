@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import { AccountService } from '../../services/account.service';
-import { Router } from '@angular/router';
-import { SyncerService } from '../../services/syncer.service';
-import { SettingService } from '../../services/setting.service';
-import { Setting } from '../../models/setting';
+import { Component, OnInit } from "@angular/core";
+import { AccountService } from "../../services/account.service";
+import { Router } from "@angular/router";
+import { SyncerService } from "../../services/syncer.service";
+import { SettingService } from "../../services/setting.service";
+import { Setting } from "../../models/setting";
 
 interface IAccounts {
   id: number;
@@ -18,9 +18,9 @@ interface IAccounts {
 }
 
 @Component({
-  selector: 'app-manage',
-  templateUrl: './manage.component.html',
-  styleUrls: ['./manage.component.scss']
+  selector: "app-manage",
+  templateUrl: "./manage.component.html",
+  styleUrls: ["./manage.component.scss"]
 })
 export class ManageComponent implements OnInit {
   public accounts;
@@ -29,8 +29,7 @@ export class ManageComponent implements OnInit {
   public showAccountLoaders: number[] = [];
   private enabledSyncAccounts: number[] = [];
   public errors: any = {};
-  public miscError = '';
-  private syncInterval = 2;
+  public miscError = "";
   readonly INTERVAL = 7000;
 
   constructor(
@@ -38,20 +37,23 @@ export class ManageComponent implements OnInit {
     private _syncerService: SyncerService,
     private _settingService: SettingService,
     private _router: Router
-  ) { }
+  ) {}
 
   ngOnInit() {
-
     setTimeout(() => {
       this._getAccounts();
 
-      this._settingService.getSetting('SYNC_INTERVAL').subscribe((result: Setting) => {
-        this.syncInterval = Number(result.value);
-      });
+      this._settingService
+        .getSetting("SYNC_INTERVAL")
+        .subscribe((result: Setting) => {
+          // For every x minutes (defined in settings table), we will sync the data...
+          setInterval(() => {
+            this._runSyncEnabledAccounts();
+          }, Number(result.value) * 60000);
+        });
 
       // When the app loads, lets try and sync the files from and to server.
       this._runSyncEnabledAccounts();
-
     }, 5000);
 
     // For every x seconds, we will make a request to the account api and check
@@ -59,17 +61,11 @@ export class ManageComponent implements OnInit {
     setInterval(() => {
       this._getAccounts();
     }, this.INTERVAL);
-
-    // For every x minutes (defined in settings table), we will sync the data...
-    setInterval(() => {
-      this._runSyncEnabledAccounts();
-    }, this.syncInterval * 60000);
   }
 
   _runSyncEnabledAccounts() {
-    this._accountService
-      .getAccounts('sync_enabled=1')
-      .subscribe((accounts: IAccounts[]) => {
+    this._accountService.getAccounts("sync_enabled=1").subscribe(
+      (accounts: IAccounts[]) => {
         for (const account of accounts) {
           // This is for the spinning loader icon
           const index = this.showAccountLoaders.indexOf(account.id);
@@ -79,51 +75,54 @@ export class ManageComponent implements OnInit {
           // Process sync
           this._processSync(account);
         } // End forloop
-      }, error => {
-        console.log('error', error);
-      });
+      },
+      error => {
+        console.log("error", error);
+      }
+    );
   }
 
   _processSync(account) {
-    // Fire the Delete, then Download then upload api...
-    this._syncerService.syncDelete(account.id).subscribe(() => {
-      const position = this.showAccountLoaders.indexOf(account.id);
-      this.showAccountLoaders.splice(position, 1);
-
-      this._syncerService.syncDownloads(account.id).subscribe(() => {
-        this._syncerService.syncUploads(account.id).subscribe(() => {
-          this._getAccounts();
-        }); // End Upload subscribe
-      }); // End Download subscribe
-    }); // End Delete
+    // Fire the syncer endpoint...
+    const position = this.showAccountLoaders.indexOf(account.id);
+    this.showAccountLoaders.splice(position, 1);
+    this._syncerService.start(account.id);
   }
 
   isLoading(account) {
-    const accountLastSync = account.last_synced_at ? account.last_synced_at : new Date().getTime();
+    const accountLastSync = account.last_synced_at
+      ? account.last_synced_at
+      : new Date().getTime();
     const index = this.enabledSyncAccounts.indexOf(account.id);
 
-    return (index !== -1 && Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
-      this.showAccountLoaders.indexOf(account.id) >= 0;
+    return (
+      (index !== -1 &&
+        Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
+      this.showAccountLoaders.indexOf(account.id) >= 0
+    );
   }
 
   _getAccounts() {
-    this._accountService.getAccounts().subscribe((accounts: IAccounts[]) => {
-      this.accounts = accounts;
-      this.miscError = '';
-      this.isAppLoading = false;
-      for (const account of accounts) {
-        // This is for the spinning loader icon
-        const index = this.showAccountLoaders.indexOf(account.id);
-        if (index === -1 && account.sync_in_progress === 1) {
-          this.showAccountLoaders.push(account.id);
-        } else if (account.sync_in_progress === 0) {
-          this.showAccountLoaders.splice(index, 1);
-        }
-      } // End forloop
-    }, error => {
-      this.isAppLoading = false;
-      this.miscError = 'Cannot connect to the backend service.';
-    });
+    this._accountService.getAccounts().subscribe(
+      (accounts: IAccounts[]) => {
+        this.accounts = accounts;
+        this.miscError = "";
+        this.isAppLoading = false;
+        for (const account of accounts) {
+          // This is for the spinning loader icon
+          const index = this.showAccountLoaders.indexOf(account.id);
+          if (index === -1 && account.sync_in_progress === 1) {
+            this.showAccountLoaders.push(account.id);
+          } else if (account.sync_in_progress === 0) {
+            this.showAccountLoaders.splice(index, 1);
+          }
+        } // End forloop
+      },
+      error => {
+        this.isAppLoading = false;
+        this.miscError = "Cannot connect to the backend service.";
+      }
+    );
   }
 
   update(e, account) {
@@ -164,15 +163,15 @@ export class ManageComponent implements OnInit {
   }
 
   goToManageAccount(account) {
-    this._router.navigate(['account-new'], {
+    this._router.navigate(["account-new"], {
       queryParams: { accountId: account.id }
     });
   }
 
   deleteAccount(account) {
-    if (confirm('Proceed with the account deletion process?')) {
+    if (confirm("Proceed with the account deletion process?")) {
       const answer = confirm(
-        'Do you wish to remove the files from your local storage? (This will not delete the files from the server)'
+        "Do you wish to remove the files from your local storage? (This will not delete the files from the server)"
       );
       this._accountService
         .deleteAccount(account.id, answer)
