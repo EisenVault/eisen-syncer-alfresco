@@ -12,13 +12,13 @@
       </div>
     </div>
     <div class="form-group mt-2">
-      <label for="sync_interval">Sync Interval (minutes)</label>
+      <label for="sync_interval">Sync Interval</label>
       <select name="sync_interval" class="form-control" id="sync_interval" [(ngModel)]="sync_interval">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="5">5</option>
-        <option value="10">10</option>
-        <option value="20">20</option>
+        <option value="1">1 minute</option>
+        <option value="2">2 minutes</option>
+        <option value="5">5 minutes</option>
+        <option value="10">10 minutes</option>
+        <option value="20">20 minutes</option>
       </select>
     </div>
     <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">

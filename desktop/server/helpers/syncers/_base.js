@@ -1,5 +1,4 @@
 const fs = require("fs");
-const { logger } = require('../logger');
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.
@@ -44,3 +43,12 @@ exports.convertToUTC = time => {
 exports.getCurrentTime = () => {
   return Math.round(new Date().getTime() / 1000);
 };
+
+
+exports.getRelativePath = params => {
+
+  let { account, node } = params;
+
+  // remove the account sync path and any starting slash
+  return node.replace(account.sync_path, '').replace(/[\/|\\]/, '');
+}

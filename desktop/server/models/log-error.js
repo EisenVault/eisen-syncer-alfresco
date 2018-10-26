@@ -80,7 +80,7 @@ exports.add = async (accountId, description) => {
       exports.deleteAllLessThan(removableId);
     }
 
-    if (description.indexOf("StatusCodeError: 404") === -1) {
+    if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
       log.warn(description);
       logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
       bugsnag.notify(description.toString());

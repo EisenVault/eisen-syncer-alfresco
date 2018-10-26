@@ -310,6 +310,21 @@ exports.deleteAllByFileOrFolderPath = async params => {
   }
 };
 
+exports.forceDeleteAllByFileOrFolderPath = async params => {
+  let account = params.account;
+  let path = params.path;
+
+  try {
+    return await db("nodes")
+      .where("account_id", account.id)
+      .where("file_path", "LIKE", path + "%")
+      .orWhere("local_folder_path", path)
+      .delete();
+  } catch (error) {
+    await errorLogModel.add(account, error);
+  }
+};
+
 /**
  *
  * @param object params
@@ -328,6 +343,30 @@ exports.deleteAll = async params => {
       });
   } catch (error) {
     await errorLogModel.add(account.id, error);
+  }
+};
+
+
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  nodeId: <String>
+ * }
+ */
+exports.forceDelete = async params => {
+  let account = params.account;
+  let nodeId = params.nodeId;
+
+  try {
+    await db("nodes")
+      .where("account_id", account.id)
+      .where("node_id", nodeId)
+      .delete();
+  } catch (error) {
+    await errorLogModel.add(account, error);
   }
 };
 

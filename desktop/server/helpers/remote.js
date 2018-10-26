@@ -97,6 +97,7 @@ exports.getNode = async params => {
 exports.getChildren = async params => {
   let account = params.account;
   let parentNodeId = params.parentNodeId;
+  let maxItems = params.maxItems || 100;
 
   if (!account) {
     throw new Error("Account not found");
@@ -108,7 +109,7 @@ exports.getChildren = async params => {
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       parentNodeId +
-      "/children",
+      "/children?include=path&maxItems=" + maxItems,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
@@ -183,36 +184,30 @@ exports.deleteServerNode = async params => {
 /**
  *
  * @param object params
- * {
- *  account: Account<Object>,
- *  sourceNodeId: <String>,
- *  destinationPath: <String>,
- * }
  */
 exports.download = async params => {
   let account = params.account;
-  let sourceNodeId = params.sourceNodeId;
+  let node = params.node;
   let destinationPath = params.destinationPath;
   let remoteFolderPath = params.remoteFolderPath;
-  let nodeModifiedAt = params.nodeModifiedAt || 0;
 
-  if (
-    (await this.watchFolderGuard({
-      account,
-      filePath: destinationPath,
-      nodeModifiedAt,
-      action: "DOWNLOAD"
-    })) === false
-  ) {
-    return;
-  }
+  // if (
+  //   (await exports.watchFolderGuard({
+  //     account,
+  //     filePath: destinationPath,
+  //     node,
+  //     action: "DOWNLOAD"
+  //   })) === false
+  // ) {
+  //   return;
+  // }
 
   var options = {
     method: "GET",
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-      sourceNodeId +
+      node.id +
       "/content?attachment=true",
     headers: {
       authorization: "Basic " + (await token.get(account))
@@ -230,19 +225,19 @@ exports.download = async params => {
 
     let modifiedDate = _base.getFileModifiedTime(destinationPath);
     if (modifiedDate === 0) {
-      const node = await this.getNode({
+      const serverNode = await this.getNode({
         account: account,
-        nodeId: sourceNodeId
+        nodeId: node.id
       });
-      if (node) {
-        modifiedDate = _base.convertToUTC(node.entry.modifiedAt);
+      if (serverNode) {
+        modifiedDate = _base.convertToUTC(serverNode.entry.modifiedAt);
       }
     }
 
     // Add refrence to the nodes table
     await nodeModel.add({
       account: account,
-      nodeId: sourceNodeId,
+      nodeId: node.id,
       remoteFolderPath: remoteFolderPath,
       filePath: destinationPath,
       fileUpdateAt: modifiedDate,
@@ -283,20 +278,21 @@ exports.upload = async params => {
     throw new Error("Account not found");
   }
 
-  if (
-    (await this.watchFolderGuard({
-      account,
-      filePath,
-      action: "UPLOAD"
-    })) === false
-  ) {
-    return;
-  }
+  // if (
+  //   (await exports.watchFolderGuard({
+  //     account,
+  //     filePath,
+  //     node: null,
+  //     action: "UPLOAD"
+  //   })) === false
+  // ) {
+  //   return;
+  // }
 
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
-    let relativePath = filePath.replace(account.sync_path + "/", "");
+    let relativePath = filePath.replace(account.sync_path + "/documentLibrary/", "");
     relativePath = relativePath.substring(
       0,
       relativePath.length - directoryName.length - 1
@@ -368,7 +364,7 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
     uploadDirectory = uploadDirectory
-      .replace(account.sync_path, "")
+      .replace(account.sync_path + '/documentLibrary', "")
       .substring(1);
 
     options = {
@@ -376,7 +372,7 @@ exports.upload = async params => {
       method: "POST",
       url: `${
         account.instance_url
-      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
+        }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -439,7 +435,7 @@ exports.upload = async params => {
 
 exports.watchFolderGuard = async params => {
   const INTERVAL = 10;
-  let { account, filePath, nodeModifiedAt, action } = params;
+  let { account, filePath, node, action } = params;
 
   // UPLOAD Guard
   if (action && action.toUpperCase() === "UPLOAD") {
@@ -461,7 +457,7 @@ exports.watchFolderGuard = async params => {
     if (
       record &&
       _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
-        INTERVAL
+      INTERVAL
     ) {
       // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
@@ -483,36 +479,33 @@ exports.watchFolderGuard = async params => {
       return false;
     }
 
-    // If the file was already downloaded, bail out!
+    // If the latest file was already downloaded, bail out!
     if (
       record &&
-      _base.convertToUTC(nodeModifiedAt) - record.last_downloaded_at <= INTERVAL
+      _base.convertToUTC(node.modified_at) - record.last_downloaded_at <= INTERVAL
     ) {
       // logger.info(`Download blocked 2: ${filePath}`);
       return false;
     }
   }
 
-  // Only upload stuffs that are happening under the watched folder
+  // Only allow if its happening under the watched folder
   let watchFolder = account.watch_folder.split("documentLibrary").pop();
   let relativeFilePath = filePath.replace(account.sync_path, "");
 
   // Strip any starting slashes..
-  watchFolder =
-    watchFolder[0] === "/"
-      ? watchFolder.substring(1, watchFolder.length)
-      : watchFolder;
+  watchFolder = watchFolder.replace(/[\/|\\]/, '');
+  relativeFilePath = relativeFilePath.replace(/[\/|\\]/, '').split("/")[0];
 
-  relativeFilePath =
-    relativeFilePath[0] === "/"
-      ? relativeFilePath.substring(1, relativeFilePath.length)
-      : relativeFilePath;
-
-  relativeFilePath = relativeFilePath.split("/")[0];
+  logger.info(`sync_path: ${account.sync_path} ... 
+  watchFolder: ${account.watch_folder} ... 
+  relativeFilePath: ${relativeFilePath} ... 
+  filePath: ${filePath} 
+  `);
 
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
   if (watchFolder !== "" && watchFolder !== relativeFilePath) {
-    //logger.info(`Bailed ${relativeFilePath}`);
+    logger.info(`Bailed ${relativeFilePath}`);
     return false;
   }
 
