@@ -109,7 +109,8 @@ exports.getChildren = async params => {
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       parentNodeId +
-      "/children?include=path&maxItems=" + maxItems,
+      "/children?include=path&maxItems=" +
+      maxItems,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
@@ -132,7 +133,7 @@ exports.getChildren = async params => {
  */
 exports.deleteServerNode = async params => {
   let account = params.account;
-  let deletedNodeId = params.deletedNodeId;
+  let record = params.record;
 
   var options = {
     resolveWithFullResponse: true,
@@ -140,7 +141,7 @@ exports.deleteServerNode = async params => {
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-      deletedNodeId,
+      record.node_id,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
@@ -150,19 +151,24 @@ exports.deleteServerNode = async params => {
     let response = await request(options);
 
     if (response.statusCode == 204) {
-      logger.info(`Deleted id: ${deletedNodeId}`);
-
       // Delete the record from the DB
-      await nodeModel.delete({
-        account: account,
-        nodeId: deletedNodeId
-      });
+      if (record.is_file === 1) {
+        await nodeModel.forceDelete({
+          account,
+          nodeId: record.node_id
+        });
+      } else if (record.is_folder === 1) {
+        await nodeModel.forceDeleteAllByFileOrFolderPath({
+          account,
+          path: record.file_path
+        });
+      }
 
       // Add an event log
       await eventLogModel.add(
         account.id,
         "DELETE_NODE",
-        `Deleted NodeId: ${deletedNodeId} from ${account.instance_url}`
+        `Deleted NodeId: ${record.node_id} from ${account.instance_url}`
       );
     }
 
@@ -173,7 +179,7 @@ exports.deleteServerNode = async params => {
     if (error.statusCode == 404) {
       await nodeModel.delete({
         account: account,
-        nodeId: deletedNodeId
+        nodeId: record.node_id
       });
     } else {
       await errorLogModel.add(account.id, error);
@@ -292,7 +298,10 @@ exports.upload = async params => {
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
-    let relativePath = filePath.replace(account.sync_path + "/documentLibrary/", "");
+    let relativePath = filePath.replace(
+      account.sync_path + "/documentLibrary/",
+      ""
+    );
     relativePath = relativePath.substring(
       0,
       relativePath.length - directoryName.length - 1
@@ -364,7 +373,7 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
     uploadDirectory = uploadDirectory
-      .replace(account.sync_path + '/documentLibrary', "")
+      .replace(account.sync_path + "/documentLibrary", "")
       .substring(1);
 
     options = {
@@ -372,7 +381,7 @@ exports.upload = async params => {
       method: "POST",
       url: `${
         account.instance_url
-        }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
+      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -457,7 +466,7 @@ exports.watchFolderGuard = async params => {
     if (
       record &&
       _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
-      INTERVAL
+        INTERVAL
     ) {
       // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
@@ -482,7 +491,8 @@ exports.watchFolderGuard = async params => {
     // If the latest file was already downloaded, bail out!
     if (
       record &&
-      _base.convertToUTC(node.modified_at) - record.last_downloaded_at <= INTERVAL
+      _base.convertToUTC(node.modified_at) - record.last_downloaded_at <=
+        INTERVAL
     ) {
       // logger.info(`Download blocked 2: ${filePath}`);
       return false;
@@ -494,8 +504,8 @@ exports.watchFolderGuard = async params => {
   let relativeFilePath = filePath.replace(account.sync_path, "");
 
   // Strip any starting slashes..
-  watchFolder = watchFolder.replace(/[\/|\\]/, '');
-  relativeFilePath = relativeFilePath.replace(/[\/|\\]/, '').split("/")[0];
+  watchFolder = watchFolder.replace(/[\/|\\]/, "");
+  relativeFilePath = relativeFilePath.replace(/[\/|\\]/, "").split("/")[0];
 
   logger.info(`sync_path: ${account.sync_path} ... 
   watchFolder: ${account.watch_folder} ... 

@@ -20,7 +20,7 @@ pm2.connect(function(err) {
     {
       name: "eisensync",
       script: "./server/server.js", // Script to be run
-      exec_mode: "fork",
+      exec_mode: "cluster",
       instances: 1,
       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
       noDaemonMode: true,
