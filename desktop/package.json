@@ -29,7 +29,10 @@
     "productName": "EisenSync",
     "copyright": "Copyright © 2018 Argali Knowledge Services Pvt. Ltd.",
     "asar": true,
-    "asarUnpack": "server/database",
+    "asarUnpack": [
+      "server/logs",
+      "server/database"
+    ],
     "directories": {
       "output": "__installers"
     },
@@ -112,7 +115,7 @@
     "ngx-electron": "^1.0.4",
     "node-machine-id": "^1.1.10",
     "nodejslogger": "^1.2.3",
-    "nodemon": "^1.18.4",
+    "nodemon": "^1.18.5",
     "pm2": "^3.2.2",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5",

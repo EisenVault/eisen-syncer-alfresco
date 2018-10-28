@@ -38,6 +38,7 @@ exports.getOne = async (id, isDeleted = 0) => {
       "username",
       "token",
       "watch_node",
+      "document_library_node",
       "watch_folder",
       "sync_path",
       "sync_enabled",
@@ -161,6 +162,7 @@ exports.updateWatchNode = async (accountId, request) => {
       site_name: request.body.site_name,
       watch_folder: request.body.watch_folder,
       watch_node: request.body.watch_node,
+      document_library_node: request.body.document_library_node,
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

@@ -12,7 +12,7 @@ bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
 // Logger
-const { logger } = require('./helpers/logger');
+const { logger } = require("./helpers/logger");
 
 // Middlewares
 app.use(bugsnag.errorHandler);
@@ -112,11 +112,11 @@ socket.on("sync-notification", async data => {
   }
 });
 
-process.on("uncaughtException", function (error) {
-  logger.error(`Error Message : ${error}`);
+process.on("uncaughtException", function(error) {
+  logger.error(`An uncaughtException has occurred : ${error}`);
   process.exit(1);
 });
 
-app.listen(env.SERVER_PORT, () => {
+app.listen(7113, () => {
   logger.info(`server running on: ${env.SERVER_PORT}`);
 });

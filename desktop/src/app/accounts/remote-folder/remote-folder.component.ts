@@ -18,7 +18,8 @@ export class RemoteFolderComponent implements OnInit {
   public showSites = false;
   public showNodes = false;
   public showLevelUp = false;
-  public documentLibraryId = "";
+  public documentLibraryNodeId = "";
+  public watchNodeId = "";
   public selectedSiteName = "";
   public watchFolder = "";
 
@@ -41,7 +42,8 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadSites() {
-    this.documentLibraryId = "";
+    this.documentLibraryNodeId = "";
+    this.watchNodeId = "";
     this.watchFolder = "";
     this.showLevelUp = false;
     this._siteService.getSites(this.accountId).subscribe(response => {
@@ -73,30 +75,17 @@ export class RemoteFolderComponent implements OnInit {
           return this.loadSites();
         }
         if (item.entry.name === "documentLibrary") {
-          this.documentLibraryId = item.entry.id;
+          this.documentLibraryNodeId = item.entry.id;
           return (this.showLevelUp = false);
         }
       }
     });
   }
 
-  // _setParentId() {
-  //   if (this.nodes && this.nodes.length > 0) {
-  //     const nodeId = this.nodes[0].entry.id;
-
-  //     this._parentNodeService
-  //       .getParents(this.accountId, nodeId)
-  //       .subscribe(response => {
-  //         if ((<any>response).list.entries.length > 0) {
-  //           this.documentLibraryId = (<any>response).list.entries[0].entry.parentId;
-  //         }
-  //       });
-  //   }
-  // }
-
   addToList(e, node) {
     if (e.target.value === "true") {
       this.watchFolder = `${node.entry.path.name}/${node.entry.name}`;
+      this.watchNodeId = node.entry.id;
       return;
     }
 
@@ -115,13 +104,11 @@ export class RemoteFolderComponent implements OnInit {
         this.accountId,
         this.selectedSiteName,
         this.watchFolder,
-        this.documentLibraryId
+        this.watchNodeId,
+        this.documentLibraryNodeId
       )
       .subscribe(
         () => {
-          // Start syncing
-          this._syncerService.start(this.accountId);
-
           // Move to the next screen
           this._router.navigate(["account-finalize", this.accountId]);
         },

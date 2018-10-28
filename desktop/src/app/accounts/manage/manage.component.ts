@@ -67,11 +67,6 @@ export class ManageComponent implements OnInit {
     this._accountService.getAccounts("sync_enabled=1").subscribe(
       (accounts: IAccounts[]) => {
         for (const account of accounts) {
-          // This is for the spinning loader icon
-          const index = this.showAccountLoaders.indexOf(account.id);
-          if (index === -1) {
-            this.showAccountLoaders.push(account.id);
-          }
           // Process sync
           this._processSync(account);
         } // End forloop
@@ -83,10 +78,20 @@ export class ManageComponent implements OnInit {
   }
 
   _processSync(account) {
-    // Fire the syncer endpoint...
+    // Stop the loading icon by default. Start when before running the sync api
     const position = this.showAccountLoaders.indexOf(account.id);
     this.showAccountLoaders.splice(position, 1);
-    this._syncerService.start(account.id);
+
+    // Proceed with sync only if its not currently in progress
+    if (account.sync_in_progress == 0) {
+      // This is for the spinning loader icon
+      const index = this.showAccountLoaders.indexOf(account.id);
+      if (index === -1) {
+        this.showAccountLoaders.push(account.id);
+      }
+      // Fire the syncer endpoint...
+      this._syncerService.start(account.id);
+    }
   }
 
   isLoading(account) {

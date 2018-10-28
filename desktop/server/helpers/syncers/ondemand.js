@@ -26,26 +26,26 @@ exports.recursiveDownload = async params => {
   let destinationPath = params.destinationPath; // where on local to download
   let recursive = params.recursive || false;
 
-  if (account.sync_enabled == 0) {
+  if (account.sync_enabled == 0 || (account.sync_in_progress == 1 && recursive === false)) {
     return;
   }
 
-  logger.info("step 1");
+  // logger.info("step 1");
 
   let children = await remote.getChildren({
     account,
     parentNodeId: sourceNodeId,
     maxItems: 150000
   });
-  logger.info("step 2");
+  // logger.info("step 2");
 
   if (!children) {
     return;
   }
-  logger.info("step 3");
+  // logger.info("step 3");
 
   await accountModel.syncStart(account.id);
-  logger.info("step 4");
+  // logger.info("step 4");
 
   for (const iterator of children.list.entries) {
     const node = iterator.entry;
@@ -53,15 +53,15 @@ exports.recursiveDownload = async params => {
       node.path.name.indexOf("documentLibrary")
     );
     let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
-    const currentPath = `${destinationPath}/${relevantPath}/${node.name}`;
-    logger.info("step 5");
+    const currentPath = path.join(destinationPath, relevantPath, node.name);
+    // logger.info("step 5");
 
     // Check if the node is present in the database
     let record = await nodeModel.getOneByNodeId({
       account: account,
       nodeId: node.id
     });
-    logger.info("step 6");
+    // logger.info("step 6");
 
     // Possible cases...
     // Case A: Perhaps the file was RENAMED on server. Delete from local
@@ -127,7 +127,6 @@ exports.recursiveDownload = async params => {
     // Case D: If not present on local or if the file is not present on local, download...
     if (!record && fileRenamed === false) {
       logger.info("created" + currentPath);
-
       await _createItemOnLocal({
         node,
         currentPath,
@@ -143,11 +142,11 @@ exports.recursiveDownload = async params => {
         recursive: true
       });
     }
-    logger.info("step 7");
+    // logger.info("step 7");
   }
 
   if (children.list.pagination.hasMoreItems === false && recursive === false) {
-    logger.info("FINISH DOWNLOADING..." + recursive);
+    logger.info("FINISH DOWNLOADING...");
     await accountModel.syncComplete(account.id);
     return;
   }
@@ -163,17 +162,17 @@ exports.recursiveDownload = async params => {
  */
 exports.recursiveUpload = async params => {
   let account = params.account;
-  let rootNodeId = params.rootNodeId;
+  let rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
 
-  logger.info("upload stp" + 1);
+  // logger.info("upload stp" + 1);
 
-  if (account.sync_enabled == 0) {
+  if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
     return;
   }
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
 
-  // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watch_folder
+  // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
   let rootFolder = path.join(
     account.sync_path,
     account.watch_folder.substring(
@@ -183,15 +182,15 @@ exports.recursiveUpload = async params => {
     "*"
   );
 
-  console.log("rootFolder", rootFolder);
-  logger.info("upload stp" + 2);
+  // logger.info("upload stp" + 2);
 
   // This function will list all files/folders/sub-folders recursively.
   let localFilePathList = glob.sync(rootFolder);
-  logger.info("upload stp" + 5);
+  // logger.info("upload stp" + 5);
 
   for (let filePath of localFilePathList) {
-    logger.info("upload stp " + 6);
+    // logger.info("upload stp " + 6);
+    let localFileModifiedDate  = _base.getFileModifiedTime(filePath);
 
     // Get the DB record of the filePath
     let record = await nodeModel.getOneByFilePath({
@@ -199,7 +198,7 @@ exports.recursiveUpload = async params => {
       filePath: filePath
     });
 
-    logger.info("upload stp " + 7);
+    // logger.info("upload stp " + 7);
 
     // Case A: File created or renamed on local, upload it
     if (!record) {
@@ -215,8 +214,9 @@ exports.recursiveUpload = async params => {
     // Case B: File modified on local, upload it
     else if (
       record &&
-      _base.getFileModifiedTime(filePath) > record.last_uploaded_at &&
-      _base.getFileModifiedTime(filePath) > record.last_downloaded_at &&
+      localFileModifiedDate > record.last_uploaded_at &&
+      localFileModifiedDate > record.last_downloaded_at &&
+      Math.abs( localFileModifiedDate - record.last_downloaded_at ) > 10 && // only upload if file wasnt downloaded in the last 10 seconds
       record.is_file === 1
     ) {
       logger.info("File modified on local, uploading..." + filePath);
@@ -247,16 +247,16 @@ exports.recursiveUpload = async params => {
         fs.removeSync(record.file_path);
       }
     }
-    logger.info("upload stp " + 9);
+    // logger.info("upload stp " + 9);
   } // Filelist iteration end
-  logger.info("upload stp " + 10);
+  // logger.info("upload stp " + 10);
 
   // At the end of folder iteration, we will compile a list of old files that were renamed. We will delete those from the server.
   let missingFiles = await nodeModel.getMissingFiles({
     account,
     fileList: localFilePathList
   });
-  logger.info("upload stp " + 11);
+  // logger.info("upload stp " + 11);
 
   for (const record of missingFiles) {
     logger.info("Deleting missing files...");
@@ -265,7 +265,7 @@ exports.recursiveUpload = async params => {
       record
     });
   }
-  logger.info("upload stp " + 12);
+  // logger.info("upload stp " + 12);
   localFilePathList = [];
   missingFiles = null;
 
@@ -295,7 +295,7 @@ exports.recursiveDelete = async params => {
   await accountModel.syncStart(account.id);
 
   // This function will list all files/folders/sub-folders recursively.
-  let localFilePathList = glob.sync(account.sync_path + "/**/*");
+  let localFilePathList = glob.sync(path.join(account.sync_path, "**", "*"));
 
   let missingFiles = await nodeModel.getMissingFiles({
     account: account,

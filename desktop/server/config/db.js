@@ -12,7 +12,10 @@ const fs = require("fs");
 
 let dbPath = path.join(
   __dirname,
-  "app.asar.unpacked/server/database/syncer.db"
+  "app.asar.unpacked",
+  "server",
+  "database",
+  "syncer.db"
 );
 if (!fs.existsSync(dbPath)) {
   dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");

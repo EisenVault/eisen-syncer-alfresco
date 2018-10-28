@@ -4,12 +4,12 @@ import { environment } from "../../environments/environment";
 import { Account } from "../models/account";
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root"
 })
 export class AccountService {
-  constructor(private _http: HttpClient) { }
+  constructor(private _http: HttpClient) {}
 
-  getAccounts(querystring = '') {
+  getAccounts(querystring = "") {
     return this._http.get(`${environment.apiUrl}/accounts?${querystring}`);
   }
 
@@ -26,7 +26,7 @@ export class AccountService {
         password: params.password,
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
-        sync_enabled: params.sync_enabled,
+        sync_enabled: params.sync_enabled
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
@@ -44,7 +44,7 @@ export class AccountService {
         password: params.password,
         sync_path: params.sync_path,
         sync_frequency: params.sync_frequency,
-        sync_enabled: params.sync_enabled,
+        sync_enabled: params.sync_enabled
       },
       {
         observe: "response" as "body", // to display the full response & as 'body' for type cast
@@ -53,29 +53,33 @@ export class AccountService {
     );
   }
 
-  updateWatchNode(accountId, siteName, watchFolder, nodeId) {
-    console.log('nodeID', nodeId);
-    
-    return this._http.put(`${environment.apiUrl}/accounts/${accountId}/watchnode`,
+  updateWatchNode(
+    accountId,
+    siteName,
+    watchFolder,
+    nodeId,
+    documentLibraryNodeId
+  ) {
+    return this._http.put(
+      `${environment.apiUrl}/accounts/${accountId}/watchnode`,
       {
         site_name: siteName,
         watch_folder: watchFolder,
-        watch_node: nodeId
+        watch_node: nodeId,
+        document_library_node: documentLibraryNodeId
       }
     );
   }
 
-
   updateSync(accountId, sync) {
-    return this._http.put(
-      `${environment.apiUrl}/accounts/${accountId}/sync`,
-      {
-        sync_enabled: sync
-      }
-    );
+    return this._http.put(`${environment.apiUrl}/accounts/${accountId}/sync`, {
+      sync_enabled: sync
+    });
   }
 
   deleteAccount(accountId, forceDelete) {
-    return this._http.delete(`${environment.apiUrl}/accounts/${accountId}/force_delete/${forceDelete}`);
+    return this._http.delete(
+      `${environment.apiUrl}/accounts/${accountId}/force_delete/${forceDelete}`
+    );
   }
 }

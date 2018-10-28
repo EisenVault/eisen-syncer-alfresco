@@ -299,7 +299,7 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = filePath.replace(
-      account.sync_path + "/documentLibrary/",
+      path.join(account.sync_path, "documentLibrary", path.sep),
       ""
     );
     relativePath = relativePath.substring(
@@ -373,7 +373,7 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
     uploadDirectory = uploadDirectory
-      .replace(account.sync_path + "/documentLibrary", "")
+      .replace(path.join(account.sync_path, "documentLibrary"), "")
       .substring(1);
 
     options = {

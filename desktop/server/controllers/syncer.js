@@ -3,7 +3,7 @@ const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 
 // Logger
-const { logger } = require('../helpers/logger');
+const { logger } = require("../helpers/logger");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
@@ -16,7 +16,7 @@ exports.upload = async (request, response) => {
   try {
     await ondemand.recursiveUpload({
       account: account,
-      rootNodeId: account.watch_node
+      rootNodeId: account.document_library_node
     });
 
     // Start watcher now
@@ -80,7 +80,7 @@ exports.delete = async (request, response) => {
 
     return response.status(200).json(account);
   } catch (error) {
-    logger.error('error while deleting file ' + JSON.stringify(error));
+    logger.error("error while deleting file " + JSON.stringify(error));
     // Start watcher now
     watcher.watchAll();
     return response

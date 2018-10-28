@@ -5,33 +5,36 @@ var pm2 = require("pm2");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 const { session } = require("electron");
+const { logger } = require("./server/helpers/logger");
+const server = require("./server/server");
 
 // Set environment
 process.env.NODE_ENV = "dev";
 
 // Start the backend server...
-pm2.connect(function(err) {
-  if (err) {
-    console.error(err);
-    process.exit(2);
-  }
+// pm2.connect(function(err) {
+//   if (err) {
+//     logger.info(`Unable to connect PM2: ${err}`);
+//     process.exit(2);
+//   }
 
-  pm2.start(
-    {
-      name: "eisensync",
-      script: "./server/server.js", // Script to be run
-      exec_mode: "cluster",
-      instances: 1,
-      max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
-      noDaemonMode: true,
-      watch: true
-    },
-    function(err, apps) {
-      pm2.disconnect(); // Disconnects from PM2
-      if (err) throw err;
-    }
-  );
-});
+//   pm2.start(
+//     {
+//       name: "eisensync",
+//       script: "./server/server.js", // Script to be run
+//       exec_mode: "cluster",
+//       instances: 1,
+//       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
+//       noDaemonMode: true,
+//       watch: true
+//     },
+//     function(err, apps) {
+//       logger.info(`Unable to start PM2: ${err}`);
+//       pm2.disconnect(); // Disconnects from PM2
+//       if (err) throw err;
+//     }
+//   );
+// });
 
 let mainWindow, tray;
 let forceQuit = false;
