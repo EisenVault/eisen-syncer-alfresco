@@ -1,7 +1,7 @@
 const electron = require("electron");
 const url = require("url");
 const path = require("path");
-var pm2 = require("pm2");
+// var pm2 = require("pm2");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 const { session } = require("electron");
@@ -25,7 +25,7 @@ process.env.NODE_ENV = "dev";
 //       exec_mode: "cluster",
 //       instances: 1,
 //       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
-//       noDaemonMode: true,
+//       noDaemonMode: false,
 //       watch: true
 //     },
 //     function(err, apps) {
