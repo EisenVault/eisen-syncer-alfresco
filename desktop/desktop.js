@@ -5,7 +5,6 @@ const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 const { session } = require("electron");
-const { logger } = require("./server/helpers/logger");
 const server = require("./server/server");
 
 // Set environment

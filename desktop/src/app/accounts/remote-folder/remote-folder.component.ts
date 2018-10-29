@@ -1,15 +1,15 @@
-import { Component, OnInit } from "@angular/core";
-import { Router, ActivatedRoute, ParamMap } from "@angular/router";
-import { SiteService } from "../../services/site.service";
-import { NodeService } from "../../services/node.service";
-import { ParentNodeService } from "../../services/parent-node.service";
-import { AccountService } from "../../services/account.service";
-import { SyncerService } from "../../services/syncer.service";
+import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute, ParamMap } from '@angular/router';
+import { SiteService } from '../../services/site.service';
+import { NodeService } from '../../services/node.service';
+import { ParentNodeService } from '../../services/parent-node.service';
+import { AccountService } from '../../services/account.service';
+import { SyncerService } from '../../services/syncer.service';
 
 @Component({
-  selector: "app-remote-folder",
-  templateUrl: "./remote-folder.component.html",
-  styleUrls: ["./remote-folder.component.scss"]
+  selector: 'app-remote-folder',
+  templateUrl: './remote-folder.component.html',
+  styleUrls: ['./remote-folder.component.scss']
 })
 export class RemoteFolderComponent implements OnInit {
   public accountId;
@@ -18,10 +18,12 @@ export class RemoteFolderComponent implements OnInit {
   public showSites = false;
   public showNodes = false;
   public showLevelUp = false;
-  public documentLibraryNodeId = "";
-  public watchNodeId = "";
-  public selectedSiteName = "";
-  public watchFolder = "";
+  public documentLibraryNodeId = '';
+  public watchNodeId = '';
+  public selectedSiteName = '';
+  public watchFolder = '';
+  public parentNodeId = '';
+
 
   constructor(
     private _router: Router,
@@ -29,22 +31,21 @@ export class RemoteFolderComponent implements OnInit {
     private _siteService: SiteService,
     private _nodeService: NodeService,
     private _accountService: AccountService,
-    private _syncerService: SyncerService,
-    private _parentNodeService: ParentNodeService
-  ) {}
+    private _parentNodeService: ParentNodeService,
+  ) { }
 
   ngOnInit() {
     this._route.paramMap.subscribe(params => {
-      this.accountId = params.get("accountId");
+      this.accountId = params.get('accountId');
     });
 
     this.loadSites();
   }
 
   loadSites() {
-    this.documentLibraryNodeId = "";
-    this.watchNodeId = "";
-    this.watchFolder = "";
+    this.documentLibraryNodeId = '';
+    this.watchNodeId = '';
+    this.watchFolder = '';
     this.showLevelUp = false;
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
@@ -59,22 +60,22 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   loadNodes(nodeId) {
-    this.watchFolder = "";
+    this.watchFolder = '';
     this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
       this.nodes = (<any>response).list.entries;
-      // this._setParentId();
+      this._setParentId();
       this.showLevelUp = true;
       this.showSites = false;
       this.showNodes = true;
 
       for (const item of (<any>response).list.entries) {
         if (
-          item.entry.nodeType === "st:site" ||
-          item.entry.nodeType === "st:sites"
+          item.entry.nodeType === 'st:site' ||
+          item.entry.nodeType === 'st:sites'
         ) {
           return this.loadSites();
         }
-        if (item.entry.name === "documentLibrary") {
+        if (item.entry.name === 'documentLibrary') {
           this.documentLibraryNodeId = item.entry.id;
           return (this.showLevelUp = false);
         }
@@ -82,18 +83,34 @@ export class RemoteFolderComponent implements OnInit {
     });
   }
 
+  _setParentId() {
+    if (this.nodes && this.nodes.length > 0) {
+      const nodeId = this.nodes[0].entry.id;
+
+      this._parentNodeService
+        .getParents(this.accountId, nodeId)
+        .subscribe(response => {
+          if ((<any>response).list.entries.length > 0) {
+            // Set the parentId for the "Up Level" button.
+            this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
+          }
+        });
+    }
+  }
+
+
   addToList(e, node) {
-    if (e.target.value === "true") {
+    if (e.target.value === 'true') {
       this.watchFolder = `${node.entry.path.name}/${node.entry.name}`;
       this.watchNodeId = node.entry.id;
       return;
     }
 
-    return "";
+    return '';
   }
 
   goBack() {
-    this._router.navigate(["account-new"], {
+    this._router.navigate(['account-new'], {
       queryParams: { accountId: this.accountId }
     });
   }
@@ -110,7 +127,7 @@ export class RemoteFolderComponent implements OnInit {
       .subscribe(
         () => {
           // Move to the next screen
-          this._router.navigate(["account-finalize", this.accountId]);
+          this._router.navigate(['account-finalize', this.accountId]);
         },
         error => console.log(error)
       );

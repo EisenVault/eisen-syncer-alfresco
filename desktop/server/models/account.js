@@ -107,8 +107,6 @@ exports.findByInstanceSiteName = async (
     .where("is_deleted", isDeleted);
 };
 
-exports.getNodes;
-
 exports.findByInstanceAccounts = async (
   instance_url,
   accounts,
@@ -195,7 +193,7 @@ exports.syncComplete = async accountId => {
   return await db("accounts")
     .update({
       sync_in_progress: 0,
-      last_synced_at: new Date().getTime()
+      last_synced_at: new Date().getTime() / 1000
     })
     .where("id", accountId);
 };

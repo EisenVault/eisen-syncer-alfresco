@@ -332,19 +332,19 @@ exports.forceDeleteAllByFileOrFolderPath = async params => {
  *  account: <Object>
  * }
  */
-exports.deleteAll = async params => {
-  let account = params.account;
+// exports.deleteAll = async params => {
+//   let account = params.account;
 
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .update({
-        is_deleted: 1
-      });
-  } catch (error) {
-    await errorLogModel.add(account.id, error);
-  }
-};
+//   try {
+//     await db("nodes")
+//       .where("account_id", account.id)
+//       .update({
+//         is_deleted: 1
+//       });
+//   } catch (error) {
+//     await errorLogModel.add(account.id, error);
+//   }
+// };
 
 
 

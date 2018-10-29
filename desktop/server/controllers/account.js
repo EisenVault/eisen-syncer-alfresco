@@ -1,5 +1,6 @@
 const accountModel = require("../models/account");
 const nodeModel = require("../models/node");
+const watcherModel = require("../models/watcher");
 const watcher = require("../helpers/watcher");
 const fs = require("fs-extra");
 
@@ -32,10 +33,13 @@ exports.updateAccount = async (request, response) => {
 };
 
 exports.updateWatchNode = async (request, response) => {
-  await accountModel.updateWatchNode(request.params.id, request);
-  return response.status(200).json({
-    success: true
-  });
+
+  console.log('req', request.body);
+  return;
+  // await accountModel.updateWatchNode(request.params.id, request);
+  // return response.status(200).json({
+  //   success: true
+  // });
 };
 
 exports.updateSync = async (request, response) => {
@@ -65,12 +69,11 @@ exports.deleteAccount = async (request, response) => {
     const account = await accountModel.getOne(accountId);
     // Remove the files physically...
     fs.removeSync(account.sync_path);
-
-    deleteAccount = await accountModel.forceDelete(accountId);
-    await nodeModel.forceDeleteAll(accountId);
-  } else {
-    deleteAccount = await accountModel.deleteAccount(accountId);
   }
+
+  deleteAccount = await accountModel.forceDelete(accountId);
+  await nodeModel.forceDeleteAll(accountId);
+  await watcherModel.deleteAllByAccountId(accountId);
 
   await watcher.watchAll();
   return response.status(200).json(deleteAccount);

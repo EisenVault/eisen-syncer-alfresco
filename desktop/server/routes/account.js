@@ -14,7 +14,7 @@ router.get("/:id", accountController.getOne);
 router.post("/", accountAddMiddleware, accountController.addAccount);
 router.put("/:id", accountAddMiddleware, accountController.updateAccount);
 router.put("/:id/sync", accountUpdateSyncMiddleware, accountController.updateSync);
-router.put("/:id/watchnode", accountUpdateWatchNodeMiddleware, accountController.updateWatchNode);
+router.put("/:id/watchnode",  accountController.updateWatchNode);
 router.put("/:id/synctime", accountController.updateSyncTime);
 router.delete("/:id/force_delete/:force_delete", accountController.deleteAccount);
 

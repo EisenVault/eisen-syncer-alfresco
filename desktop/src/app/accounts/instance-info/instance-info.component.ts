@@ -12,10 +12,10 @@ export class InstanceInfoComponent implements OnInit {
   public loading = false;
   public errors: any = {};
   public accountId = 0;
-  public instance_url = '';
+  public instance_url = 'https://';
   public username = '';
   public password = '';
-  public sync_path = '';
+  public sync_path = '...';
   public sync_frequency = 2;
   public sync_enabled = false;
   public file = '';

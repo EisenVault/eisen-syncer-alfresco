@@ -177,7 +177,7 @@ exports.deleteServerNode = async params => {
     // Looks like the node was not available on the server, no point in keeping the record in the DB
     // So lets delete it
     if (error.statusCode == 404) {
-      await nodeModel.delete({
+      await nodeModel.forceDelete({
         account: account,
         nodeId: record.node_id
       });

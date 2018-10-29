@@ -33,7 +33,6 @@ app.use("/nodes", require("./routes/node"));
 
 (async () => {
   let accounts = await accountModel.getAll();
-
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
     await accountModel.syncComplete(account.id);
@@ -112,7 +111,7 @@ socket.on("sync-notification", async data => {
   }
 });
 
-process.on("uncaughtException", function(error) {
+process.on("uncaughtException", function (error) {
   logger.error(`An uncaughtException has occurred : ${error}`);
   process.exit(1);
 });
