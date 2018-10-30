@@ -41,17 +41,24 @@ const { logger } = require("../helpers/logger");
 let dbPath = path.join(__dirname.replace('app.asar', 'app.asar.unpacked').replace('config', 'database'), "syncer.db");
 
 if (!fs.existsSync(dbPath)) {
-  // dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
+  dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
 
   if (!fs.existsSync(dbPath)) {
     throw `Database Not Found. __dirname: ${__dirname} dbPath: ${dbPath}`;
   }
 }
 
-exports.db = require("knex")({
+const knex = require("knex")({
   client: "sqlite3",
   connection: {
     filename: dbPath
   },
   useNullAsDefault: true
 });
+
+// output raw sql queries
+knex.on('query', function (queryData) {
+  // console.log(queryData.sql);
+});
+
+exports.db = knex;

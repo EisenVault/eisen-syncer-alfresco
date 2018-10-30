@@ -6,7 +6,7 @@ const fs = require("fs-extra");
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
-  return response.status(200).json(await accountModel.getAll(syncEnabled, 0));
+  return response.status(200).json(await accountModel.getAll(syncEnabled));
 };
 
 exports.getOne = async (request, response) => {
@@ -32,14 +32,21 @@ exports.updateAccount = async (request, response) => {
   });
 };
 
-exports.updateWatchNode = async (request, response) => {
+exports.addWatchNodes = async (request, response) => {
+  // Delete old watch nodes
+  await watcherModel.deleteAllByAccountId(request.params.id);
 
-  console.log('req', request.body);
-  return;
-  // await accountModel.updateWatchNode(request.params.id, request);
-  // return response.status(200).json({
-  //   success: true
-  // });
+  let insertedRecords = [];
+  for (const iterator of request.body) {
+    if (insertedRecords.indexOf(iterator.watchPath) === -1) {
+      await watcherModel.addWatcher(request.params.id, iterator);
+      insertedRecords.push(iterator.watchPath);
+    }
+  }
+
+  return response.status(200).json({
+    success: true
+  });
 };
 
 exports.updateSync = async (request, response) => {

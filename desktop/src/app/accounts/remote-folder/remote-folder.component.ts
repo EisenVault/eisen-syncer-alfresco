@@ -2,9 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { SiteService } from '../../services/site.service';
 import { NodeService } from '../../services/node.service';
-import { ParentNodeService } from '../../services/parent-node.service';
 import { AccountService } from '../../services/account.service';
-import { SyncerService } from '../../services/syncer.service';
+import { WatchData, WatchList } from '../../models/watcher';
 
 @Component({
   selector: 'app-remote-folder',
@@ -13,17 +12,10 @@ import { SyncerService } from '../../services/syncer.service';
 })
 export class RemoteFolderComponent implements OnInit {
   public accountId;
+  public disableFinish = true;
   public sites = [];
-  public nodes = [];
-  public showSites = false;
-  public showNodes = false;
-  public showLevelUp = false;
-  public documentLibraryNodeId = '';
-  public watchNodeId = '';
-  public selectedSiteName = '';
-  public watchFolder = '';
-  public parentNodeId = '';
-
+  public selectedList: WatchList[] = [];
+  public preSelectedSiteIdList = [];
 
   constructor(
     private _router: Router,
@@ -31,82 +23,86 @@ export class RemoteFolderComponent implements OnInit {
     private _siteService: SiteService,
     private _nodeService: NodeService,
     private _accountService: AccountService,
-    private _parentNodeService: ParentNodeService,
   ) { }
 
   ngOnInit() {
     this._route.paramMap.subscribe(params => {
       this.accountId = params.get('accountId');
+      this.loadSites();
     });
-
-    this.loadSites();
   }
 
   loadSites() {
-    this.documentLibraryNodeId = '';
-    this.watchNodeId = '';
-    this.watchFolder = '';
-    this.showLevelUp = false;
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
-      this.showSites = true;
-      this.showNodes = false;
-    });
-  }
 
-  setSite(site) {
-    this.selectedSiteName = site.id;
-    this.loadNodes(site.guid);
-  }
+      this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
+        result.map((item) => {
+          this.preSelectedSiteIdList.push(item.site_id);
+          this.selectedList.push({
+            siteName: item.site_name,
+            siteId: item.site_id,
+            documentLibraryId: item.document_library_node,
+            watchNodeId: item.watch_node,
+            watchPath: item.watch_folder
+          });
 
-  loadNodes(nodeId) {
-    this.watchFolder = '';
-    this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
-      this.nodes = (<any>response).list.entries;
-      this._setParentId();
-      this.showLevelUp = true;
-      this.showSites = false;
-      this.showNodes = true;
-
-      for (const item of (<any>response).list.entries) {
-        if (
-          item.entry.nodeType === 'st:site' ||
-          item.entry.nodeType === 'st:sites'
-        ) {
-          return this.loadSites();
-        }
-        if (item.entry.name === 'documentLibrary') {
-          this.documentLibraryNodeId = item.entry.id;
-          return (this.showLevelUp = false);
-        }
-      }
-    });
-  }
-
-  _setParentId() {
-    if (this.nodes && this.nodes.length > 0) {
-      const nodeId = this.nodes[0].entry.id;
-
-      this._parentNodeService
-        .getParents(this.accountId, nodeId)
-        .subscribe(response => {
-          if ((<any>response).list.entries.length > 0) {
-            // Set the parentId for the "Up Level" button.
-            this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
+          if (this.selectedList.length > 0) {
+            this.disableFinish = false;
           }
+
         });
-    }
+      });
+
+    });
   }
 
+  setSite(e, site) {
 
-  addToList(e, node) {
-    if (e.target.value === 'true') {
-      this.watchFolder = `${node.entry.path.name}/${node.entry.name}`;
-      this.watchNodeId = node.entry.id;
-      return;
+    if (e.target.checked === true) {
+
+      this._nodeService.getNodes(this.accountId, site.guid).subscribe(response => {
+
+        for (const item of (<any>response).list.entries) {
+
+          if (item.entry.name === 'documentLibrary') {
+
+            const lastElement = item.entry.path.elements.pop();
+            const siteName = lastElement.name;
+            const siteId = lastElement.id;
+            const documentLibraryId = item.entry.id;
+            const watchNodeId = item.entry.id;
+            const watchPath = `${item.entry.path.name}/${item.entry.name}`;
+
+            this.selectedList.push({
+              siteName,
+              siteId,
+              documentLibraryId,
+              watchNodeId,
+              watchPath
+            });
+
+            this.disableFinish = false;
+            break;
+          }
+        }
+      });
+
+    } else {
+
+      // If site is unchecked, remove it's reference from the list
+      this.selectedList.map((item, index) => {
+        if (item.siteId === site.guid) {
+          this.selectedList.splice(index, 1);
+        }
+      });
+
+      this.disableFinish = false;
     }
 
-    return '';
+    if (this.selectedList.length === 0) {
+      this.disableFinish = true;
+    }
   }
 
   goBack() {
@@ -119,10 +115,7 @@ export class RemoteFolderComponent implements OnInit {
     this._accountService
       .updateWatchNode(
         this.accountId,
-        this.selectedSiteName,
-        this.watchFolder,
-        this.watchNodeId,
-        this.documentLibraryNodeId
+        this.selectedList
       )
       .subscribe(
         () => {

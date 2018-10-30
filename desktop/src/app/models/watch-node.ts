@@ -1,3 +1,3 @@
 export interface WatchNode {
-    success: boolean
+    success: boolean;
 }

@@ -351,7 +351,7 @@ exports.deleteByPath = async params => {
       });
     }
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+   await accountModel.syncComplete(account.id);
   } catch (error) {
     logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);

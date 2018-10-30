@@ -30,6 +30,7 @@ app.use("/syncer", require("./routes/syncer"));
 app.use("/sites", require("./routes/site"));
 app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
+app.use("/watchers", require("./routes/watcher"));
 
 (async () => {
   let accounts = await accountModel.getAll();
