@@ -1,27 +1,38 @@
 const ondemand = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
+const watcherModel = require("../models/watcher");
 
 // Logger
 const { logger } = require("../helpers/logger");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-  logger.info("UPLOAD START");
+  logger.info("UPLOAD API START");
   // Stop watcher for a while
   // watcher.unwatchAll();
 
   let account = await accountModel.getOne(request.body.account_id);
+  const watchers = await watcherModel.getAllByAccountId(account.id);
 
   try {
-    await ondemand.recursiveUpload({
-      account: account,
-      rootNodeId: account.document_library_node
-    });
+    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+    await accountModel.syncStart(account.id);
+
+    for (const watcher of watchers) {
+      await ondemand.recursiveUpload({
+        account: account,
+        watcher,
+        rootNodeId: watcher.document_library_node
+      });
+    }
+
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
 
     // Start watcher now
     watcher.watchAll();
-    logger.info("UPLOAD END");
+    logger.info("UPLOAD API END");
 
     return response
       .status(200)
@@ -37,20 +48,29 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-  logger.info("DOWNLOAD START");
+  logger.info("DOWNLOAD API START");
 
-  let account = await accountModel.getOne(request.params.accountId);
+  const account = await accountModel.getOne(request.params.accountId);
+  const watchFolders = await watcherModel.getAllByAccountId(account.id);
 
   try {
-    await ondemand.recursiveDownload({
-      account: account,
-      sourceNodeId: account.watch_node,
-      destinationPath: account.sync_path
-    });
+    // Set the issyncing flag to on so that the client can know if the syncing progress is still going
+    await accountModel.syncStart(account.id);
+    for (const watcher of watchFolders) {
+      await ondemand.recursiveDownload({
+        account: account,
+        watcher,
+        sourceNodeId: watcher.watch_node,
+        destinationPath: watcher.sync_path
+      });
+    }
+
+    // Set the sync completed time and also set issync flag to off
+    await accountModel.syncComplete(account.id);
 
     // Start watcher now
     watcher.watchAll();
-    logger.info("DOWNLOAD END");
+    logger.info("DOWNLOAD API END");
 
     return response.status(200).json({ success: true });
   } catch (error) {

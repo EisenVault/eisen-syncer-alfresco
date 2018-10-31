@@ -21,36 +21,40 @@ const { logger } = require("../logger");
  * }
  */
 exports.recursiveDownload = async params => {
-  let account = params.account;
-  let sourceNodeId = params.sourceNodeId; // the nodeid to download
-  let destinationPath = params.destinationPath; // where on local to download
-  let recursive = params.recursive || false;
+  const account = params.account;
+  const watcher = params.watcher;
+  const sourceNodeId = params.sourceNodeId; // the nodeid to download
+  const destinationPath = params.destinationPath; // where on local to download
+  const recursive = params.recursive || false;
 
-  if (account.sync_enabled == 0 || (account.sync_in_progress == 1 && recursive === false)) {
+  if (
+    account.sync_enabled == 0 ||
+    (account.sync_in_progress == 1 && recursive === false)
+  ) {
     return;
   }
 
-  // logger.info("step 1");
+  // await accountModel.syncStart(account.id);
+
+  // logger.info("step 2");
 
   let children = await remote.getChildren({
     account,
     parentNodeId: sourceNodeId,
     maxItems: 150000
   });
-  // logger.info("step 2");
+  // logger.info("step 3");
 
   if (!children) {
     return;
   }
-  // logger.info("step 3");
 
-  await accountModel.syncStart(account.id);
   // logger.info("step 4");
 
   for (const iterator of children.list.entries) {
     const node = iterator.entry;
     let relevantPath = node.path.name.substring(
-      node.path.name.indexOf("documentLibrary")
+      node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
     );
     let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
     const currentPath = path.join(destinationPath, relevantPath, node.name);
@@ -102,6 +106,7 @@ exports.recursiveDownload = async params => {
       ) {
         logger.info("downloaded since new " + currentPath);
         await _createItemOnLocal({
+          watcher,
           node,
           currentPath,
           account
@@ -128,6 +133,7 @@ exports.recursiveDownload = async params => {
     if (!record && fileRenamed === false) {
       logger.info("created" + currentPath);
       await _createItemOnLocal({
+        watcher,
         node,
         currentPath,
         account
@@ -137,6 +143,7 @@ exports.recursiveDownload = async params => {
     if (node.isFolder === true) {
       await exports.recursiveDownload({
         account,
+        watcher,
         sourceNodeId: node.id,
         destinationPath,
         recursive: true
@@ -147,7 +154,7 @@ exports.recursiveDownload = async params => {
 
   if (children.list.pagination.hasMoreItems === false && recursive === false) {
     logger.info("FINISH DOWNLOADING...");
-    await accountModel.syncComplete(account.id);
+    // await accountModel.syncComplete(account.id);
     return;
   }
 };
@@ -161,36 +168,40 @@ exports.recursiveDownload = async params => {
  * }
  */
 exports.recursiveUpload = async params => {
-  let account = params.account;
-  let rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
+  const account = params.account;
+  const watcher = params.watcher;
+  const rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
 
-  // logger.info("upload stp" + 1);
+  logger.info("upload stp" + 1);
 
   if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
     return;
   }
-  // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-  await accountModel.syncStart(account.id);
 
   // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
   let rootFolder = path.join(
     account.sync_path,
-    account.watch_folder.substring(
-      account.watch_folder.indexOf("documentLibrary")
+    watcher.watch_folder.substring(
+      watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
     ),
     "**",
     "*"
   );
 
-  // logger.info("upload stp" + 2);
+  logger.info("upload stp" + 2);
 
   // This function will list all files/folders/sub-folders recursively.
   let localFilePathList = glob.sync(rootFolder);
   // logger.info("upload stp" + 5);
 
+  // Following cases are possible...
+  // Case A: File created or renamed on local, upload it
+  // Case B: File modified on local, upload it
+  // Case C: File deleted on server, delete on local
+
   for (let filePath of localFilePathList) {
     // logger.info("upload stp " + 6);
-    let localFileModifiedDate  = _base.getFileModifiedTime(filePath);
+    let localFileModifiedDate = _base.getFileModifiedTime(filePath);
 
     // Get the DB record of the filePath
     let record = await nodeModel.getOneByFilePath({
@@ -205,6 +216,7 @@ exports.recursiveUpload = async params => {
       logger.info("New file, uploading..." + filePath);
       await remote.upload({
         account,
+        watcher,
         filePath,
         rootNodeId
       });
@@ -216,14 +228,15 @@ exports.recursiveUpload = async params => {
       record &&
       localFileModifiedDate > record.last_uploaded_at &&
       localFileModifiedDate > record.last_downloaded_at &&
-      Math.abs( localFileModifiedDate - record.last_downloaded_at ) > 10 && // only upload if file wasnt downloaded in the last 10 seconds
+      Math.abs(localFileModifiedDate - record.last_downloaded_at) > 10 && // only upload if file wasnt downloaded in the last 10 seconds
       record.is_file === 1
     ) {
       logger.info("File modified on local, uploading..." + filePath);
       // Upload the local changes to the server.
       await remote.upload({
-        account: account,
-        filePath: filePath,
+        account,
+        watcher,
+        filePath,
         rootNodeId: rootNodeId
       });
       continue;
@@ -241,6 +254,7 @@ exports.recursiveUpload = async params => {
 
       // Make sure the node was deleted on the server
       if (!isNodeExists) {
+        console.log('isNodeExists', isNodeExists);
         logger.info(
           "File not available on server, deleting on local..." + filePath
         );
@@ -254,12 +268,12 @@ exports.recursiveUpload = async params => {
   // At the end of folder iteration, we will compile a list of old files that were renamed. We will delete those from the server.
   let missingFiles = await nodeModel.getMissingFiles({
     account,
+    watcher,
     fileList: localFilePathList
   });
   // logger.info("upload stp " + 11);
-
   for (const record of missingFiles) {
-    logger.info("Deleting missing files...");
+    logger.info(`Deleting ${missingFiles.length} missing files...`);
     remote.deleteServerNode({
       account,
       record
@@ -269,8 +283,6 @@ exports.recursiveUpload = async params => {
   localFilePathList = [];
   missingFiles = null;
 
-  // Set the sync completed time and also set issync flag to off
-  await accountModel.syncComplete(account.id);
   logger.info("FINISHED UPLOAD...");
   return;
 };
@@ -351,7 +363,7 @@ exports.deleteByPath = async params => {
       });
     }
     // Set the sync completed time and also set issync flag to off
-   await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete(account.id);
   } catch (error) {
     logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
@@ -361,20 +373,12 @@ exports.deleteByPath = async params => {
 };
 
 _createItemOnLocal = async params => {
-  let account = params.account;
-  let node = params.node;
-  let currentPath = params.currentPath;
+  const account = params.account;
+  const watcher = params.watcher;
+  const node = params.node;
+  const currentPath = params.currentPath;
   try {
     if (node.isFolder === true) {
-      // if (await remote.watchFolderGuard({
-      //   account,
-      //   filePath: currentPath,
-      //   node: node,
-      //   action: 'DOWNLOAD'
-      // }) === false) {
-      //   return;
-      // }
-
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
@@ -382,7 +386,8 @@ _createItemOnLocal = async params => {
 
       // Add reference to the nodes table
       await nodeModel.add({
-        account: account,
+        account,
+        watcher,
         nodeId: node.id,
         remoteFolderPath: path.dirname(node.path.name),
         filePath: currentPath,
@@ -396,6 +401,7 @@ _createItemOnLocal = async params => {
     // If the child is a file, download the file...
     if (node.isFile === true) {
       await remote.download({
+        watcher,
         account,
         node,
         destinationPath: currentPath,

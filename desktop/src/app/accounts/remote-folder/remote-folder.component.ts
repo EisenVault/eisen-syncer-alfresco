@@ -13,7 +13,9 @@ import { WatchData, WatchList } from '../../models/watcher';
 export class RemoteFolderComponent implements OnInit {
   public accountId;
   public disableFinish = true;
+  public selectAllText = 'Select All';
   public sites = [];
+  public isSelectAllChecked = false;
   public selectedList: WatchList[] = [];
   public preSelectedSiteIdList = [];
 
@@ -37,6 +39,12 @@ export class RemoteFolderComponent implements OnInit {
       this.sites = (<any>response).list.entries;
 
       this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
+        console.log('length', this.sites.length, result.length);
+
+        if (this.sites.length === result.length) {
+          this.isSelectAllChecked = true;
+        }
+
         result.map((item) => {
           this.preSelectedSiteIdList.push(item.site_id);
           this.selectedList.push({
@@ -57,7 +65,56 @@ export class RemoteFolderComponent implements OnInit {
     });
   }
 
+  selectAll(event) {
+    this.disableFinish = true;
+    this.selectedList = [];
+    const siteCheckboxes = document.getElementsByClassName('site-checkbox');
+
+    if (event.target.checked === true) {
+      this.selectAllText = 'Processing...';
+      [].forEach.call(siteCheckboxes, function (cb) {
+        cb.checked = true;
+      });
+
+      setTimeout(() => {
+        this.disableFinish = false;
+        this.selectAllText = 'Select All';
+      }, this.sites.length * 500);
+
+      this.sites.map(site => {
+        this._nodeService.getNodes(this.accountId, site.entry.guid).subscribe(response => {
+          for (const item of (<any>response).list.entries) {
+            if (item.entry.name === 'documentLibrary') {
+              const lastElement = item.entry.path.elements.pop();
+              const siteName = lastElement.name;
+              const siteId = lastElement.id;
+              const documentLibraryId = item.entry.id;
+              const watchNodeId = item.entry.id;
+              const watchPath = `${item.entry.path.name}/${item.entry.name}`;
+
+              this.selectedList.push({
+                siteName,
+                siteId,
+                documentLibraryId,
+                watchNodeId,
+                watchPath
+              });
+              break;
+            }
+          }
+        });
+      });
+    } else {
+      [].forEach.call(siteCheckboxes, function (cb) {
+        cb.checked = false;
+      });
+      this.disableFinish = true;
+      this.selectedList = [];
+    }
+  }
+
   setSite(e, site) {
+    this.isSelectAllChecked = false;
 
     if (e.target.checked === true) {
 

@@ -5,7 +5,7 @@ const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 const { session } = require("electron");
-const server = require("./server/server");
+require("./server/server");
 
 // Set environment
 process.env.NODE_ENV = "dev";
@@ -158,14 +158,16 @@ app.on("ready", () => {
       click() {
         forceQuit = true;
 
-        // Let pm2 stop the process after which we can quit the app gracefully...
-        setTimeout(() => {
-          app.quit();
-        }, 1000);
+        app.quit();
 
-        pm2.stop("eisensync", errback => {
-          console.log("errback", errback);
-        });
+        // Let pm2 stop the process after which we can quit the app gracefully...
+        // setTimeout(() => {
+        //   app.quit();
+        // }, 1000);
+
+        // pm2.stop("eisensync", errback => {
+        //   console.log("errback", errback);
+        // });
       }
     }
   ];

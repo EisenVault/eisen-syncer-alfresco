@@ -17,16 +17,23 @@
 <div class="alert alert-info" *ngIf="sites && sites.length == 0">
   <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
 </div>
+
 <div *ngIf="sites && sites.length > 0">
   <h5>Select a Department</h5>
+  <ul class="list-group">
+    <li class="list-group-item">
+      <label for="selectall">
+        <input id="selectall" [checked]="isSelectAllChecked" type="checkbox" class="mr-2" (click)="selectAll($event)" />
+        <b>{{ selectAllText }}</b>
+      </label>
+  </ul>
   <div class="list-container">
     <!-- <div class="list-group" *ngFor="let site of sites" (click)="setSite(site.entry)"> -->
     <div class="list-group" *ngFor="let site of sites">
       <a class="list-group-item list-group-item-action flex-column align-items-start">
         <label [for]="site.entry.guid">
-          <input type="checkbox" [id]="site.entry.guid" [name]="site.entry.guid" [value]="site.entry.guid" [checked]="preSelectedSiteIdList.indexOf(site.entry.guid) !== -1"
-            (click)="setSite($event, site.entry)">
-          {{ site.entry.title }}
+          <input class="mr-2 site-checkbox" type="checkbox" [id]="site.entry.guid" [name]="site.entry.guid" [value]="site.entry.guid"
+            [checked]="preSelectedSiteIdList.indexOf(site.entry.guid) !== -1" (click)="setSite($event, site.entry)"> {{ site.entry.title }}
         </label>
       </a>
     </div>

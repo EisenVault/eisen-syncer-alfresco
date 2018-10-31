@@ -6,6 +6,7 @@ const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
 const nodeModel = require("./models/node");
+const errorLogModel = require("./models/log-error");
 const env = require("./config/env");
 var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
@@ -112,9 +113,10 @@ socket.on("sync-notification", async data => {
   }
 });
 
-process.on("uncaughtException", function (error) {
+process.on("uncaughtException", async (error) => {
+  await errorLogModel.add(0, error);
   logger.error(`An uncaughtException has occurred : ${error}`);
-  process.exit(1);
+  //process.exit(1);
 });
 
 app.listen(7113, () => {

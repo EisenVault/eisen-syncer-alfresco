@@ -19,15 +19,16 @@ const LIMIT = 950;
  * }
  */
 exports.add = async params => {
-  let account = params.account;
-  let nodeId = params.nodeId;
-  let remoteFolderPath = params.remoteFolderPath;
-  let filePath = params.filePath;
-  let fileUpdateAt = params.fileUpdateAt || 0;
-  let lastUploadedAt = params.lastUploadedAt || 0;
-  let lastDownloadedAt = params.lastDownloadedAt || 0;
-  let isFolder = params.isFolder;
-  let isFile = params.isFile;
+  const account = params.account;
+  const watcher = params.watcher;
+  const nodeId = params.nodeId;
+  const remoteFolderPath = params.remoteFolderPath;
+  const filePath = params.filePath;
+  const fileUpdateAt = params.fileUpdateAt || 0;
+  const lastUploadedAt = params.lastUploadedAt || 0;
+  const lastDownloadedAt = params.lastDownloadedAt || 0;
+  const isFolder = params.isFolder;
+  const isFile = params.isFile;
 
   // Delete the record if it already exists
   try {
@@ -44,6 +45,7 @@ exports.add = async params => {
     return await db
       .insert({
         account_id: account.id,
+        site_id: watcher.site_id,
         node_id: nodeId,
         remote_folder_path: remoteFolderPath,
         file_name: path.basename(filePath),
@@ -202,8 +204,9 @@ exports.getAllByFolderPath = async params => {
  * }
  */
 exports.getMissingFiles = async params => {
-  let account = params.account;
-  let fileList = params.fileList;
+  const account = params.account;
+  const watcher = params.watcher;
+  const fileList = params.fileList;
 
   let missingFiles = [];
   let listCount = 0;
@@ -215,6 +218,7 @@ exports.getMissingFiles = async params => {
         .select(["node_id", "file_path"])
         .whereNotIn("file_path", chunk)
         .where("account_id", account.id)
+        .where("site_id", watcher.site_id)
         .where("is_deleted", 0)
         .from("nodes");
 
