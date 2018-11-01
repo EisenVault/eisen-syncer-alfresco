@@ -1,4 +1,5 @@
 const fs = require("fs-extra");
+const path = require("path");
 const mkdirp = require("mkdirp");
 const glob = require("glob");
 const accountModel = require("../../models/account");
@@ -6,6 +7,9 @@ const remote = require("../remote");
 const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
 const _base = require("./_base");
+
+// Logger
+const { logger } = require("../logger");
 
 /**
  *
@@ -17,114 +21,143 @@ const _base = require("./_base");
  * }
  */
 exports.recursiveDownload = async params => {
-  let account = params.account;
-  let sourceNodeId = params.sourceNodeId;
-  let destinationPath = params.destinationPath;
+  const account = params.account;
+  const watcher = params.watcher;
+  const sourceNodeId = params.sourceNodeId; // the nodeid to download
+  const destinationPath = params.destinationPath; // where on local to download
+  const recursive = params.recursive || false;
 
-  if (account.sync_enabled == 0) {
+  if (
+    account.sync_enabled == 0 ||
+    (account.sync_in_progress == 1 && recursive === false)
+  ) {
     return;
   }
 
-  try {
-    // Start the sync
-    await accountModel.syncStart(account.id);
+  // await accountModel.syncStart(account.id);
 
-    let response;
-    let skipCount = 0;
-    let maxItems = 100;
+  // logger.info("step 2");
 
-    while (true) {
-      response = await _downloadChunks({
-        account: account,
-        nodeId: sourceNodeId,
-        skipCount: skipCount,
-        maxItems: maxItems
-      });
+  let children = await remote.getChildren({
+    account,
+    parentNodeId: sourceNodeId,
+    maxItems: 150000
+  });
+  // logger.info("step 3");
 
-      // Increase the skipcount
-      skipCount = skipCount + maxItems;
+  if (!children) {
+    return;
+  }
 
-      for (const node of response.nodes) {
-        let record = await nodeModel.getOneByNodeId({
-          account: account,
-          nodeId: node.id
-        });
+  // logger.info("step 4");
 
-        let currentPath =
-          destinationPath + "/" + node.path_name.split("documentLibrary/")[1];
+  for (const iterator of children.list.entries) {
+    const node = iterator.entry;
+    let relevantPath = node.path.name.substring(
+      node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
+    );
+    let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
+    const currentPath = path.join(destinationPath, relevantPath, node.name);
+    // logger.info("step 5");
 
-        // Case 1: Check If the remote node is NOT present on local
-        if (!fs.existsSync(currentPath)) {
-          // Case 1.1 Check File reference is present in DB (perhaps file was renamed on server).
-          if (record) {
-            // Delete the old file
-            fs.removeSync(record.file_path);
+    // Check if the node is present in the database
+    let record = await nodeModel.getOneByNodeId({
+      account: account,
+      nodeId: node.id
+    });
+    // logger.info("step 6");
 
-            // Delete Old record from DB and update DB and set new filename
-            await nodeModel.delete({
-              account: account,
-              nodeId: node.id
-            });
-          }
+    // Possible cases...
+    // Case A: Perhaps the file was RENAMED on server. Delete from local
+    // Case B: Check last modified date and download if newer
+    // Case C: Perhaps the file was DELETED on local but not on the server.
+    // Case D: If not present on local, download...
 
-          // Case 1.1/1.2 Download the file/folder on local (this will also add the new records in the DB)
-          await _createItemOnLocal({
-            node: node,
-            currentPath: currentPath,
-            account: account,
-            sourceNodeId: node.id
+    // If the record is present
+    if (record) {
+      // Case A: Perhaps the file was RENAMED on server. Delete from local
+      if (record.file_name !== path.basename(currentPath)) {
+        logger.info("Deleted renamed (old) path..." + record.file_path);
+        // If a node/folder is renamed on server, we will skip the deletion logic in this iteration assuming that the download will take sometime
+        fileRenamed = true;
+        // Delete the old file/folder from local
+        fs.removeSync(record.file_path);
+
+        // Delete the record from the DB
+        if (record.is_file === 1) {
+          await nodeModel.forceDelete({
+            account,
+            nodeId: record.node_id
           });
-        } else {
-          // Case 2: File present in local
-          if (record) {
-            // Convert the time to UTC and then get the unixtimestamp.
-            let nodeModifiedDate = _base.convertToUTC(node.modified_at);
-
-            // let fileModifiedDate = record.file_update_at;
-            let fileModifiedDate = _base.getFileLatestTime(record);
-
-            console.log(
-              "nodeModifiedDate,fileModifiedDate",
-              nodeModifiedDate,
-              node.modified_at,
-              fileModifiedDate
-            );
-
-            // If the server file time is greater, download the remote file (since server node is newer version)
-            if (nodeModifiedDate > fileModifiedDate) {
-              await _createItemOnLocal({
-                node: node,
-                currentPath: currentPath,
-                account: account,
-                sourceNodeId: node.id
-              });
-
-              console.log(
-                "Downloading " +
-                  currentPath +
-                  " since " +
-                  new Date(nodeModifiedDate * 1000).toLocaleString() +
-                  " notequal " +
-                  new Date(fileModifiedDate * 1000).toLocaleString()
-              );
-            }
-          }
+        } else if (record.is_folder === 1) {
+          await nodeModel.forceDeleteAllByFileOrFolderPath({
+            account,
+            path: record.file_path
+          });
         }
-      } // End forloop
+      } // end Case A
 
-      if (response.metadata.hasMoreItems === "false") {
-        break;
-      }
+      // Case B: ...check last modified date and download of the file if newer (lets not download any folders)
+      // Convert the time to UTC and then get the unixtimestamp.
+      else if (
+        _base.convertToUTC(node.modifiedAt) > _base.getFileLatestTime(record) &&
+        record.file_name === path.basename(currentPath) &&
+        record.is_file === 1
+      ) {
+        logger.info("downloaded since new " + currentPath);
+        await _createItemOnLocal({
+          watcher,
+          node,
+          currentPath,
+          account
+        });
+      } // end Case B
+
+      // Case C: Perhaps the file was DELETED on local but not on the server.(will skip if the node was renamed on server)
+      else if (
+        !fs.existsSync(currentPath) &&
+        record.node_id === node.id &&
+        fileRenamed === false
+      ) {
+        logger.info(
+          "deleted on server, because deleted on local" + currentPath
+        );
+        await remote.deleteServerNode({
+          account,
+          record
+        });
+      } // end Case C
     }
 
-    await accountModel.syncComplete(account.id);
-  } catch (error) {
-    await errorLogModel.add(account.id, error);
-    // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    // Case D: If not present on local or if the file is not present on local, download...
+    if (!record && fileRenamed === false) {
+      logger.info("created" + currentPath);
+      await _createItemOnLocal({
+        watcher,
+        node,
+        currentPath,
+        account
+      });
+    }
+
+    if (node.isFolder === true) {
+      await exports.recursiveDownload({
+        account,
+        watcher,
+        sourceNodeId: node.id,
+        destinationPath,
+        recursive: true
+      });
+    }
+    // logger.info("step 7");
+  }
+
+  if (children.list.pagination.hasMoreItems === false && recursive === false) {
+    logger.info("FINISH DOWNLOADING...");
+    // await accountModel.syncComplete(account.id);
+    return;
   }
 };
-
 /**
  *
  * @param object params
@@ -135,94 +168,135 @@ exports.recursiveDownload = async params => {
  * }
  */
 exports.recursiveUpload = async params => {
-  let account = params.account;
-  let syncPath = params.sync_path || account.sync_path;
-  let rootNodeId = params.rootNodeId;
+  const account = params.account;
+  const watcher = params.watcher;
+  const rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
 
-  if (account.sync_enabled == 0) {
+  logger.info("upload stp" + 1);
+
+  if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
     return;
   }
 
-  rootFolder = syncPath;
-  if (fs.statSync(rootFolder).isDirectory()) {
-    rootFolder = syncPath + "/**/*";
-  }
+  // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
+  let rootFolder = path.join(
+    account.sync_path,
+    watcher.watch_folder.substring(
+      watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
+    ),
+    "**",
+    "*"
+  );
 
-  // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-  await accountModel.syncStart(account.id);
+  logger.info("upload stp" + 2);
 
   // This function will list all files/folders/sub-folders recursively.
   let localFilePathList = glob.sync(rootFolder);
+  // logger.info("upload stp" + 5);
 
-  // If the main folder is a directory, prepend its path to the list so that the main folder is also added in the "nodes" folder
-  if (params.sync_path && fs.statSync(params.sync_path).isDirectory()) {
-    localFilePathList.unshift(params.sync_path);
-  }
+  // Following cases are possible...
+  // Case A: File created or renamed on local, upload it
+  // Case B: File modified on local, upload it
+  // Case C: File deleted on server, delete on local
 
-  let counter = 0;
-  // Iterate through each file and perform certain task
   for (let filePath of localFilePathList) {
-    counter++;
+    // logger.info("upload stp " + 6);
+    let localFileModifiedDate = _base.getFileModifiedTime(filePath);
+
     // Get the DB record of the filePath
     let record = await nodeModel.getOneByFilePath({
       account: account,
       filePath: filePath
     });
 
-    // CASE 1: Check if file is available on disk but missing in DB (New node was created).
-    // Then Upload the Node to the server and once response received add a record of the same in the "nodes" table.
+    // logger.info("upload stp " + 7);
+
+    // Case A: File created or renamed on local, upload it
     if (!record) {
+      logger.info("New file, uploading..." + filePath);
       await remote.upload({
-        account: account,
-        filePath: filePath,
-        rootNodeId: rootNodeId,
-        broadcast: true
+        account,
+        watcher,
+        filePath,
+        rootNodeId
       });
       continue;
     }
 
-    // CASE 2: Check if file is available on disk but its modified date does not match the one in DB (file was locally updated/modified)
-    // Upload the file to the server and once response received update the "file_modified_at" field in the "nodes" table.
-    fileModifiedTime = _base.getFileModifiedTime(filePath);
-
-    if (record && Math.abs(fileModifiedTime - record.file_update_at) >= 2) {
-      console.log(
-        "Uploading local changes of " +
-          filePath +
-          " since " +
-          new Date(record.file_update_at * 1000).toLocaleString() +
-          " notequal " +
-          new Date(fileModifiedTime * 1000).toLocaleString()
-      );
-
+    // Case B: File modified on local, upload it
+    else if (
+      record &&
+      localFileModifiedDate > record.last_uploaded_at &&
+      localFileModifiedDate > record.last_downloaded_at &&
+      Math.abs(localFileModifiedDate - record.last_downloaded_at) > 10 && // only upload if file wasnt downloaded in the last 10 seconds
+      record.is_file === 1
+    ) {
+      logger.info("File modified on local, uploading..." + filePath);
       // Upload the local changes to the server.
       await remote.upload({
-        account: account,
-        filePath: filePath,
+        account,
+        watcher,
+        filePath,
         rootNodeId: rootNodeId
       });
       continue;
     }
-  } // Filelist iteration end
 
-  // TODO CASE 3: Check if file is present in DB but missing on local disk (file was deleted on local)
-  // Delete node from server and once response received, delete record from DB.
-  if (counter === localFilePathList.length) {
-    await this.recursiveDelete({
-      account: account
+    // Case C: File deleted on server, delete on local
+    else if (
+      record &&
+      (record.last_uploaded_at > 0 || record.last_downloaded_at > 0)
+    ) {
+      const isNodeExists = await remote.getNode({
+        account,
+        nodeId: record.node_id
+      });
+
+      // Make sure the node was deleted on the server
+      if (!isNodeExists) {
+        console.log('isNodeExists', isNodeExists);
+        logger.info(
+          "File not available on server, deleting on local..." + filePath
+        );
+        fs.removeSync(record.file_path);
+      }
+    }
+    // logger.info("upload stp " + 9);
+  } // Filelist iteration end
+  // logger.info("upload stp " + 10);
+
+  // At the end of folder iteration, we will compile a list of old files that were renamed. We will delete those from the server.
+  let missingFiles = await nodeModel.getMissingFiles({
+    account,
+    watcher,
+    fileList: localFilePathList
+  });
+  // logger.info("upload stp " + 11);
+  for (const record of missingFiles) {
+    logger.info(`Deleting ${missingFiles.length} missing files...`);
+    remote.deleteServerNode({
+      account,
+      record
     });
-    // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
   }
+  // logger.info("upload stp " + 12);
+  localFilePathList = [];
+  missingFiles = null;
+
+  logger.info("FINISHED UPLOAD...");
+  return;
 };
 
 /**
+ * Recursively delete all files from server that were deleted from local
+ *
  * @param object params
  * {
  *  account: Account<Object>,
  * }
  */
 exports.recursiveDelete = async params => {
+  return;
   let account = params.account;
 
   if (account.sync_enabled == 0) {
@@ -233,21 +307,20 @@ exports.recursiveDelete = async params => {
   await accountModel.syncStart(account.id);
 
   // This function will list all files/folders/sub-folders recursively.
-  let localFilePathList = glob.sync(account.sync_path + "/**/*");
+  let localFilePathList = glob.sync(path.join(account.sync_path, "**", "*"));
 
   let missingFiles = await nodeModel.getMissingFiles({
     account: account,
-    fileList: localFilePathList,
-    column: "node_id"
+    fileList: localFilePathList
   });
 
-  for (const missingNode of missingFiles) {
+  for (const iterator of missingFiles) {
     // Delete the node from the server, once thats done it will delete the record from the DB as well
     await remote.deleteServerNode({
       account: account,
-      deletedNodeId: missingNode,
-      broadcast: true
+      deletedNodeId: iterator.node_id
     });
+    logger.info(`Deleted missing file: ${iterator.stringify()}`);
   }
 
   // Set the sync completed time and also set issync flag to off
@@ -266,7 +339,10 @@ exports.deleteByPath = async params => {
   let account = params.account;
   let filePath = params.filePath;
 
-  if (account.sync_enabled == 0) {
+  if (
+    account.sync_enabled == 0 ||
+    (await remote.watchFolderGuard({ account, filePath })) === false
+  ) {
     return;
   }
 
@@ -283,14 +359,13 @@ exports.deleteByPath = async params => {
       // Delete the node from the server, once thats done it will delete the record from the DB as well
       await remote.deleteServerNode({
         account: account,
-        deletedNodeId: record.node_id,
-        broadcast: true
+        record: record
       });
     }
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
   } catch (error) {
-    console.log(error);
+    logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
     await accountModel.syncComplete(account.id);
@@ -298,13 +373,12 @@ exports.deleteByPath = async params => {
 };
 
 _createItemOnLocal = async params => {
-  let account = params.account;
-  let node = params.node;
-  let currentPath = params.currentPath;
-  let sourceNodeId = params.sourceNodeId;
-
+  const account = params.account;
+  const watcher = params.watcher;
+  const node = params.node;
+  const currentPath = params.currentPath;
   try {
-    if (node.is_folder == "true") {
+    if (node.isFolder === true) {
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
@@ -312,33 +386,30 @@ _createItemOnLocal = async params => {
 
       // Add reference to the nodes table
       await nodeModel.add({
-        account: account,
-        nodeId: sourceNodeId,
+        account,
+        watcher,
+        nodeId: node.id,
+        remoteFolderPath: path.dirname(node.path.name),
         filePath: currentPath,
-        fileUpdateAt: _base.convertToUTC(node.modified_at),
-        // fileUpdateAt: _base.getFileModifiedTime(currentPath),
+        fileUpdateAt: _base.convertToUTC(node.modifiedAt),
+        lastDownloadedAt: _base.getCurrentTime(),
         isFolder: true,
         isFile: false
       });
-    } else if (node.is_file == "true") {
-      // If the child is a file, download it
+    }
+
+    // If the child is a file, download the file...
+    if (node.isFile === true) {
       await remote.download({
-        account: account,
-        sourceNodeId: sourceNodeId,
-        destinationPath: currentPath
+        watcher,
+        account,
+        node,
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(node.path.name)
       });
     }
   } catch (error) {
-    console.log(error);
+    logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
   }
-};
-
-_downloadChunks = async params => {
-  return await remote.getNodeList({
-    account: params.account,
-    nodeId: params.nodeId,
-    skipCount: params.skipCount,
-    maxItems: params.maxItems
-  });
 };

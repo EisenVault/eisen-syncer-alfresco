@@ -1,4 +1,3 @@
-const express = require("express");
 const settingModel = require("../models/setting");
 
 exports.getAll = async (request, response) => {

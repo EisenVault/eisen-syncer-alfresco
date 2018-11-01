@@ -1,25 +1,23 @@
-import { Component, OnInit } from "@angular/core";
-import { Router, ActivatedRoute, ParamMap } from "@angular/router";
-import { SiteService } from "../../services/site.service";
-import { NodeService } from "../../services/node.service";
-import { ParentNodeService } from "../../services/parent-node.service";
-import { AccountService } from "../../services/account.service";
-import { SyncerService } from "../../services/syncer.service";
+import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute, ParamMap } from '@angular/router';
+import { SiteService } from '../../services/site.service';
+import { NodeService } from '../../services/node.service';
+import { AccountService } from '../../services/account.service';
+import { WatchData, WatchList } from '../../models/watcher';
 
 @Component({
-  selector: "app-remote-folder",
-  templateUrl: "./remote-folder.component.html",
-  styleUrls: ["./remote-folder.component.scss"]
+  selector: 'app-remote-folder',
+  templateUrl: './remote-folder.component.html',
+  styleUrls: ['./remote-folder.component.scss']
 })
 export class RemoteFolderComponent implements OnInit {
   public accountId;
+  public disableFinish = true;
+  public isLoading = false;
   public sites = [];
-  public nodes = [];
-  public showSites: boolean = false;
-  public showNodes: boolean = false;
-  public showLevelUp: boolean = false;
-  public selectedNode: string = '';
-  public parentNodeId: string = "";
+  public isSelectAllChecked = false;
+  public selectedList: WatchList[] = [];
+  public preSelectedSiteIdList = [];
 
   constructor(
     private _router: Router,
@@ -27,80 +25,159 @@ export class RemoteFolderComponent implements OnInit {
     private _siteService: SiteService,
     private _nodeService: NodeService,
     private _accountService: AccountService,
-    private _syncerService: SyncerService,
-    private _parentNodeService: ParentNodeService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this._route.paramMap.subscribe(params => {
-      this.accountId = params.get("accountId");
+      this.accountId = params.get('accountId');
+      this.loadSites();
     });
-
-    this.loadSites();
   }
 
   loadSites() {
-    this.selectedNode = '';
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
-      this.showSites = true;
-      this.showNodes = false;
-    });
-  }
 
-  loadNodes(nodeId) {
-    this.selectedNode = '';
-    this._nodeService.getNodes(this.accountId, nodeId).subscribe(response => {
-      this.showLevelUp = true;
-      this.nodes = (<any>response).list.entries;
-      this._setParentId();
-      this.showSites = false;
-      this.showNodes = true;
+      this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
+        console.log('length', this.sites.length, result.length);
 
-      for (let item of (<any>response).list.entries) {
-        if (item.entry.name == "documentLibrary") {
-          return (this.showLevelUp = false);
+        if (this.sites.length === result.length) {
+          this.isSelectAllChecked = true;
         }
-      }
+
+        result.map((item) => {
+          this.preSelectedSiteIdList.push(item.site_id);
+          this.selectedList.push({
+            siteName: item.site_name,
+            siteId: item.site_id,
+            documentLibraryId: item.document_library_node,
+            watchNodeId: item.watch_node,
+            watchPath: item.watch_folder
+          });
+
+          if (this.selectedList.length > 0) {
+            this.disableFinish = false;
+          }
+
+        });
+      });
+
     });
   }
 
-  _setParentId() {
-    if (this.nodes && this.nodes.length > 0) {
-      let nodeId = this.nodes[0].entry.id;
+  selectAll(event) {
+    this.disableFinish = true;
+    this.selectedList = [];
+    const siteCheckboxes = document.getElementsByClassName('site-checkbox');
 
-      this._parentNodeService
-        .getParents(this.accountId, nodeId)
-        .subscribe(response => {
-          if ((<any>response).list.entries.length > 0) {
-            this.parentNodeId = (<any>response).list.entries[0].entry.parentId;
+    if (event.target.checked === true) {
+      this.isLoading = true;
+      [].forEach.call(siteCheckboxes, function (cb) {
+        cb.checked = true;
+      });
+
+      setTimeout(() => {
+        this.disableFinish = false;
+        this.isLoading = false;
+      }, this.sites.length * 500);
+
+      this.sites.map(site => {
+        this._nodeService.getNodes(this.accountId, site.entry.guid).subscribe(response => {
+          for (const item of (<any>response).list.entries) {
+            if (item.entry.name === 'documentLibrary') {
+              const lastElement = item.entry.path.elements.pop();
+              const siteName = lastElement.name;
+              const siteId = lastElement.id;
+              const documentLibraryId = item.entry.id;
+              const watchNodeId = item.entry.id;
+              const watchPath = `${item.entry.path.name}/${item.entry.name}`;
+
+              this.selectedList.push({
+                siteName,
+                siteId,
+                documentLibraryId,
+                watchNodeId,
+                watchPath
+              });
+              break;
+            }
           }
         });
+      });
+    } else {
+      [].forEach.call(siteCheckboxes, function (cb) {
+        cb.checked = false;
+      });
+      this.disableFinish = true;
+      this.selectedList = [];
     }
   }
 
-  addToList(e, nodeId) {
-    if (e.target.value == "true") {
-      return this.selectedNode = nodeId;
+  setSite(e, site) {
+    this.isSelectAllChecked = false;
+
+    if (e.target.checked === true) {
+
+      this._nodeService.getNodes(this.accountId, site.guid).subscribe(response => {
+
+        for (const item of (<any>response).list.entries) {
+
+          if (item.entry.name === 'documentLibrary') {
+
+            const lastElement = item.entry.path.elements.pop();
+            const siteName = lastElement.name;
+            const siteId = lastElement.id;
+            const documentLibraryId = item.entry.id;
+            const watchNodeId = item.entry.id;
+            const watchPath = `${item.entry.path.name}/${item.entry.name}`;
+
+            this.selectedList.push({
+              siteName,
+              siteId,
+              documentLibraryId,
+              watchNodeId,
+              watchPath
+            });
+
+            this.disableFinish = false;
+            break;
+          }
+        }
+      });
+
+    } else {
+
+      // If site is unchecked, remove it's reference from the list
+      this.selectedList.map((item, index) => {
+        if (item.siteId === site.guid) {
+          this.selectedList.splice(index, 1);
+        }
+      });
+
+      this.disableFinish = false;
     }
 
-    return '';
+    if (this.selectedList.length === 0) {
+      this.disableFinish = true;
+    }
   }
 
   goBack() {
-    this._router.navigate(["account-new"], { queryParams: { accountId: this.accountId } });
+    this._router.navigate(['account-new'], {
+      queryParams: { accountId: this.accountId }
+    });
   }
 
   finalize() {
     this._accountService
-      .updateWatchNode(this.accountId, this.selectedNode)
+      .updateWatchNode(
+        this.accountId,
+        this.selectedList
+      )
       .subscribe(
-        response => {
-          // Start syncing
-          this._syncerService.start(this.accountId);
-
+        () => {
           // Move to the next screen
-          this._router.navigate(["account-finalize", this.accountId]);
+          this._router.navigate(['account-finalize', this.accountId]);
         },
         error => console.log(error)
       );

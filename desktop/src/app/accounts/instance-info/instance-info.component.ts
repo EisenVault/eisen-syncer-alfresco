@@ -9,22 +9,22 @@ import { AccountService } from "../../services/account.service";
 })
 export class InstanceInfoComponent implements OnInit {
   public response;
-  public loading: boolean = false;
+  public loading = false;
   public errors: any = {};
-  public accountId: number = 0;
-  public instance_url: string = "";
-  public username: string = "";
-  public password: string = "";
-  public sync_path: string = "...";
-  public sync_frequency: number = 2;
-  public sync_enabled: boolean = true;
-  public file: string = "";
+  public accountId = 0;
+  public instance_url = 'https://';
+  public username = '';
+  public password = '';
+  public sync_path = '...';
+  public sync_frequency = 2;
+  public sync_enabled = false;
+  public file = '';
 
   constructor(
     private _accountService: AccountService,
     private _router: Router,
     private _activatedRoute: ActivatedRoute
-  ) {}
+  ) { }
 
   ngOnInit() {
     this._activatedRoute.queryParams.subscribe(params => {
@@ -34,7 +34,7 @@ export class InstanceInfoComponent implements OnInit {
           if (response) {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
-            this.sync_enabled = (<any>response).sync_enabled;
+            this.sync_enabled = false;
             this.sync_path = (<any>response).sync_path;
             this.sync_frequency = (<any>response).sync_frequency;
           }
@@ -72,9 +72,9 @@ export class InstanceInfoComponent implements OnInit {
         },
         error => {
           this.loading = false;
-          if (error.status == 400) {
-            for (let e of error.error.errors) {
-              for (let errorField in e) {
+          if (error.status === 400) {
+            for (const e of error.error.errors) {
+              for (const errorField in e) {
                 this.errors[errorField] = e[errorField];
               }
             }

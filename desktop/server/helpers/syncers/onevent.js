@@ -8,31 +8,26 @@ const errorLogModel = require("../../models/log-error");
 const watcher = require("../watcher");
 const _base = require("./_base");
 
-exports.create = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
-
+exports.create = async (account, params) => {
+  return;
   let currentPath = _getPath(account, params.path);
 
   // Set the issyncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
-  watcher.unwatchAll();
+  // watcher.unwatchAll();
 
   try {
     // If the node is a folder, we will create the folder and all its subfolders
-    if (params.is_folder === "true") {
+    if (params.is_folder === true) {
       mkdirp.sync(currentPath);
 
       // Add reference to the nodes table
       await nodeModel.add({
         account: account,
         nodeId: params.node_id,
+        remoteFolderPath: path.dirname(params.path),
         filePath: currentPath,
         fileUpdateAt: _base.getFileModifiedTime(currentPath),
         isFolder: true,
@@ -44,13 +39,18 @@ exports.create = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === "true") {
+    }
+
+    // If the node is a file, we will download the file
+    if (params.is_file === true) {
+      // Create the folder chain first...
       mkdirp.sync(path.dirname(currentPath));
 
       await remote.download({
         account: account,
         sourceNodeId: params.node_id,
-        destinationPath: currentPath
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(params.path)
       });
 
       // Start watcher now
@@ -69,13 +69,8 @@ exports.create = async params => {
 };
 
 // Update the file
-exports.update = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
+exports.update = async (account, params) => {
+  return;
 
   let currentPath = _getPath(account, params.path);
 
@@ -83,7 +78,7 @@ exports.update = async params => {
   await accountModel.syncStart(account.id);
 
   // Stop watcher for a while
-  watcher.unwatchAll();
+  // watcher.unwatchAll();
 
   let oldRecord = await nodeModel.getOneByNodeId({
     account: account,
@@ -92,7 +87,7 @@ exports.update = async params => {
 
   try {
     // If the node is a folder, we will create the folder
-    if (params.is_folder === "true" && currentPath !== oldRecord.file_path) {
+    if (params.is_folder === true && currentPath !== oldRecord.file_path) {
       // Rename the old folder to the new name
       fs.renameSync(oldRecord.file_path, currentPath);
 
@@ -106,6 +101,7 @@ exports.update = async params => {
       await nodeModel.add({
         account: account,
         nodeId: params.node_id,
+        remoteFolderPath: path.dirname(params.path),
         filePath: currentPath,
         fileUpdateAt: _base.getFileModifiedTime(currentPath),
         isFolder: true,
@@ -117,9 +113,14 @@ exports.update = async params => {
 
       // Set the sync completed time and also set issync flag to off
       await accountModel.syncComplete(account.id);
-    } else if (params.is_file === "true") {
+    }
+
+    // If the node is a file, we will download it
+    if (params.is_file === true) {
       // Delete the old file
-      fs.removeSync(oldRecord.file_path);
+      if (oldRecord) {
+        fs.removeSync(oldRecord.file_path);
+      }
 
       // Delete the old reference
       await nodeModel.delete({
@@ -131,7 +132,8 @@ exports.update = async params => {
       await remote.download({
         account: account,
         sourceNodeId: params.node_id,
-        destinationPath: currentPath
+        destinationPath: currentPath,
+        remoteFolderPath: path.dirname(params.path)
       });
 
       // Start watcher now
@@ -149,13 +151,8 @@ exports.update = async params => {
   }
 };
 
-exports.delete = async params => {
-  let instance_url = _getInstanceUrl(params.instance_url);
-  let account = await accountModel.findByEnabledSyncInstance(instance_url);
-
-  if (!account) {
-    return;
-  }
+exports.delete = async (account, params) => {
+  return;
 
   // Set the is_syncing flag to on so that the client can know if the syncing progress is still going
   await accountModel.syncStart(account.id);
@@ -171,9 +168,10 @@ exports.delete = async params => {
     return;
   }
 
-  let path = _getPath(account, record.file_path);
+  let path = record.file_path;
 
-  if (account.sync_path != path) {
+  // Make sure you do not delete the root path by mistake
+  if (account.sync_path !== path) {
     fs.removeSync(path);
   }
 
@@ -181,7 +179,7 @@ exports.delete = async params => {
     // Then remove the entry from the DB
     await nodeModel.delete({
       account: account,
-      nodeId: path
+      nodeId: params.node_id
     });
 
     // Set the sync completed time and also set issync flag to off

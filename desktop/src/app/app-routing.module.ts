@@ -1,4 +1,13 @@
-import { NgModule } from "@angular/core";
+import BugsnagErrorHandler from 'bugsnag-angular';
+import bugsnag from 'bugsnag-js';
+const bugsnagClient = bugsnag('3613b87fd26a90eadb81aa07e847d6bf');
+
+export function errorHandlerFactory() {
+  return new BugsnagErrorHandler(bugsnagClient);
+}
+
+
+import { NgModule, ErrorHandler } from "@angular/core";
 import { Routes, RouterModule } from "@angular/router";
 
 import { InstanceInfoComponent } from "./accounts/instance-info/instance-info.component";
@@ -51,6 +60,7 @@ const routes: Routes = [
 
 @NgModule({
   imports: [RouterModule.forRoot(routes, { useHash: true })],
-  exports: [RouterModule]
+  exports: [RouterModule],
+  providers: [ { provide: ErrorHandler, useFactory: errorHandlerFactory } ]
 })
 export class AppRoutingModule {}

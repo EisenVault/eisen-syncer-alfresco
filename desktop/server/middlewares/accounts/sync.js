@@ -1,6 +1,7 @@
 const validator = require("validator");
 const _ = require("lodash");
 const http = require("request-promise-native");
+const watcherModel = require('../../models/watcher');
 
 module.exports = async (request, response, next) => {
   let errors = [];
@@ -11,6 +12,13 @@ module.exports = async (request, response, next) => {
   ) {
     errors.push({
       sync_enabled: ["Auto Sync cannot be empty"]
+    });
+  }
+
+  const removeFolders = await watcherModel.getAllByAccountId(request.params.id);
+  if(removeFolders.length === 0) {
+    errors.push({
+      sync_enabled: ["Sync cannot be enabled for this account since no remote folder was selected."]
     });
   }
 

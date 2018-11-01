@@ -1,5 +1,6 @@
 const Cryptr = require("cryptr");
-const cryptr = new Cryptr("nufejPIJ77v72GGNF12H");
+const machineID = require("node-machine-id");
+const cryptr = new Cryptr(machineID.machineIdSync());
 
 exports.encrypt = data => {
   return cryptr.encrypt(data);
