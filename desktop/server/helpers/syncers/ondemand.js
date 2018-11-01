@@ -183,8 +183,8 @@ exports.recursiveUpload = async params => {
   // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
   let rootFolder = path.join(
     account.sync_path,
-    account.watch_folder.substring(
-      account.watch_folder.indexOf("documentLibrary")
+    watcher.watch_folder.substring(
+      watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
     ),
     "**",
     "*"
