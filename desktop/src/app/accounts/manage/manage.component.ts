@@ -1,9 +1,10 @@
 import { Component, OnInit } from "@angular/core";
 import { AccountService } from "../../services/account.service";
-import { Router } from "@angular/router";
+import { Router, ActivatedRoute } from "@angular/router";
 import { SyncerService } from "../../services/syncer.service";
 import { SettingService } from "../../services/setting.service";
 import { Setting } from "../../models/setting";
+import { ElectronService } from "ngx-electron";
 
 interface IAccounts {
   id: number;
@@ -31,25 +32,50 @@ export class ManageComponent implements OnInit {
   public errors: any = {};
   public miscError = "";
   readonly INTERVAL = 7000;
+  private syncIntervalSetting = 10;
 
   constructor(
     private _accountService: AccountService,
     private _syncerService: SyncerService,
     private _settingService: SettingService,
-    private _router: Router
-  ) {}
+    private _router: Router,
+    private route: ActivatedRoute,
+    private _electronService: ElectronService
+  ) { }
 
   ngOnInit() {
+    // If the app has already loaded then no need for the 5 seconds wait time
+    this.route.queryParams.subscribe(params => {
+      if (params['cached'] === 1) {
+        this._getAccounts();
+        this.isAppLoading = false;
+      }
+    });
+
     setTimeout(() => {
       this._getAccounts();
 
+      // Get the sync interval
       this._settingService
         .getSetting("SYNC_INTERVAL")
         .subscribe((result: Setting) => {
-          // For every x minutes (defined in settings table), we will sync the data...
+          this.syncIntervalSetting = Number(result.value) * 60;
+          // For every minute, we will run the timer for sync...
           setInterval(() => {
             this._runSyncEnabledAccounts();
-          }, Number(result.value) * 60000);
+          }, 60000);
+        });
+
+      // Get the launch status
+      this._settingService
+        .getSetting("LAUNCH_AT_STARTUP")
+        .subscribe((result: Setting) => {
+          // If the launch status is -1 (means user ran the app for the first time), we will enable it
+          if (result.value === "-1") {
+            if (this._electronService.isElectronApp) {
+              this._electronService.ipcRenderer.sendSync("autolaunch", 1);
+            }
+          }
         });
 
       // When the app loads, lets try and sync the files from and to server.
@@ -77,18 +103,24 @@ export class ManageComponent implements OnInit {
     );
   }
 
-  _processSync(account) {
+  _processSync(account, forceSync = false) {
     // Stop the loading icon by default. Start when before running the sync api
     const position = this.showAccountLoaders.indexOf(account.id);
     this.showAccountLoaders.splice(position, 1);
+    const currentTimestamp = Math.round(new Date().getTime() / 1000);
+    const timeDifference = Math.abs(currentTimestamp - account.last_synced_at);
 
-    // Proceed with sync only if its not currently in progress
-    if (account.sync_in_progress == 0) {
+    // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
+    if (
+      forceSync === true || (account.sync_in_progress === 0 && timeDifference >= this.syncIntervalSetting)
+    ) {
       // This is for the spinning loader icon
       const index = this.showAccountLoaders.indexOf(account.id);
       if (index === -1) {
         this.showAccountLoaders.push(account.id);
       }
+      console.log('started sync');
+
       // Fire the syncer endpoint...
       this._syncerService.start(account.id);
     }
@@ -108,6 +140,7 @@ export class ManageComponent implements OnInit {
   }
 
   _getAccounts() {
+    this.isAppLoading = true;
     this._accountService.getAccounts().subscribe(
       (accounts: IAccounts[]) => {
         this.accounts = accounts;
@@ -134,8 +167,8 @@ export class ManageComponent implements OnInit {
     this._accountService.updateSync(account.id, e.target.checked).subscribe(
       () => {
         if (e.target.checked === true) {
-          this._processSync(account);
           this.enabledSyncAccounts.push(account.id);
+          this._processSync(account, true);
         } else {
           const index = this.enabledSyncAccounts.indexOf(account.id);
           this.enabledSyncAccounts.slice(index, 1);
@@ -159,7 +192,7 @@ export class ManageComponent implements OnInit {
           throw error;
         }
 
-        e.target.checked = false;
+        // e.target.checked = false;
         setTimeout(() => {
           this.errors = [];
         }, 3000);
@@ -176,7 +209,7 @@ export class ManageComponent implements OnInit {
   deleteAccount(account) {
     if (confirm("Proceed with the account deletion process?")) {
       const answer = confirm(
-        "Do you wish to remove the files from your local storage? (This will not delete the files from the server)"
+        `WARNING!!! \n\nDo you want to DELETE the folder "${account.sync_path}" from your local path? This data will however NOT get deleted from the server.`
       );
       this._accountService
         .deleteAccount(account.id, answer)

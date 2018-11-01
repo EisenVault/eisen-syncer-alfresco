@@ -12,7 +12,7 @@ export class InstanceInfoComponent implements OnInit {
   public loading = false;
   public errors: any = {};
   public accountId = 0;
-  public instance_url = '';
+  public instance_url = 'https://';
   public username = '';
   public password = '';
   public sync_path = '';
@@ -101,7 +101,7 @@ export class InstanceInfoComponent implements OnInit {
       .subscribe(
         response => {
           this.loading = false;
-          if (response.status == 200) {
+          if (response.status === 200) {
             this._router.navigate([
               "account-remote-folder",
               (<any>response).body.account_id
@@ -110,7 +110,7 @@ export class InstanceInfoComponent implements OnInit {
         },
         error => {
           this.loading = false;
-          if (error.status == 400) {
+          if (error.status === 400) {
             for (let e of error.error.errors) {
               for (let errorField in e) {
                 this.errors[errorField] = e[errorField];

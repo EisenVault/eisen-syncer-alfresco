@@ -6,6 +6,7 @@ const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
 const nodeModel = require("./models/node");
+const errorLogModel = require("./models/log-error");
 const env = require("./config/env");
 var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
@@ -30,10 +31,10 @@ app.use("/syncer", require("./routes/syncer"));
 app.use("/sites", require("./routes/site"));
 app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
+app.use("/watchers", require("./routes/watcher"));
 
 (async () => {
   let accounts = await accountModel.getAll();
-
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
     await accountModel.syncComplete(account.id);
@@ -112,9 +113,10 @@ socket.on("sync-notification", async data => {
   }
 });
 
-process.on("uncaughtException", function(error) {
+process.on("uncaughtException", async (error) => {
+  await errorLogModel.add(0, error);
   logger.error(`An uncaughtException has occurred : ${error}`);
-  process.exit(1);
+  //process.exit(1);
 });
 
 app.listen(7113, () => {

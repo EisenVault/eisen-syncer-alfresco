@@ -1,5 +1,9 @@
 const accountModel = require("../models/account");
 const nodeModel = require("../models/node");
+<<<<<<< HEAD
+=======
+const watcherModel = require("../models/watcher");
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
 const watcher = require("../helpers/watcher");
 const fs = require("fs-extra");
 
@@ -31,8 +35,23 @@ exports.updateAccount = async (request, response) => {
   });
 };
 
+<<<<<<< HEAD
 exports.updateWatchNode = async (request, response) => {
   await accountModel.updateWatchNode(request.params.id, request);
+=======
+exports.addWatchNodes = async (request, response) => {
+  // Delete old watch nodes
+  await watcherModel.deleteAllByAccountId(request.params.id);
+
+  let insertedRecords = [];
+  for (const iterator of request.body) {
+    if (insertedRecords.indexOf(iterator.watchPath) === -1) {
+      await watcherModel.addWatcher(request.params.id, iterator);
+      insertedRecords.push(iterator.watchPath);
+    }
+  }
+
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
   return response.status(200).json({
     success: true
   });
@@ -59,6 +78,7 @@ exports.deleteAccount = async (request, response) => {
   const accountId = request.params.id;
   const forceDelete = request.params.force_delete;
   let deleteAccount = null;
+<<<<<<< HEAD
 
   if (forceDelete === "true") {
     // Permanantly delete account, files and all node data from the db
@@ -72,6 +92,20 @@ exports.deleteAccount = async (request, response) => {
     deleteAccount = await accountModel.deleteAccount(accountId);
   }
 
+=======
+
+  if (forceDelete === "true") {
+    // Permanantly delete account, files and all node data from the db
+    const account = await accountModel.getOne(accountId);
+    // Remove the files physically...
+    fs.removeSync(account.sync_path);
+  }
+
+  deleteAccount = await accountModel.forceDelete(accountId);
+  await nodeModel.forceDeleteAll(accountId);
+  await watcherModel.deleteAllByAccountId(accountId);
+
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
   await watcher.watchAll();
   return response.status(200).json(deleteAccount);
 };

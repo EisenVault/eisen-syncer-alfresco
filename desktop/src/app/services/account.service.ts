@@ -7,7 +7,7 @@ import { Account } from "../models/account";
   providedIn: "root"
 })
 export class AccountService {
-  constructor(private _http: HttpClient) {}
+  constructor(private _http: HttpClient) { }
 
   getAccounts(querystring = "") {
     return this._http.get(`${environment.apiUrl}/accounts?${querystring}`);
@@ -55,19 +55,11 @@ export class AccountService {
 
   updateWatchNode(
     accountId,
-    siteName,
-    watchFolder,
-    nodeId,
-    documentLibraryNodeId
+    selectedList
   ) {
-    return this._http.put(
+    return this._http.post(
       `${environment.apiUrl}/accounts/${accountId}/watchnode`,
-      {
-        site_name: siteName,
-        watch_folder: watchFolder,
-        watch_node: nodeId,
-        document_library_node: documentLibraryNodeId
-      }
+      selectedList
     );
   }
 

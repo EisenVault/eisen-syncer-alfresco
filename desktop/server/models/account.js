@@ -1,20 +1,18 @@
 const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 
-exports.getAll = async (syncEnabled, isDeleted = 0) => {
+exports.getAll = async (syncEnabled) => {
   try {
     return await db
       .select(
         "id",
         "instance_url",
         "username",
-        "watch_node",
-        "watch_folder",
         "sync_path",
         "sync_enabled",
         "sync_frequency",
         "sync_in_progress",
-        "last_synced_at"
+        "last_synced_at",
       )
       .modify(queryBuilder => {
         if (syncEnabled == 1) {
@@ -23,23 +21,19 @@ exports.getAll = async (syncEnabled, isDeleted = 0) => {
           queryBuilder.where("sync_enabled", 0);
         }
       })
-      .from("accounts")
-      .where("is_deleted", isDeleted);
+      .from("accounts");
+
   } catch (error) {
     return [{}];
   }
 };
 
-exports.getOne = async (id, isDeleted = 0) => {
+exports.getOne = async (id) => {
   return await db
     .select(
       "id",
       "instance_url",
       "username",
-      "token",
-      "watch_node",
-      "document_library_node",
-      "watch_folder",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
@@ -59,7 +53,7 @@ exports.getPassword = async id => {
     .where("id", id);
 };
 
-exports.getOneByAccountId = async (id, isDeleted = 0) => {
+exports.getOneByAccountId = async (id) => {
   return await db
     .select("*")
     .first()
@@ -107,20 +101,43 @@ exports.findByInstanceSiteName = async (
     .where("is_deleted", isDeleted);
 };
 
-exports.getNodes;
+exports.syncPathExists = async (sync_path, accountId = null) => {
+  let query = await db
+    .select(["sync_path"])
+    .modify(queryBuilder => {
+      if (accountId) {
+        queryBuilder.whereNot("id", accountId);
+      }
+    })
+    .from("accounts")
+    .where("sync_path", sync_path);
 
-exports.findByInstanceAccounts = async (
+  return query;
+};
+
+exports.findByInstanceSiteName = async (
   instance_url,
-  accounts,
-  isDeleted = 0
+  siteName
 ) => {
   return await db
     .select("*")
     .from("accounts")
     .whereIn("id", accounts)
     .where("instance_url", instance_url)
-    .where("sync_enabled", 1)
-    .where("is_deleted", isDeleted);
+    .where("site_name", siteName)
+    .where("sync_enabled", 1);
+};
+
+exports.findByInstanceAccounts = async (
+  instance_url,
+  accounts
+) => {
+  return await db
+    .select("*")
+    .from("accounts")
+    .whereIn("id", accounts)
+    .where("instance_url", instance_url)
+    .where("sync_enabled", 1);
 };
 
 exports.addAccount = async request => {
@@ -129,7 +146,6 @@ exports.addAccount = async request => {
       instance_url: request.body.instance_url.replace(/\/+$/, ""),
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
-      watch_node: request.body.watch_node,
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
@@ -156,17 +172,6 @@ exports.updateAccount = async (accountId, request) => {
     .where("id", accountId);
 };
 
-exports.updateWatchNode = async (accountId, request) => {
-  return await db("accounts")
-    .update({
-      site_name: request.body.site_name,
-      watch_folder: request.body.watch_folder,
-      watch_node: request.body.watch_node,
-      document_library_node: request.body.document_library_node,
-      updated_at: new Date().getTime()
-    })
-    .where("id", accountId);
-};
 
 exports.updateSync = async (accountId, request) => {
   return await db("accounts")
@@ -191,26 +196,16 @@ exports.syncStart = async accountId => {
     .where("id", accountId);
 };
 
-exports.syncComplete = async accountId => {
+exports.syncComplete = async (accountId) => {
   return await db("accounts")
     .update({
       sync_in_progress: 0,
-      last_synced_at: new Date().getTime()
+      last_synced_at: new Date().getTime() / 1000
     })
     .where("id", accountId);
 };
 
-exports.updateToken = async (accountId, token) => {
-  return await db("accounts")
-    .update({
-      token: token,
-      token_updated_at: new Date().getTime(),
-      updated_at: new Date().getTime()
-    })
-    .where("id", accountId);
-};
-
-exports.deleteAccount = async accountId => {
+exports.forceDelete = async accountId => {
   return await db("accounts")
     .update({
       is_deleted: 1

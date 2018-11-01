@@ -5,8 +5,7 @@ const token = require("../helpers/token");
 
 exports.getAll = async (request, response) => {
   let nodeId = request.params.node_id;
-  let account = await accountModel.getOneByAccountId(request.params.account_id);
-
+  let account = await accountModel.getOneByAccountId(request.params.account_id);  
   var options = {
     method: "GET",
     url:

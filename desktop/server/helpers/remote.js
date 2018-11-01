@@ -177,7 +177,7 @@ exports.deleteServerNode = async params => {
     // Looks like the node was not available on the server, no point in keeping the record in the DB
     // So lets delete it
     if (error.statusCode == 404) {
-      await nodeModel.delete({
+      await nodeModel.forceDelete({
         account: account,
         nodeId: record.node_id
       });
@@ -192,21 +192,11 @@ exports.deleteServerNode = async params => {
  * @param object params
  */
 exports.download = async params => {
-  let account = params.account;
-  let node = params.node;
-  let destinationPath = params.destinationPath;
-  let remoteFolderPath = params.remoteFolderPath;
-
-  // if (
-  //   (await exports.watchFolderGuard({
-  //     account,
-  //     filePath: destinationPath,
-  //     node,
-  //     action: "DOWNLOAD"
-  //   })) === false
-  // ) {
-  //   return;
-  // }
+  const account = params.account;
+  const watcher = params.watcher;
+  const node = params.node;
+  const destinationPath = params.destinationPath;
+  const remoteFolderPath = params.remoteFolderPath;
 
   var options = {
     method: "GET",
@@ -243,6 +233,7 @@ exports.download = async params => {
     // Add refrence to the nodes table
     await nodeModel.add({
       account: account,
+      watcher,
       nodeId: node.id,
       remoteFolderPath: remoteFolderPath,
       filePath: destinationPath,
@@ -276,6 +267,7 @@ exports.download = async params => {
  */
 exports.upload = async params => {
   let account = params.account;
+  let watcher = params.watcher;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
   let options = {};
@@ -284,22 +276,11 @@ exports.upload = async params => {
     throw new Error("Account not found");
   }
 
-  // if (
-  //   (await exports.watchFolderGuard({
-  //     account,
-  //     filePath,
-  //     node: null,
-  //     action: "UPLOAD"
-  //   })) === false
-  // ) {
-  //   return;
-  // }
-
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = filePath.replace(
-      path.join(account.sync_path, "documentLibrary", path.sep),
+      path.join(account.sync_path, watcher.site_name, "documentLibrary", path.sep),
       ""
     );
     relativePath = relativePath.substring(
@@ -333,7 +314,8 @@ exports.upload = async params => {
       if (response && response.entry.id) {
         // Add a record in the db
         await nodeModel.add({
-          account: account,
+          account,
+          watcher,
           nodeId: response.entry.id,
           remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
@@ -373,7 +355,7 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
     uploadDirectory = uploadDirectory
-      .replace(path.join(account.sync_path, "documentLibrary"), "")
+      .replace(path.join(account.sync_path, watcher.site_name, "documentLibrary"), "")
       .substring(1);
 
     options = {
@@ -381,7 +363,7 @@ exports.upload = async params => {
       method: "POST",
       url: `${
         account.instance_url
-      }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
+        }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
         Authorization: "Basic " + (await token.get(account))
       },
@@ -404,6 +386,7 @@ exports.upload = async params => {
         // Add a record in the db
         await nodeModel.add({
           account: account,
+          watcher,
           nodeId: response.entry.id,
           remoteFolderPath: response.entry.path.name,
           filePath: params.filePath,
@@ -466,7 +449,7 @@ exports.watchFolderGuard = async params => {
     if (
       record &&
       _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
-        INTERVAL
+      INTERVAL
     ) {
       // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
@@ -492,7 +475,7 @@ exports.watchFolderGuard = async params => {
     if (
       record &&
       _base.convertToUTC(node.modified_at) - record.last_downloaded_at <=
-        INTERVAL
+      INTERVAL
     ) {
       // logger.info(`Download blocked 2: ${filePath}`);
       return false;

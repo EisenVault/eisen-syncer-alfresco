@@ -1,12 +1,20 @@
 const electron = require("electron");
 const url = require("url");
 const path = require("path");
+<<<<<<< HEAD
 var pm2 = require("pm2");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
 const { session } = require("electron");
 const { logger } = require("./server/helpers/logger");
 const server = require("./server/server");
+=======
+// var pm2 = require("pm2");
+const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
+const AutoLaunch = require("auto-launch");
+const { session } = require("electron");
+require("./server/server");
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
 
 // Set environment
 process.env.NODE_ENV = "dev";
@@ -25,7 +33,11 @@ process.env.NODE_ENV = "dev";
 //       exec_mode: "cluster",
 //       instances: 1,
 //       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
+<<<<<<< HEAD
 //       noDaemonMode: true,
+=======
+//       noDaemonMode: false,
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
 //       watch: true
 //     },
 //     function(err, apps) {
@@ -159,6 +171,7 @@ app.on("ready", () => {
       click() {
         forceQuit = true;
 
+<<<<<<< HEAD
         // Let pm2 stop the process after which we can quit the app gracefully...
         setTimeout(() => {
           app.quit();
@@ -167,6 +180,18 @@ app.on("ready", () => {
         pm2.stop("eisensync", errback => {
           console.log("errback", errback);
         });
+=======
+        app.quit();
+
+        // Let pm2 stop the process after which we can quit the app gracefully...
+        // setTimeout(() => {
+        //   app.quit();
+        // }, 1000);
+
+        // pm2.stop("eisensync", errback => {
+        //   console.log("errback", errback);
+        // });
+>>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
       }
     }
   ];

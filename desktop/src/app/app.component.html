@@ -2,7 +2,7 @@
     <div class="left-nav">
         <ul>
             <li>
-                <a title="Manage Accounts" routerLink="/account/manage">
+                <a title="Manage Accounts" routerLink="/account/manage" [queryParams]="{ cached: 1 }">
                     <i class="fas fa-user-cog"></i>
                 </a>
             </li>

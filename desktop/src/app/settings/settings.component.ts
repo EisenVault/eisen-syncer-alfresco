@@ -15,7 +15,7 @@ interface Setting {
 })
 export class SettingsComponent implements OnInit {
   public startup_launch;
-  public sync_interval = 2;
+  public sync_interval = 10;
   public isSaved = false;
 
   constructor(
