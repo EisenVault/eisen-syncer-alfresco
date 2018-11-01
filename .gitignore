@@ -6,7 +6,6 @@
 /desktop/out-tsc
 /desktop/__release-builds/
 /desktop/__installers/
-/desktop/build/
 /desktop/server/logs/
 
 # dependencies
