@@ -1,7 +1,4 @@
-const express = require("express");
 const accountModel = require("../models/account");
-const crypt = require("../config/crypt");
-const btoa = require("btoa");
 const http = require("request-promise-native");
 const errorLogModel = require("../models/log-error");
 const token = require("../helpers/token");

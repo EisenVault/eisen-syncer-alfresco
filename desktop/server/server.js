@@ -5,11 +5,19 @@ const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
 const accountModel = require("./models/account");
-const machineID = require("node-machine-id");
+const nodeModel = require("./models/node");
+const errorLogModel = require("./models/log-error");
 const env = require("./config/env");
+var bugsnag = require("bugsnag");
+bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
+// Logger
+const { logger } = require("./helpers/logger");
+
 // Middlewares
+app.use(bugsnag.errorHandler);
+app.use(bugsnag.requestHandler);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -23,10 +31,10 @@ app.use("/syncer", require("./routes/syncer"));
 app.use("/sites", require("./routes/site"));
 app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
+app.use("/watchers", require("./routes/watcher"));
 
 (async () => {
   let accounts = await accountModel.getAll();
-
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
     await accountModel.syncComplete(account.id);
@@ -40,27 +48,77 @@ watcher.watchAll();
 let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
+  return;
   data = typeof data === "object" ? data : JSON.parse(data);
 
-  if (data.machine_id == machineID.machineIdSync()) {
+  if (!data.path && !data.node_id) {
+    // The response should have atleast the path or the node_id
     return;
   }
 
-  if (data.action.toUpperCase() == "CREATE") {
-    await onevent.create(data);
-  }
-  if (data.action.toUpperCase() == "UPDATE" || data.action.toUpperCase() == "MOVE") {
-    await onevent.update(data);
-  }
+  logger.info(JSON.stringify(data));
+
   if (data.action.toUpperCase() == "DELETE") {
-    await onevent.delete(data);
+    // Since we are not gettting the deleted path from the socket service, we will have to look up in the nodes table to get the remote paths, and their account ids
+    var nodeRemotePaths = [];
+    var accounts = [];
+    const deletionNodes = await nodeModel.getAllByNodeId(data.node_id);
+    for (const iterator of deletionNodes) {
+      nodeRemotePaths.push(iterator.remote_folder_path);
+      accounts.push(iterator.account_id);
+    }
+
+    // Once we get the account ids, we will find all related accounts
+    getBroadcastedAccounts = await accountModel.findByInstanceAccounts(
+      data.instance_url,
+      accounts
+    );
+  } else {
+    let siteName = data.path.split("/")[3];
+    getBroadcastedAccounts = await accountModel.findByInstanceSiteName(
+      data.instance_url,
+      siteName
+    );
+  }
+
+  if (getBroadcastedAccounts.length === 0) {
+    return;
+  }
+
+  for (const account of getBroadcastedAccounts) {
+    if (data.action.toUpperCase() == "DELETE") {
+      // Perform checks so that the action may be taken only for the folders being watched...
+      for (const remotePath of nodeRemotePaths) {
+        // If the deleted path on the server is inside the watch_folder of the account, then we delete the local file only under that path...
+        if (remotePath.indexOf(account.watch_folder) !== -1) {
+          await onevent.delete(account, data);
+        }
+      }
+    }
+
+    if (data.action.toUpperCase() == "CREATE") {
+      // If the current path is not the watch folder of this account, then skip and go to next iteration.
+      if (data.path.indexOf(account.watch_folder) === -1) {
+        continue;
+      }
+      await onevent.create(account, data);
+    }
+
+    if (
+      data.action.toUpperCase() === "UPDATE" ||
+      data.action.toUpperCase() === "MOVE"
+    ) {
+      await onevent.update(account, data);
+    }
   }
 });
 
-try {
-  app.listen(env.SERVER_PORT, () => {
-    console.log("server running on " + env.SERVER_PORT);
-  });
-} catch (error) {
-  console.log(`Port ${env.SERVER_PORT} is already in use`);
-}
+process.on("uncaughtException", async (error) => {
+  await errorLogModel.add(0, error);
+  logger.error(`An uncaughtException has occurred : ${error}`);
+  //process.exit(1);
+});
+
+app.listen(7113, () => {
+  logger.info(`server running on: ${env.SERVER_PORT}`);
+});

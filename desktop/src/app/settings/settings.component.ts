@@ -1,6 +1,6 @@
-import { Component, OnInit } from "@angular/core";
-import { SettingService } from "../services/setting.service";
-import { ElectronService } from "ngx-electron";
+import { Component, OnInit } from '@angular/core';
+import { SettingService } from '../services/setting.service';
+import { ElectronService } from 'ngx-electron';
 
 interface Setting {
   id: number;
@@ -9,33 +9,38 @@ interface Setting {
 }
 
 @Component({
-  selector: "app-settings",
-  templateUrl: "./settings.component.html",
-  styleUrls: ["./settings.component.scss"]
+  selector: 'app-settings',
+  templateUrl: './settings.component.html',
+  styleUrls: ['./settings.component.scss']
 })
 export class SettingsComponent implements OnInit {
   public startup_launch;
-  public isSaved: boolean = false;
+  public sync_interval = 10;
+  public isSaved = false;
 
   constructor(
     private _settingService: SettingService,
     private _electronService: ElectronService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.startup_launch = false;
+    this._settingService.getSetting('SYNC_INTERVAL').subscribe((result: Setting) => {
+      this.sync_interval = Number(result.value);
+    });
 
-    this._settingService.getSettings().subscribe((result: Setting) => {
+    this._settingService.getSetting('LAUNCH_AT_STARTUP').subscribe((result: Setting) => {
       this.startup_launch = Number(result.value);
     });
   }
 
   saveSettings() {
-    let value = this.startup_launch === true ? 1 : 0;
-    this._settingService.startupSettings(value).subscribe(response => {});
+    const value = this.startup_launch === true ? 1 : 0;
+    this._settingService.updateSetting('LAUNCH_AT_STARTUP', value).subscribe(() => { });
+    this._settingService.updateSetting('SYNC_INTERVAL', this.sync_interval).subscribe(() => { });
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.sendSync(
-        "autolaunch",
+        'autolaunch',
         value
       );
       this.isSaved = true;

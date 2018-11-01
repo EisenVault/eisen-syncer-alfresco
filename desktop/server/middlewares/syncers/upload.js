@@ -1,4 +1,3 @@
-const validator = require("validator");
 const _ = require("lodash");
 const accountModel = require("../../models/account");
 

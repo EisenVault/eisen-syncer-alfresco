@@ -7,9 +7,9 @@ import { environment } from "../../environments/environment";
 })
 export class NodeService {
 
-  constructor(private _http: HttpClient) {}
+  constructor(private _http: HttpClient) { }
 
   getNodes(accountId, nodeId) {
-    return this._http.get(environment.apiUrl + "/nodes/" + accountId + '/' + nodeId);
+    return this._http.get(`${environment.apiUrl}/nodes/${accountId}/${nodeId}`);
   }
 }

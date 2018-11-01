@@ -1,7 +1,8 @@
-const express = require("express");
 const accountModel = require("../models/account");
-const validator = require("validator");
+const nodeModel = require("../models/node");
+const watcherModel = require("../models/watcher");
 const watcher = require("../helpers/watcher");
+const fs = require("fs-extra");
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
@@ -24,22 +25,32 @@ exports.addAccount = async (request, response) => {
 };
 
 exports.updateAccount = async (request, response) => {
-  let accountId = await accountModel.updateAccount(request.params.id, request);
+  await accountModel.updateAccount(request.params.id, request);
   await watcher.watchAll();
   return response.status(200).json({
     account_id: request.params.id
   });
 };
 
-exports.updateWatchNode = async (request, response) => {
-  let account = await accountModel.updateWatchNode(request.params.id, request);
+exports.addWatchNodes = async (request, response) => {
+  // Delete old watch nodes
+  await watcherModel.deleteAllByAccountId(request.params.id);
+
+  let insertedRecords = [];
+  for (const iterator of request.body) {
+    if (insertedRecords.indexOf(iterator.watchPath) === -1) {
+      await watcherModel.addWatcher(request.params.id, iterator);
+      insertedRecords.push(iterator.watchPath);
+    }
+  }
+
   return response.status(200).json({
     success: true
   });
 };
 
 exports.updateSync = async (request, response) => {
-  let account = await accountModel.updateSync(request.params.id, request);
+  await accountModel.updateSync(request.params.id, request);
   await watcher.watchAll();
   return response.status(200).json({
     success: true
@@ -47,7 +58,7 @@ exports.updateSync = async (request, response) => {
 };
 
 exports.updateSyncTime = async (request, response) => {
-  let account = await accountModel.syncComplete(request.params.id);
+  await accountModel.syncComplete(request.params.id);
   await watcher.watchAll();
 
   return response.status(200).json({
@@ -56,8 +67,21 @@ exports.updateSyncTime = async (request, response) => {
 };
 
 exports.deleteAccount = async (request, response) => {
-  let deleteAccount = await accountModel.deleteAccount(request.params.id);
-  await watcher.watchAll();
+  const accountId = request.params.id;
+  const forceDelete = request.params.force_delete;
+  let deleteAccount = null;
 
+  if (forceDelete === "true") {
+    // Permanantly delete account, files and all node data from the db
+    const account = await accountModel.getOne(accountId);
+    // Remove the files physically...
+    fs.removeSync(account.sync_path);
+  }
+
+  deleteAccount = await accountModel.forceDelete(accountId);
+  await nodeModel.forceDeleteAll(accountId);
+  await watcherModel.deleteAllByAccountId(accountId);
+
+  await watcher.watchAll();
   return response.status(200).json(deleteAccount);
 };

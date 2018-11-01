@@ -6,11 +6,17 @@
 </div>
 
 <hr>
+<!-- Error alert message for sync updation-->
+<div class="font-italic alert alert-danger" *ngIf="errors.sync_enabled">{{ errors.sync_enabled.join('') }}</div>
+<!-- Error alert message for other misc errors-->
+<div class="font-italic alert alert-danger" *ngIf="miscError">{{ miscError }}</div>
+
 <div class="mt-5">
   <div class="alert alert-success" role="alert" *ngIf="isSaved">
     Account settings saved successfully!
   </div>
-  <table class="table">
+  <h2 class="text-center" *ngIf="isAppLoading">Loading accounts...</h2>
+  <table class="table" *ngIf="!isAppLoading">
     <thead class="thead-dark">
       <tr>
         <th scope="col">Instance URL</th>
@@ -25,26 +31,29 @@
       <tr *ngFor="let account of accounts">
         <td>{{ account.instance_url }}</td>
         <td>{{ account.username }}</td>
-        <td>{{ account.sync_path }}</td>
         <td>
-          <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account.id)">
+          <span title="{{ account.sync_path}}">{{ account.sync_path | slice:0:20 }}...</span>
+        </td>
+        <td>
+          <input type="checkbox" name="id" value="true" [checked]="account.sync_enabled" (click)="update($event, account)">
         </td>
         <td>
           <div *ngIf="isLoading(account); else synccomplete">
             <img src="./assets/imgs/spinner.gif" alt="">
           </div>
           <ng-template #synccomplete>
-            <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime' }}</span>
+            <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{
+              account.last_synced_at | date:'shortTime' }}</span>
             <ng-template #nosynctime>
               <span class="badge badge-danger">Unsynced</span>
             </ng-template>
           </ng-template>
         </td>
         <td>
-          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account.id)">
+          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account)">
             <i class="fas fa-edit"></i>
           </button>
-          <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account.id)">
+          <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account)">
             <i class="fas fa-trash"></i>
           </button>
         </td>

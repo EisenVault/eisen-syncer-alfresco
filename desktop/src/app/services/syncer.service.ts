@@ -9,25 +9,12 @@ export class SyncerService {
   constructor(private _httpClient: HttpClient) {}
 
   start(accountId: number) {
-
-    // Fire the Delete, then Download then upload api...
-    return this.syncDelete(accountId).subscribe(response => {
-
-      this.syncDownloads(accountId)
-        .subscribe(response => {
-          this.syncUploads(accountId)
-            .subscribe(response => {
-              
-              return true;
-              
-            }); // End Upload subscribe
-        }); // End Download subscribe
-    }); // End Delete
-
-  }
-
-  syncDelete(accountId: number){
-    return this._httpClient.delete(environment.apiUrl + "/syncer/" + accountId);
+    // Fire Download then upload api...
+    this.syncDownloads(accountId).subscribe(() => {
+      this.syncUploads(accountId).subscribe(() => {
+        return true;
+      }); // End Upload subscribe
+    }); // End Download subscribe
   }
 
   syncDownloads(accountId: number) {
@@ -36,9 +23,13 @@ export class SyncerService {
     );
   }
 
-  syncUploads(accountId: number){
+  syncUploads(accountId: number) {
     return this._httpClient.post(environment.apiUrl + "/syncer/uploads", {
-      account_id: accountId,
+      account_id: accountId
     });
+  }
+
+  syncDelete(accountId: number) {
+    return this._httpClient.delete(environment.apiUrl + "/syncer/" + accountId);
   }
 }

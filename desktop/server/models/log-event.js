@@ -1,5 +1,5 @@
 const log = require("electron-log");
-const path = require("path");
+const { logger } = require('../helpers/logger');
 const { db } = require("../config/db");
 const MIN_THRESHOLD = 200;
 
@@ -70,7 +70,8 @@ exports.add = async (accountId, type, description) => {
     this.deleteAllLessThan(removableId);
   }
 
-  log.warn(description);
+  //log.warn(description);
+  //logger.info(description);
 
   return eventId;
 };
