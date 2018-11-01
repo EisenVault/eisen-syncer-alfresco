@@ -115,10 +115,6 @@
     "ngx-electron": "^1.0.4",
     "node-machine-id": "^1.1.10",
     "nodejslogger": "^1.2.3",
-<<<<<<< HEAD
-    "nodemon": "^1.18.5",
-=======
->>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
     "pm2": "^3.2.2",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5",

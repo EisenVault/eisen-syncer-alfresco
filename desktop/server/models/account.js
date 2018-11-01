@@ -41,8 +41,7 @@ exports.getOne = async (id) => {
     )
     .first()
     .from("accounts")
-    .where("id", id)
-    .where("is_deleted", isDeleted);
+    .where("id", id);
 };
 
 exports.getPassword = async id => {
@@ -58,8 +57,7 @@ exports.getOneByAccountId = async (id) => {
     .select("*")
     .first()
     .from("accounts")
-    .where("id", id)
-    .where("is_deleted", isDeleted);
+    .where("id", id);
 };
 
 exports.findByInstance = async (instance_url, username, isDeleted = 0) => {
@@ -68,11 +66,10 @@ exports.findByInstance = async (instance_url, username, isDeleted = 0) => {
     .first()
     .from("accounts")
     .where("instance_url", instance_url)
-    .where("username", username)
-    .where("is_deleted", isDeleted);
+    .where("username", username);
 };
 
-exports.syncPathExists = async (sync_path, accountId = null, isDeleted = 0) => {
+exports.syncPathExists = async (sync_path = '', accountId = null) => {
   let query = await db
     .select(["sync_path"])
     .modify(queryBuilder => {
@@ -81,8 +78,7 @@ exports.syncPathExists = async (sync_path, accountId = null, isDeleted = 0) => {
       }
     })
     .from("accounts")
-    .where("sync_path", sync_path)
-    .where("is_deleted", isDeleted);
+    .where("sync_path", sync_path);
 
   return query;
 };
@@ -97,22 +93,7 @@ exports.findByInstanceSiteName = async (
     .from("accounts")
     .where("instance_url", instance_url)
     .where("site_name", siteName)
-    .where("sync_enabled", 1)
-    .where("is_deleted", isDeleted);
-};
-
-exports.syncPathExists = async (sync_path, accountId = null) => {
-  let query = await db
-    .select(["sync_path"])
-    .modify(queryBuilder => {
-      if (accountId) {
-        queryBuilder.whereNot("id", accountId);
-      }
-    })
-    .from("accounts")
-    .where("sync_path", sync_path);
-
-  return query;
+    .where("sync_enabled", 1);
 };
 
 exports.findByInstanceSiteName = async (
@@ -150,8 +131,7 @@ exports.addAccount = async request => {
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       created_at: new Date().getTime(),
-      updated_at: new Date().getTime(),
-      is_deleted: 0
+      updated_at: new Date().getTime()
     })
     .into("accounts");
 };
@@ -165,8 +145,6 @@ exports.updateAccount = async (accountId, request) => {
       sync_path: request.body.sync_path,
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
-      token_updated_at: 0,
-      token: "",
       updated_at: new Date().getTime()
     })
     .where("id", accountId);

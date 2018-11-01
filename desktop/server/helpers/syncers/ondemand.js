@@ -178,16 +178,6 @@ exports.recursiveUpload = async params => {
     return;
   }
 
-  // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
-  let rootFolder = path.join(
-    account.sync_path,
-    watcher.watch_folder.substring(
-      watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
-    ),
-    "**",
-    "*"
-  );
-
   logger.info("upload stp" + 2);
 
   // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder

@@ -4,7 +4,6 @@ const router = express.Router();
 // Middlewares
 const accountAddMiddleware = require("../middlewares/accounts/add");
 const accountUpdateSyncMiddleware = require("../middlewares/accounts/sync");
-const accountUpdateWatchNodeMiddleware = require("../middlewares/accounts/watchnode");
 
 // Controllers
 const accountController = require("../controllers/account");

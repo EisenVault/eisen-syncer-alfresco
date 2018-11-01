@@ -34,10 +34,13 @@ app.use("/nodes", require("./routes/node"));
 app.use("/watchers", require("./routes/watcher"));
 
 (async () => {
-  let accounts = await accountModel.getAll();
+  let accounts = await accountModel.getAll(1);
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
-    await accountModel.syncComplete(account.id);
+    console.log('account', account);
+    if (account && account.id) {
+      await accountModel.syncComplete(account.id);
+    }
   }
 })();
 

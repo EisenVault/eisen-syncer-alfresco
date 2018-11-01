@@ -2,20 +2,11 @@ const ondemand = require("../helpers/syncers/ondemand");
 const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 const watcherModel = require("../models/watcher");
-
-// Logger
-const { logger } = require("../helpers/logger");
-
-// Logger
 const { logger } = require("../helpers/logger");
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-<<<<<<< HEAD
-  logger.info("UPLOAD START");
-=======
   logger.info("UPLOAD API START");
->>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
   // Stop watcher for a while
   // watcher.unwatchAll();
 
@@ -23,16 +14,6 @@ exports.upload = async (request, response) => {
   const watchers = await watcherModel.getAllByAccountId(account.id);
 
   try {
-<<<<<<< HEAD
-    await ondemand.recursiveUpload({
-      account: account,
-      rootNodeId: account.document_library_node
-    });
-
-    // Start watcher now
-    watcher.watchAll();
-    logger.info("UPLOAD END");
-=======
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
     await accountModel.syncStart(account.id);
 
@@ -50,7 +31,6 @@ exports.upload = async (request, response) => {
     // Start watcher now
     watcher.watchAll();
     logger.info("UPLOAD API END");
->>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
 
     return response
       .status(200)
@@ -66,18 +46,11 @@ exports.upload = async (request, response) => {
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-<<<<<<< HEAD
-  logger.info("DOWNLOAD START");
-
-  let account = await accountModel.getOne(request.params.accountId);
-
-=======
   logger.info("DOWNLOAD API START");
 
   const account = await accountModel.getOne(request.params.accountId);
   const watchFolders = await watcherModel.getAllByAccountId(account.id);
 
->>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
     await accountModel.syncStart(account.id);
@@ -95,11 +68,7 @@ exports.download = async (request, response) => {
 
     // Start watcher now
     watcher.watchAll();
-<<<<<<< HEAD
-    logger.info("DOWNLOAD END");
-=======
     logger.info("DOWNLOAD API END");
->>>>>>> 0676c75c6a2039956a9b39819ba57a2352b5179e
 
     return response.status(200).json({ success: true });
   } catch (error) {
