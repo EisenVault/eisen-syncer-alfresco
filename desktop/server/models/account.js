@@ -160,7 +160,7 @@ exports.syncStart = async accountId => {
     .where("id", accountId);
 };
 
-exports.syncComplete = async (accountId = 0) => {
+exports.syncComplete = async (accountId) => {
   return await db("accounts")
     .update({
       sync_in_progress: 0,
