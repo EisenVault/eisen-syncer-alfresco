@@ -46,7 +46,7 @@ export class ManageComponent implements OnInit {
   ngOnInit() {
     // If the app has already loaded then no need for the 5 seconds wait time
     this.route.queryParams.subscribe(params => {
-      if (params['cached'] === 1) {
+      if (params['cached'] === '1') {
         this._getAccounts();
         this.isAppLoading = false;
       }

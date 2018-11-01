@@ -27,29 +27,31 @@ exports.recursiveDownload = async params => {
   const destinationPath = params.destinationPath; // where on local to download
   const recursive = params.recursive || false;
 
+  logger.info("step 1");
+
   if (
     account.sync_enabled == 0 ||
     (account.sync_in_progress == 1 && recursive === false)
   ) {
+    logger.info("return");
+
     return;
   }
 
-  // await accountModel.syncStart(account.id);
-
-  // logger.info("step 2");
+  logger.info("step 2");
 
   let children = await remote.getChildren({
     account,
     parentNodeId: sourceNodeId,
     maxItems: 150000
   });
-  // logger.info("step 3");
+  logger.info("step 3");
 
   if (!children) {
     return;
   }
 
-  // logger.info("step 4");
+  logger.info("step 4");
 
   for (const iterator of children.list.entries) {
     const node = iterator.entry;
@@ -58,14 +60,14 @@ exports.recursiveDownload = async params => {
     );
     let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
     const currentPath = path.join(destinationPath, relevantPath, node.name);
-    // logger.info("step 5");
+    logger.info("step 5");
 
     // Check if the node is present in the database
     let record = await nodeModel.getOneByNodeId({
       account: account,
       nodeId: node.id
     });
-    // logger.info("step 6");
+    logger.info("step 6");
 
     // Possible cases...
     // Case A: Perhaps the file was RENAMED on server. Delete from local
@@ -149,7 +151,7 @@ exports.recursiveDownload = async params => {
         recursive: true
       });
     }
-    // logger.info("step 7");
+    logger.info("step 7");
   }
 
   if (children.list.pagination.hasMoreItems === false && recursive === false) {
@@ -190,11 +192,11 @@ exports.recursiveUpload = async params => {
     "*"
   );
 
-  // logger.info("upload stp" + 2);
+  logger.info("upload stp" + 3);
 
   // This function will list all files/folders/sub-folders recursively.
   let localFilePathList = glob.sync(rootFolder);
-  // logger.info("upload stp" + 5);
+  logger.info("upload stp" + 5);
 
   // Following cases are possible...
   // Case A: File created or renamed on local, upload it
@@ -202,7 +204,7 @@ exports.recursiveUpload = async params => {
   // Case C: File deleted on server, delete on local
 
   for (let filePath of localFilePathList) {
-    // logger.info("upload stp " + 6);
+    logger.info("upload stp " + 6);
     let localFileModifiedDate = _base.getFileModifiedTime(filePath);
 
     // Get the DB record of the filePath
@@ -211,7 +213,7 @@ exports.recursiveUpload = async params => {
       filePath: filePath
     });
 
-    // logger.info("upload stp " + 7);
+    logger.info("upload stp " + 7);
 
     // Case A: File created or renamed on local, upload it
     if (!record) {
@@ -239,7 +241,7 @@ exports.recursiveUpload = async params => {
         account,
         watcher,
         filePath,
-        rootNodeId: rootNodeId
+        rootNodeId
       });
       continue;
     }
@@ -262,9 +264,9 @@ exports.recursiveUpload = async params => {
         fs.removeSync(record.file_path);
       }
     }
-    // logger.info("upload stp " + 9);
+    logger.info("upload stp " + 9);
   } // Filelist iteration end
-  // logger.info("upload stp " + 10);
+  logger.info("upload stp " + 10);
 
   // At the end of folder iteration, we will compile a list of old files that were renamed. We will delete those from the server.
   let missingFiles = await nodeModel.getMissingFiles({
@@ -272,7 +274,7 @@ exports.recursiveUpload = async params => {
     watcher,
     fileList: localFilePathList
   });
-  // logger.info("upload stp " + 11);
+  logger.info("upload stp " + 11);
   for (const record of missingFiles) {
     logger.info(`Deleting ${missingFiles.length} missing files...`);
     remote.deleteServerNode({
@@ -280,7 +282,7 @@ exports.recursiveUpload = async params => {
       record
     });
   }
-  // logger.info("upload stp " + 12);
+  logger.info("upload stp " + 12);
   localFilePathList = [];
   missingFiles = null;
 

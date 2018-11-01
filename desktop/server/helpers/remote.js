@@ -490,12 +490,6 @@ exports.watchFolderGuard = async params => {
   watchFolder = watchFolder.replace(/[\/|\\]/, "");
   relativeFilePath = relativeFilePath.replace(/[\/|\\]/, "").split("/")[0];
 
-  logger.info(`sync_path: ${account.sync_path} ... 
-  watchFolder: ${account.watch_folder} ... 
-  relativeFilePath: ${relativeFilePath} ... 
-  filePath: ${filePath} 
-  `);
-
   // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
   if (watchFolder !== "" && watchFolder !== relativeFilePath) {
     logger.info(`Bailed ${relativeFilePath}`);

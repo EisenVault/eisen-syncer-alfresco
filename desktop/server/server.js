@@ -37,7 +37,6 @@ app.use("/watchers", require("./routes/watcher"));
   let accounts = await accountModel.getAll(1);
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
-    console.log('account', account);
     if (account && account.id) {
       await accountModel.syncComplete(account.id);
     }

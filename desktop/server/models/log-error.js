@@ -85,6 +85,8 @@ exports.add = async (accountId, description) => {
       logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
       bugsnag.notify(description.toString());
     }
+    logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
+
 
     return eventId;
   } catch (error) {
