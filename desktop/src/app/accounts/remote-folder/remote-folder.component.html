@@ -2,17 +2,6 @@
 
 <div class="clearfix">&nbsp;</div>
 
-<!-- <div class="row">
-  <div class="col-md-6">
-    <button *ngIf="showLevelUp" class="btn btn-default btn-sm" (click)="loadNodes(parentNodeId)">Level Up
-      <i class="fas fa-level-up-alt"></i>
-    </button>
-  </div>
-  <div class="col-md-6">
-    <button *ngIf="showNodes" class="btn btn-default btn-sm float-right" (click)="loadSites()">Back to Sites</button>
-  </div>
-</div> -->
-
 <hr>
 <div class="alert alert-info" *ngIf="sites && sites.length == 0">
   <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
@@ -23,7 +12,8 @@
   <ul class="list-group">
     <li class="list-group-item">
       <label for="selectall">
-        <input id="selectall" [disabled]="isLoading" [checked]="isSelectAllChecked" type="checkbox" class="mr-2" (click)="selectAll($event)" />
+        <input id="selectall" [disabled]="isLoading" [checked]="isSelectAllChecked" type="checkbox" class="mr-2"
+          (click)="selectAll($event)" />
         <b>{{ isLoading ? 'Processing...' : 'Select All' }}</b>
       </label>
   </ul>
@@ -35,7 +25,6 @@
       </div>
     </div>
 
-    <!-- <div class="list-group" *ngFor="let site of sites" (click)="setSite(site.entry)"> -->
     <div class="list-group" *ngFor="let site of sites">
       <a class="list-group-item list-group-item-action flex-column align-items-start">
         <label [for]="site.entry.guid">
@@ -49,24 +38,6 @@
 
   </div>
 </div>
-<!-- <div *ngIf="showNodes">
-  <h6>Select a Folder</h6>
-  <div class="list-container">
-    <div class="list-group pointer" *ngFor="let node of nodes">
-      <a class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-          <h5 class="mb-1">
-            <input type="radio" name="node" value="true" (click)="addToList($event, node)"> &nbsp;
-            <span (click)="loadNodes(node.entry.id)">{{ node.entry.name }}</span>
-          </h5>
-        </div>
-      </a>
-    </div>
-    <div class="alert alert-danger" *ngIf="nodes.length == 0">
-      No folders here...
-    </div>
-  </div>
-</div> -->
 
 <div class="mt-5">
   <button type="button" class="btn btn-danger" (click)="goBack()">
