@@ -13,7 +13,7 @@ import { WatchData, WatchList } from '../../models/watcher';
 export class RemoteFolderComponent implements OnInit {
   public accountId;
   public disableFinish = true;
-  public selectAllText = 'Select All';
+  public isLoading = false;
   public sites = [];
   public isSelectAllChecked = false;
   public selectedList: WatchList[] = [];
@@ -71,14 +71,14 @@ export class RemoteFolderComponent implements OnInit {
     const siteCheckboxes = document.getElementsByClassName('site-checkbox');
 
     if (event.target.checked === true) {
-      this.selectAllText = 'Processing...';
+      this.isLoading = true;
       [].forEach.call(siteCheckboxes, function (cb) {
         cb.checked = true;
       });
 
       setTimeout(() => {
         this.disableFinish = false;
-        this.selectAllText = 'Select All';
+        this.isLoading = false;
       }, this.sites.length * 500);
 
       this.sites.map(site => {
