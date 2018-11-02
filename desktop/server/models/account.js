@@ -1,5 +1,6 @@
 const { db } = require("../config/db");
 const crypt = require("../config/crypt");
+const _path = require('../helpers/path');
 
 exports.getAll = async (syncEnabled) => {
   try {
@@ -127,7 +128,7 @@ exports.addAccount = async request => {
       instance_url: request.body.instance_url.replace(/\/+$/, ""),
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
-      sync_path: request.body.sync_path,
+      sync_path: _path.toUnix(request.body.sync_path),
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       created_at: new Date().getTime(),
@@ -142,7 +143,7 @@ exports.updateAccount = async (accountId, request) => {
       instance_url: request.body.instance_url.replace(/\/+$/, ""),
       username: request.body.username,
       password: crypt.encrypt(request.body.password),
-      sync_path: request.body.sync_path,
+      sync_path: _path.toUnix(request.body.sync_path),
       sync_enabled: request.body.sync_enabled,
       sync_frequency: request.body.sync_frequency,
       updated_at: new Date().getTime()

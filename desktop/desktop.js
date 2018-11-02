@@ -104,7 +104,7 @@ app.on("ready", () => {
             pathname: path.join(__dirname + "/dist/index.html"),
             protocol: "file:",
             slashes: true,
-            hash: "/account/manage"
+            hash: "/account/manage?cached=1"
           })
         );
         mainWindow.show();
@@ -173,7 +173,7 @@ app.on("ready", () => {
   ];
 
   const trayMenu = Menu.buildFromTemplate(trayMenuItems);
-  tray.setToolTip("Sync your files easily");
+  tray.setToolTip("EisenSync");
   tray.setContextMenu(trayMenu);
 
   // Load the html file into window
@@ -185,19 +185,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function(e) {
+  mainWindow.on("close", function (e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function() {
+  mainWindow.on("closed", function () {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function() {
+  app.on("activate-with-no-open-windows", function () {
     mainWindow.show();
   });
 

@@ -2,7 +2,7 @@ const { db } = require("../config/db");
 const path = require("path");
 const errorLogModel = require("./log-error");
 const _ = require("lodash");
-const { logger } = require('../helpers/logger');
+const _path = require('../helpers/path');
 const LIMIT = 950;
 
 /**
@@ -23,7 +23,7 @@ exports.add = async params => {
   const watcher = params.watcher;
   const nodeId = params.nodeId;
   const remoteFolderPath = params.remoteFolderPath;
-  const filePath = params.filePath;
+  const filePath = _path.toUnix(params.filePath);
   const fileUpdateAt = params.fileUpdateAt || 0;
   const lastUploadedAt = params.lastUploadedAt || 0;
   const lastDownloadedAt = params.lastDownloadedAt || 0;
