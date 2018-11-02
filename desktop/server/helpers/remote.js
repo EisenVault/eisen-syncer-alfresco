@@ -279,14 +279,17 @@ exports.upload = async params => {
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
-    let relativePath = filePath.replace(
-      path.join(account.sync_path, watcher.site_name, "documentLibrary", path.sep),
-      ""
-    );
-    relativePath = relativePath.substring(
-      0,
-      relativePath.length - directoryName.length - 1
-    );
+    let relativePath = path.dirname(filePath)
+      .split('documentLibrary')[1]
+      .replace(/^\/|\/$/g, '');
+    // let relativePath = filePath.replace(
+    //   path.join(account.sync_path, watcher.site_name, "documentLibrary", path.sep),
+    //   ""
+    // );
+    // relativePath = relativePath.substring(
+    //   0,
+    //   relativePath.length - directoryName.length - 1
+    // );
 
     options = {
       resolveWithFullResponse: true,
@@ -354,9 +357,10 @@ exports.upload = async params => {
   // If its a file, send a request to upload the file.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     let uploadDirectory = path.dirname(filePath);
-    uploadDirectory = uploadDirectory
-      .replace(path.join(account.sync_path, watcher.site_name, "documentLibrary"), "")
-      .substring(1);
+    let relativePath = path.dirname(filePath).split('documentLibrary')[1].replace(/^\/|\/$/g, '');
+    // uploadDirectory = uploadDirectory
+    //   .replace(path.join(account.sync_path, watcher.site_name, "documentLibrary"), "")
+    //   .substring(1);
 
     options = {
       resolveWithFullResponse: true,

@@ -1,8 +1,9 @@
 const accountModel = require("../models/account");
 const nodeModel = require("../models/node");
 const watcherModel = require("../models/watcher");
+const errorLogModel = require("../models/log-error");
 const watcher = require("../helpers/watcher");
-const fs = require("fs-extra");
+const rimraf = require('rimraf');
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
@@ -74,8 +75,19 @@ exports.deleteAccount = async (request, response) => {
   if (forceDelete === "true") {
     // Permanantly delete account, files and all node data from the db
     const account = await accountModel.getOne(accountId);
-    // Remove the files physically...
-    fs.removeSync(account.sync_path);
+    const watchers = await watcherModel.getAllByAccountId(accountId);
+
+    for (const iterator of watchers) {
+      try {
+        // Remove the files physically...
+        rimraf(account.sync_path + '/' + iterator.site_name, () => {
+          console.log('Done');
+        });
+      } catch (error) {
+        errorLogModel.add(account.id, error);
+      }
+    }
+
   }
 
   deleteAccount = await accountModel.forceDelete(accountId);
