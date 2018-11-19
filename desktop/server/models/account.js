@@ -35,19 +35,12 @@ exports.getOne = async (id) => {
       "id",
       "instance_url",
       "username",
+      "password",
       "sync_path",
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress"
     )
-    .first()
-    .from("accounts")
-    .where("id", id);
-};
-
-exports.getPassword = async id => {
-  return await db
-    .select("*")
     .first()
     .from("accounts")
     .where("id", id);

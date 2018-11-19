@@ -45,7 +45,11 @@ exports.getNodeList = async params => {
   };
 
   try {
-    let response = await request(options);
+    let response = await request(options)
+      .on('error', function (e) {
+        console.error(e);
+        return;
+      });
     return JSON.parse(response);
   } catch (error) {
     await errorLogModel.add(account.id, error);
@@ -79,7 +83,11 @@ exports.getNode = async params => {
   };
 
   try {
-    let response = await request(options);
+    let response = await request(options)
+      .on('error', function (e) {
+        console.error(e);
+        return;
+      });
     return JSON.parse(response);
   } catch (error) {
     await errorLogModel.add(account.id, error);
@@ -117,7 +125,11 @@ exports.getChildren = async params => {
   };
 
   try {
-    let response = await request(options);
+    let response = await request(options)
+      .on('error', function (e) {
+        console.error(e);
+        return;
+      });
     return JSON.parse(response);
   } catch (error) {
     await errorLogModel.add(account.id, error);
@@ -148,7 +160,11 @@ exports.deleteServerNode = async params => {
   };
 
   try {
-    let response = await request(options);
+    let response = await request(options)
+      .on('error', function (e) {
+        console.error(e);
+        return;
+      });
 
     if (response.statusCode == 204) {
       // Delete the record from the DB
@@ -217,7 +233,12 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    await request(options).pipe(fs.createWriteStream(destinationPath));
+    await request(options)
+      .on('error', function (e) {
+        console.error(e);
+        return;
+      })
+      .pipe(fs.createWriteStream(destinationPath));
 
     let modifiedDate = _base.getFileModifiedTime(destinationPath);
     if (modifiedDate === 0) {
@@ -311,7 +332,11 @@ exports.upload = async params => {
     };
 
     try {
-      let response = await request(options);
+      let response = await request(options)
+        .on('error', function (e) {
+          console.error(e);
+          return;
+        });
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
@@ -383,7 +408,11 @@ exports.upload = async params => {
     };
 
     try {
-      let response = await request(options);
+      let response = await request(options)
+        .on('error', function (e) {
+          console.error(e);
+        });
+
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {

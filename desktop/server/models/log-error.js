@@ -81,11 +81,11 @@ exports.add = async (accountId, description) => {
     }
 
     if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-      log.warn(description);
-      logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
-      bugsnag.notify(description.toString());
+      log.error(description);
+      //   logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
+      //   bugsnag.notify(description.toString());
     }
-    logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
+    // logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
 
 
     return eventId;

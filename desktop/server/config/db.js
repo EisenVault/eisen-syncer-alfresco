@@ -33,12 +33,18 @@ const knex = require("knex")({
   connection: {
     filename: dbPath
   },
-  useNullAsDefault: true
+  useNullAsDefault: true,
+  // pool: { min: 1, max: 100 },
+  acquireConnectionTimeout: 10000
 });
 
 // output raw sql queries
 knex.on('query', function (queryData) {
   // console.log(queryData.sql);
+});
+
+knex.on('error', function (error) {
+  console.error('Error in db.js...', error);
 });
 
 exports.db = knex;

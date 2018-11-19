@@ -1,15 +1,15 @@
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { environment } from "../../environments/environment";
-import { Account } from "../models/account";
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
+import { Account } from '../models/account';
 
 @Injectable({
-  providedIn: "root"
+  providedIn: 'root'
 })
 export class AccountService {
   constructor(private _http: HttpClient) { }
 
-  getAccounts(querystring = "") {
+  getAccounts(querystring = '') {
     return this._http.get(`${environment.apiUrl}/accounts?${querystring}`);
   }
 
@@ -19,7 +19,7 @@ export class AccountService {
 
   addAccount(params) {
     return this._http.post<Account>(
-      environment.apiUrl + "/accounts",
+      environment.apiUrl + '/accounts',
       {
         instance_url: params.instance_url,
         username: params.username,
@@ -29,15 +29,15 @@ export class AccountService {
         sync_enabled: params.sync_enabled
       },
       {
-        observe: "response" as "body", // to display the full response & as 'body' for type cast
-        responseType: "json"
+        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
+        responseType: 'json'
       }
     );
   }
 
   updateAccount(params) {
     return this._http.put<Account>(
-      environment.apiUrl + "/accounts/" + params.accountId,
+      environment.apiUrl + '/accounts/' + params.accountId,
       {
         instance_url: params.instance_url,
         username: params.username,
@@ -47,8 +47,8 @@ export class AccountService {
         sync_enabled: params.sync_enabled
       },
       {
-        observe: "response" as "body", // to display the full response & as 'body' for type cast
-        responseType: "json"
+        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
+        responseType: 'json'
       }
     );
   }

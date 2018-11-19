@@ -1,11 +1,11 @@
-import { Component, OnInit } from "@angular/core";
-import { ActivatedRoute, Router } from "@angular/router";
-import { AccountService } from "../../services/account.service";
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AccountService } from '../../services/account.service';
 
 @Component({
-  selector: "app-instance-info",
-  templateUrl: "./instance-info.component.html",
-  styleUrls: ["./instance-info.component.scss"]
+  selector: 'app-instance-info',
+  templateUrl: './instance-info.component.html',
+  styleUrls: ['./instance-info.component.scss']
 })
 export class InstanceInfoComponent implements OnInit {
   public response;
@@ -28,12 +28,13 @@ export class InstanceInfoComponent implements OnInit {
 
   ngOnInit() {
     this._activatedRoute.queryParams.subscribe(params => {
-      this.accountId = params["accountId"];
+      this.accountId = params['accountId'];
       if (this.accountId) {
         this._accountService.getAccount(this.accountId).subscribe(response => {
           if (response) {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
+            this.password = (<any>response).password;
             this.sync_enabled = false;
             this.sync_path = (<any>response).sync_path;
             this.sync_frequency = (<any>response).sync_frequency;
@@ -65,7 +66,7 @@ export class InstanceInfoComponent implements OnInit {
           this.loading = false;
           if (response.status == 201) {
             this._router.navigate([
-              "account-remote-folder",
+              'account-remote-folder',
               (<any>response).body.account_id
             ]);
           }
@@ -103,7 +104,7 @@ export class InstanceInfoComponent implements OnInit {
           this.loading = false;
           if (response.status === 200) {
             this._router.navigate([
-              "account-remote-folder",
+              'account-remote-folder',
               (<any>response).body.account_id
             ]);
           }
@@ -111,8 +112,8 @@ export class InstanceInfoComponent implements OnInit {
         error => {
           this.loading = false;
           if (error.status === 400) {
-            for (let e of error.error.errors) {
-              for (let errorField in e) {
+            for (const e of error.error.errors) {
+              for (const errorField in e) {
                 this.errors[errorField] = e[errorField];
               }
             }
@@ -124,14 +125,14 @@ export class InstanceInfoComponent implements OnInit {
   }
 
   onBrowse() {
-    let file = <HTMLScriptElement>document.getElementById("file");
+    let file = <HTMLScriptElement>document.getElementById('file');
     file.click();
 
     file.addEventListener(
-      "change",
+      'change',
       () =>
         (this.sync_path = (document.getElementById(
-          "file"
+          'file'
         ) as any).files[0].path),
       false
     );

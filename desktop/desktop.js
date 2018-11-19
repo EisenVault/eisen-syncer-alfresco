@@ -73,6 +73,7 @@ app.on("ready", () => {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 650,
+    skipTaskbar: true,
     title: "EisenSync - Syncing files made simple",
     icon: path.join(__dirname, "src/assets/logos/256.png")
   });
@@ -226,9 +227,6 @@ if (process.env.NODE_ENV !== "production") {
         click(item, focusedWindow) {
           focusedWindow.toggleDevTools();
         }
-      },
-      {
-        role: "reload"
       }
     ]
   });
