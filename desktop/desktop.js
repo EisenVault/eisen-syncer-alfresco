@@ -1,10 +1,11 @@
 const electron = require("electron");
+const { session } = require("electron");
+
+const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const url = require("url");
 const path = require("path");
 // var pm2 = require("pm2");
-const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
-const { session } = require("electron");
 require("./server/server");
 
 // Set environment
@@ -75,11 +76,58 @@ app.on("ready", () => {
     height: 650,
     skipTaskbar: true,
     title: "EisenSync - Syncing files made simple",
-    icon: path.join(__dirname, "src/assets/logos/256.png")
+    icon: path.join(__dirname, "src/assets/logos/256.png"),
+    webPreferences: {
+      backgroundThrottling: false,
+    }
   });
 
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
+
+  // Blink the tray icon if the sync is in progress...
+  // ipcMain.on('isSyncing', (event, isSyncing) => {
+  //   if (isSyncing === true) {
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray_refresh.png`));
+  //   } else {
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+  //   }
+  // });
+
+  // ipcMain.on('isSyncing', (event, isSyncing) => {
+  //   let timer = setInterval(() => {
+  //     let trayMode = false;
+  //     let trayIcon = 'tray.png';
+
+  //     if (isSyncing === true) {
+  //       trayMode = !trayMode;
+  //       if (!trayMode) {
+  //         trayIcon = 'tray_refresh.png';
+  //       }
+  //       tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
+  //     }
+  //   }, 1000);
+
+  //   if (isSyncing === false) {
+  //     clearInterval(timer);
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+  //   }
+  // });
+
+  // let trayMode = false;
+  // setInterval(() => {
+
+
+
+
+  //   trayMode = !trayMode;
+  //   let trayIcon = 'tray.png';
+  //   if (!trayMode) {
+  //     trayIcon = 'tray_refresh.png';
+  //   }
+  //   tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
+
+  // }, 1000);
 
   // Add tray context menu
   let trayMenuItems = [

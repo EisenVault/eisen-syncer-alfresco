@@ -303,6 +303,7 @@ exports.upload = async params => {
     let relativePath = path.dirname(filePath)
       .split('documentLibrary')[1]
       .replace(/^\/|\/$/g, '');
+
     // let relativePath = filePath.replace(
     //   path.join(account.sync_path, watcher.site_name, "documentLibrary", path.sep),
     //   ""
@@ -402,7 +403,7 @@ exports.upload = async params => {
           options: {}
         },
         name: path.basename(filePath),
-        relativePath: uploadDirectory,
+        relativePath: relativePath,
         overwrite: "true"
       }
     };

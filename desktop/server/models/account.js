@@ -172,7 +172,7 @@ exports.syncComplete = async (accountId) => {
   return await db("accounts")
     .update({
       sync_in_progress: 0,
-      last_synced_at: new Date().getTime() / 1000
+      last_synced_at: Math.round(new Date().getTime())
     })
     .where("id", accountId);
 };

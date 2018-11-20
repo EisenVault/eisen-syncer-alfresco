@@ -30,38 +30,44 @@ exports.add = async params => {
   const isFolder = params.isFolder;
   const isFile = params.isFile;
 
-  // Delete the record if it already exists
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .where("file_path", filePath)
-      .delete();
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+  // If its a new record, simply add it
+  db.transaction(async (trx) => {
 
-  try {
-    // If its a new record, simply add it
-    return await db
-      .insert({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: nodeId,
-        remote_folder_path: remoteFolderPath,
-        file_name: path.basename(filePath),
-        file_path: filePath,
-        local_folder_path: path.dirname(filePath),
-        file_update_at: fileUpdateAt,
-        last_uploaded_at: lastUploadedAt,
-        last_downloaded_at: lastDownloadedAt,
-        is_folder: isFolder,
-        is_file: isFile,
-        is_deleted: 0
-      })
-      .into("nodes");
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+    try {
+      // Delete the record if it already exists
+      await db("nodes")
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .delete()
+        .transacting(trx);
+
+      const result = await db
+        .insert({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: nodeId,
+          remote_folder_path: remoteFolderPath,
+          file_name: path.basename(filePath),
+          file_path: filePath,
+          local_folder_path: path.dirname(filePath),
+          file_update_at: fileUpdateAt,
+          last_uploaded_at: lastUploadedAt,
+          last_downloaded_at: lastDownloadedAt,
+          is_folder: isFolder,
+          is_file: isFile,
+          is_deleted: 0
+        })
+        .into("nodes")
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
 };
 
 exports.getOneByFilePath = async params => {
@@ -237,16 +243,23 @@ exports.updateModifiedTime = async params => {
   let filePath = params.filePath;
   let fileUpdateAt = params.fileUpdateAt;
 
-  try {
-    return await db("nodes")
-      .update({
-        file_update_at: fileUpdateAt
-      })
-      .where("account_id", account.id)
-      .where("file_path", filePath);
-  } catch (error) {
-    return await errorLogModel.add(account, error);
-  }
+  db.transaction(async trx => {
+    try {
+      const result = await db("nodes")
+        .update({
+          file_update_at: fileUpdateAt
+        })
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      return await errorLogModel.add(account, error);
+    }
+  });
 };
 
 /**
@@ -261,16 +274,23 @@ exports.delete = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .where("node_id", nodeId)
-      .update({
-        is_deleted: 1
-      });
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+  db.transaction(async trx => {
+
+    try {
+      await db("nodes")
+        .where("account_id", account.id)
+        .where("node_id", nodeId)
+        .update({
+          is_deleted: 1
+        })
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 };
 
 /**
@@ -285,72 +305,68 @@ exports.deleteByPath = async params => {
   let account = params.account;
   let filePath = params.filePath;
 
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .where("file_path", filePath)
-      .update({
-        is_deleted: 1
-      });
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+  db.transaction(async trx => {
+
+    try {
+      await db("nodes")
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .update({
+          is_deleted: 1
+        })
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 };
 
 exports.deleteAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
 
-  try {
-    return await db("nodes")
-      .where("account_id", account.id)
-      .where("file_path", "LIKE", path + "%")
-      .orWhere("local_folder_path", path)
-      .update({
-        is_deleted: 1
-      });
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+  db.transaction(async trx => {
+    try {
+      const result = await db("nodes")
+        .where("account_id", account.id)
+        .where("file_path", "LIKE", path + "%")
+        .orWhere("local_folder_path", path)
+        .update({
+          is_deleted: 1
+        })
+        .transacting(trx);
+      trx.commit;
+      return result;
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 };
 
 exports.forceDeleteAllByFileOrFolderPath = async params => {
   let account = params.account;
   let path = params.path;
 
-  try {
-    return await db("nodes")
-      .where("account_id", account.id)
-      .where("file_path", "LIKE", path + "%")
-      .orWhere("local_folder_path", path)
-      .delete();
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+  db.transaction(async trx => {
+    try {
+      const result = await db("nodes")
+        .where("account_id", account.id)
+        .where("file_path", "LIKE", path + "%")
+        .orWhere("local_folder_path", path)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+      return result;
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 };
-
-/**
- *
- * @param object params
- * {
- *  account: <Object>
- * }
- */
-// exports.deleteAll = async params => {
-//   let account = params.account;
-
-//   try {
-//     await db("nodes")
-//       .where("account_id", account.id)
-//       .update({
-//         is_deleted: 1
-//       });
-//   } catch (error) {
-//     await errorLogModel.add(account.id, error);
-//   }
-// };
-
-
 
 /**
  *
@@ -364,38 +380,20 @@ exports.forceDelete = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .where("node_id", nodeId)
-      .delete();
-  } catch (error) {
-    await errorLogModel.add(account.id, error);
-  }
-};
+  db.transaction(async trx => {
+    try {
+      await db("nodes")
+        .where("account_id", account.id)
+        .where("node_id", nodeId)
+        .delete()
+        .transacting(trx);
+      trx.commit;
 
-
-
-/**
- *
- * @param object params
- * {
- *  account: <Object>,
- *  nodeId: <String>
- * }
- */
-exports.forceDelete = async params => {
-  let account = params.account;
-  let nodeId = params.nodeId;
-
-  try {
-    await db("nodes")
-      .where("account_id", account.id)
-      .where("node_id", nodeId)
-      .delete();
-  } catch (error) {
-    await errorLogModel.add(account, error);
-  }
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 };
 
 /**
@@ -407,11 +405,16 @@ exports.forceDelete = async params => {
  * }
  */
 exports.forceDeleteAll = async accountId => {
-  try {
-    await db("nodes")
-      .where("account_id", accountId)
-      .delete();
-  } catch (error) {
-    await errorLogModel.add(accountId, error);
-  }
+  db.transaction(async trx => {
+    try {
+      await db("nodes")
+        .where("account_id", accountId)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(accountId, error);
+    }
+  });
 };

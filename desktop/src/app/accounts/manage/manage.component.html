@@ -43,7 +43,7 @@
           </div>
           <ng-template #synccomplete>
             <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{
-              account.last_synced_at | date:'shortTime' }}</span>
+              account.last_synced_at | date:'shortTime':timezone }}</span>
             <ng-template #nosynctime>
               <span class="badge badge-danger">Unsynced</span>
             </ng-template>
@@ -52,6 +52,9 @@
         <td>
           <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account)">
             <i class="fas fa-edit"></i>
+          </button>
+          <button type="button" title="Account Details" class="btn btn-outline-secondary mr-2" (click)="goToAccountDetails(account)">
+            <i class="fas fa-eye"></i>
           </button>
           <button type="button" title="Delete Account" class="btn btn-outline-danger" (click)="deleteAccount(account)">
             <i class="fas fa-trash"></i>

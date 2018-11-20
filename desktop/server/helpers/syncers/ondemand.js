@@ -34,7 +34,6 @@ exports.recursiveDownload = async params => {
     (account.sync_in_progress == 1 && recursive === false)
   ) {
     logger.info("return");
-
     return;
   }
 
@@ -51,6 +50,11 @@ exports.recursiveDownload = async params => {
     return;
   }
 
+  // If the current folder doesnot exists, we will create it.
+  if (!fs.existsSync(`${destinationPath}/${watcher.site_name}/documentLibrary`)) {
+    mkdirp(`${destinationPath}/${watcher.site_name}/documentLibrary`);
+  }
+
   logger.info("step 4");
 
   for (const iterator of children.list.entries) {
@@ -60,6 +64,7 @@ exports.recursiveDownload = async params => {
     );
     let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
     const currentPath = path.join(destinationPath, relevantPath, node.name);
+
     logger.info("step 5");
 
     // Check if the node is present in the database

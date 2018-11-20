@@ -111,6 +111,7 @@
     "knex": "^0.14.6",
     "lodash": "^4.17.10",
     "mkdirp": "^0.5.1",
+    "moment-timezone": "^0.5.23",
     "ngx-electron": "^1.0.4",
     "node-machine-id": "^1.1.10",
     "nodejslogger": "^1.2.3",
