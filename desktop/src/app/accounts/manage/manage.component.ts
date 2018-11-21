@@ -73,8 +73,6 @@ export class ManageComponent implements OnInit {
         .getSetting('TIMEZONE')
         .subscribe((result: Setting) => {
           this.timezone = moment(new Date()).tz(result.value).format('Z');
-          console.log('this.timezone ', this.timezone);
-
         });
 
       // Get the launch status

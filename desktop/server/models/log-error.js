@@ -63,7 +63,7 @@ exports.getCount = async () => {
     .first();
 };
 
-exports.add = async (accountId, description) => {
+exports.add = async (accountId, description, originatedFrom = '') => {
   try {
     let eventId = await db
       .insert({
@@ -81,7 +81,7 @@ exports.add = async (accountId, description) => {
     }
 
     if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-      log.error(description);
+      log.error("---ERROR---", originatedFrom, description);
       //   logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
       //   bugsnag.notify(description.toString());
     }

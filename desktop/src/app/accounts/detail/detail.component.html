@@ -1,36 +1,34 @@
-<h3 class="text-secondary">
-  <i class="fas fa-eye"></i> Account Information </h3>
+<h3>
+  Account Details </h3>
 <hr>
-<p>Your account configuration has been saved. You can enable the "auto sync" option from the
-  <a href="#" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Manage Accounts</a> page.</p>
-<div class="mt-5 table-responsive">
 
+<div class="mt-5 table-responsive">
   <table class="table">
     <tr>
       <th scope="col">Instance URL</th>
-      <td>http://</td>
+      <td>{{ account?.instance_url }}</td>
     </tr>
     <tr>
       <th scope="col">Username</th>
-      <td>XXXXX</td>
+      <td>{{ account?.username }}</td>
     </tr>
     <tr>
       <th scope="col">Sync Path</th>
-      <td>XXXXX</td>
+      <td>{{ account?.sync_path }}</td>
     </tr>
     <tr>
       <th scope="col">Auto Sync Enabled</th>
-      <td>XXXXX</td>
+      <td>{{ account?.sync_enabled ? 'Yes' : 'No' }}</td>
     </tr>
     <tr>
       <th scope="col">Last Synced At</th>
-      <td>XXXXX</td>
+      <td>{{ account?.last_synced_at ? (account.last_synced_at | date:'medium':timezone) : 'Unsynced' }}</td>
     </tr>
   </table>
 
-  <h2>Departments</h2>
+  <h2>Watched Department(s)</h2>
   <!-- Department Table -->
-  <table class="table table-bordered table-sm">
+  <table class="table table-bordered table-sm" *ngIf="departments.length > 0; else nodepartment">
     <thead>
       <tr>
         <th scope="col">Department Name</th>
@@ -38,11 +36,18 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Mark</td>
-        <td>@mdo</td>
+      <tr *ngFor="let department of departments">
+        <td>{{ department.title }}</td>
+        <td>{{ department.role }}</td>
       </tr>
     </tbody>
   </table>
+
+  <ng-template #nodepartment>
+    <p>No departments are currently being watched.</p>
+  </ng-template>
   <!-- Department Table End -->
 </div>
+
+<a href="#" class="btn btn-info mt-5" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Back to Manage
+  Accounts</a>

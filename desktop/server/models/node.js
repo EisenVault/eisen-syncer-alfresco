@@ -227,11 +227,10 @@ exports.getMissingFiles = async params => {
         .where("site_id", watcher.site_id)
         .where("is_deleted", 0)
         .from("nodes");
-
       missingFiles = missingFiles.concat(result);
       listCount = listCount + LIMIT;
     } catch (error) {
-      await errorLogModel.add(account, error);
+      await errorLogModel.add(account, error, __filename + '/getMissingFiles');
     }
   }
 
@@ -320,6 +319,36 @@ exports.deleteByPath = async params => {
     } catch (error) {
       trx.rollback;
       await errorLogModel.add(account, error);
+    }
+  });
+};
+
+
+/**
+ *
+ * @param object params
+ * {
+ *  account: <Object>,
+ *  filePath: <String>
+ * }
+ */
+exports.forceDeleteByPath = async params => {
+  let account = params.account;
+  let filePath = params.filePath;
+
+  db.transaction(async trx => {
+
+    try {
+      await db("nodes")
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error, __filename);
     }
   });
 };

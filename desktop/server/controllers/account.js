@@ -3,7 +3,6 @@ const nodeModel = require("../models/node");
 const watcherModel = require("../models/watcher");
 const errorLogModel = require("../models/log-error");
 const watcher = require("../helpers/watcher");
-const crypt = require("../config/crypt");
 const rimraf = require('rimraf');
 
 exports.getAll = async (request, response) => {
@@ -12,10 +11,9 @@ exports.getAll = async (request, response) => {
 };
 
 exports.getOne = async (request, response) => {
-  const data = await accountModel.getOne(request.params.id);
   return response
     .status(200)
-    .json({ ...data, password: crypt.decrypt(data.password) });
+    .json(await accountModel.getOne(request.params.id));
 };
 
 exports.addAccount = async (request, response) => {

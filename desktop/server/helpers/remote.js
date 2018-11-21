@@ -73,10 +73,7 @@ exports.getNode = async params => {
 
   var options = {
     method: "GET",
-    url:
-      account.instance_url +
-      "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-      nodeId,
+    url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${nodeId}?include=path`,
     headers: {
       authorization: "Basic " + (await token.get(account))
     }
@@ -304,15 +301,6 @@ exports.upload = async params => {
       .split('documentLibrary')[1]
       .replace(/^\/|\/$/g, '');
 
-    // let relativePath = filePath.replace(
-    //   path.join(account.sync_path, watcher.site_name, "documentLibrary", path.sep),
-    //   ""
-    // );
-    // relativePath = relativePath.substring(
-    //   0,
-    //   relativePath.length - directoryName.length - 1
-    // );
-
     options = {
       resolveWithFullResponse: true,
       method: "POST",
@@ -382,11 +370,7 @@ exports.upload = async params => {
 
   // If its a file, send a request to upload the file.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    let uploadDirectory = path.dirname(filePath);
     let relativePath = path.dirname(filePath).split('documentLibrary')[1].replace(/^\/|\/$/g, '');
-    // uploadDirectory = uploadDirectory
-    //   .replace(path.join(account.sync_path, watcher.site_name, "documentLibrary"), "")
-    //   .substring(1);
 
     options = {
       resolveWithFullResponse: true,

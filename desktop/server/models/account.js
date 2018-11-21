@@ -35,6 +35,23 @@ exports.getOne = async (id) => {
       "id",
       "instance_url",
       "username",
+      "sync_path",
+      "sync_enabled",
+      "sync_frequency",
+      "sync_in_progress",
+      "last_synced_at"
+    )
+    .first()
+    .from("accounts")
+    .where("id", id);
+};
+
+exports.getOneWithPassword = async (id) => {
+  return await db
+    .select(
+      "id",
+      "instance_url",
+      "username",
       "password",
       "sync_path",
       "sync_enabled",
