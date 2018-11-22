@@ -50,9 +50,6 @@
           </ng-template>
         </td>
         <td>
-          <button type="button" title="Edit Account" class="btn btn-outline-info mr-2" (click)="goToManageAccount(account)">
-            <i class="fas fa-edit"></i>
-          </button>
           <button type="button" title="Account Details" class="btn btn-outline-secondary mr-2" (click)="goToAccountDetails(account)">
             <i class="fas fa-eye"></i>
           </button>
@@ -62,8 +59,10 @@
         </td>
       </tr>
       <tr *ngIf="accounts && accounts.length < 1">
-        <td colspan="6" align="center">You have not yet added any accounts. Would you like to
-          <a routerLink="/account-new">add one</a>?</td>
+        <td colspan="6" align="center">
+          <p class="mt-4">You have not yet added any accounts.</p>
+          <p class="mt-4"><a class="btn btn-info" routerLink="/account-new">Add New Account</a></p>
+        </td>
       </tr>
     </tbody>
   </table>

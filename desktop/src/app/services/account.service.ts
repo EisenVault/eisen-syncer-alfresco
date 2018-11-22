@@ -35,16 +35,26 @@ export class AccountService {
     );
   }
 
-  updateAccount(params) {
+  updateCredentials(params) {
     return this._http.put<Account>(
-      environment.apiUrl + '/accounts/' + params.accountId,
+      environment.apiUrl + '/accounts/credentials/' + params.accountId,
       {
         instance_url: params.instance_url,
         username: params.username,
-        password: params.password,
-        sync_path: params.sync_path,
-        sync_frequency: params.sync_frequency,
-        sync_enabled: params.sync_enabled
+        password: params.password
+      },
+      {
+        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
+        responseType: 'json'
+      }
+    );
+  }
+
+  updateSyncPath(params) {
+    return this._http.put<Account>(
+      environment.apiUrl + '/accounts/sync_path/' + params.accountId,
+      {
+        sync_path: params.sync_path
       },
       {
         observe: 'response' as 'body', // to display the full response & as 'body' for type cast

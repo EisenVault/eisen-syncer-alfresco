@@ -64,39 +64,55 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, description, originatedFrom = '') => {
-  try {
-    let eventId = await db
-      .insert({
-        account_id: accountId,
-        description: String(description),
-        created_at: new Date().getTime()
-      })
-      .into("log_errors");
 
-    // Delete old records
-    let count = await this.getCount();
-    if (count.total > MIN_THRESHOLD) {
-      let removableId = eventId[0] - MIN_THRESHOLD;
-      exports.deleteAllLessThan(removableId);
+  let eventId = [[]];
+  db.transaction(async (trx) => {
+    try {
+      eventId = await db
+        .insert({
+          account_id: accountId,
+          description: String(description),
+          created_at: new Date().getTime()
+        })
+        .into("log_errors")
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      log.warn(String(error));
+      logger.error(String(error));
     }
+  });
 
-    if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-      log.error("---ERROR---", originatedFrom, description);
-      //   logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
-      //   bugsnag.notify(description.toString());
-    }
-    // logger.error(`##-----------ERROR OCCURRED: ${description}-----------##`);
-
-
-    return eventId;
-  } catch (error) {
-    log.warn(String(error));
-    logger.error(String(error));
+  // Delete old records
+  let count = await this.getCount();
+  if (count.total > MIN_THRESHOLD) {
+    let removableId = eventId[0] - MIN_THRESHOLD;
+    exports.deleteAllLessThan(removableId);
   }
+
+  if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
+    log.error("---ERROR---", originatedFrom, description);
+    //   bugsnag.notify(description.toString());
+  }
+
+  return eventId;
 };
 
 exports.deleteAllLessThan = async id => {
-  await db("log_errors")
-    .where("id", "<", id)
-    .delete();
+
+  db.transaction(async (trx) => {
+    try {
+      await db("log_errors")
+        .where("id", "<", id)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+    } catch (error) {
+      trx.rollback;
+      log.error("---ERROR---logerror delete", originatedFrom, error);
+    }
+
+  });
 };

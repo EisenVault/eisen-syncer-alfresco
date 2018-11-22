@@ -229,9 +229,8 @@ export class ManageComponent implements OnInit {
   deleteAccount(account) {
     if (confirm('Proceed with the account deletion process?')) {
       const answer = confirm(
-        `WARNING!!! \n\n
-        Do you want to DELETE the folder '${account.sync_path}' from your local path?
-        This data will however NOT get deleted from the server.`
+        `Account was deleted successfully! \n
+        Would you like to DELETE the contents of the folder '${account.sync_path}' from your local path? This data will however NOT get deleted from the server.`
       );
       this._accountService
         .deleteAccount(account.id, answer)

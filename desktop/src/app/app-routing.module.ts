@@ -15,6 +15,8 @@ import { RemoteFolderComponent } from './accounts/remote-folder/remote-folder.co
 import { FinalizeComponent } from './accounts/finalize/finalize.component';
 import { ManageComponent } from './accounts/manage/manage.component';
 import { DetailComponent } from './accounts/detail/detail.component';
+import { CredentialsComponent } from './accounts/credentials/credentials.component';
+import { SyncPathComponent } from './accounts/sync-path/sync-path.component';
 import { ErrorComponent } from './logs/error/error.component';
 import { EventComponent } from './logs/event/event.component';
 import { AboutComponent } from './about/about.component';
@@ -44,6 +46,14 @@ const routes: Routes = [
   {
     path: 'account-details',
     component: DetailComponent
+  },
+  {
+    path: 'account-credentials',
+    component: CredentialsComponent
+  },
+  {
+    path: 'account-sync-path',
+    component: SyncPathComponent
   },
   {
     path: 'logs/error',

@@ -34,6 +34,8 @@ exports.recursiveDownload = async params => {
     account.sync_enabled == 0 ||
     (account.sync_in_progress == 1 && recursive === false)
   ) {
+    console.log('account', account);
+    logger.info("download bailed");
     return;
   }
 
@@ -183,6 +185,8 @@ exports.recursiveUpload = async params => {
   logger.info("upload step 1");
 
   if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
+    logger.info("upload bailed");
+    console.log('account', account);
     return;
   }
 
@@ -270,8 +274,12 @@ exports.recursiveUpload = async params => {
         nodeId: record.node_id
       });
 
+      console.log('isNodeExists', isNodeExists);
+
+      logger.info("upload step 6-2");
+
       // If the node is not found on the server, delete the file on local
-      if (!isNodeExists) {
+      if (isNodeExists && isNodeExists.error.statusCode === 404) {
         logger.info(
           "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
         );

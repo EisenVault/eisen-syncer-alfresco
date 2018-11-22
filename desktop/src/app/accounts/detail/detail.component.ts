@@ -25,8 +25,10 @@ interface Account {
 })
 export class DetailComponent implements OnInit {
 
+  public accountId: number;
   public account: Account;
   public departments = [];
+  public departmentLoaded = false;
   public timezone: string;
 
   constructor(
@@ -38,29 +40,26 @@ export class DetailComponent implements OnInit {
 
   ngOnInit() {
     this._route.queryParams.subscribe(param => {
-      const accountId = param['accountId'];
-      this._accountService.getAccount(accountId).subscribe((account: Account) => {
+      this.accountId = param['accountId'];
+      this._accountService.getAccount(this.accountId).subscribe((account: Account) => {
         this.account = account;
       });
 
       // Get list of all watchlist
-      this._siteService.getWatchers(accountId).subscribe((watchList: WatchData[]) => {
+      this._siteService.getWatchers(this.accountId).subscribe((watchList: WatchData[]) => {
         const watchDepartments = [];
         watchList.map(item => {
           watchDepartments.push(item.site_id);
         });
 
         // Get list of all sites
-        this._siteService.getSites(accountId).subscribe((sites: any) => {
+        this._siteService.getSites(this.accountId).subscribe((sites: any) => {
           sites.list.entries.map((site: any) => {
             if (watchDepartments.indexOf(site.entry.guid) >= 0) {
               this.departments.push({ title: site.entry.title, role: site.entry.role });
             }
           });
-
-          console.log('this.departments', this.departments);
-
-
+          this.departmentLoaded = true;
         });
       });
 

@@ -12,7 +12,7 @@ exports.upload = async (request, response) => {
 
   let account = await accountModel.getOne(request.body.account_id);
 
-  if (!account) {
+  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
     return;
   }
 
@@ -57,7 +57,7 @@ exports.download = async (request, response) => {
 
   const account = await accountModel.getOne(request.params.accountId);
 
-  if (!account) {
+  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
     return;
   }
 

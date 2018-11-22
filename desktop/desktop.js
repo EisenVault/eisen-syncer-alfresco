@@ -4,37 +4,11 @@ const { session } = require("electron");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const url = require("url");
 const path = require("path");
-// var pm2 = require("pm2");
 const AutoLaunch = require("auto-launch");
 require("./server/server");
 
 // Set environment
 process.env.NODE_ENV = "dev";
-
-// Start the backend server...
-// pm2.connect(function(err) {
-//   if (err) {
-//     logger.info(`Unable to connect PM2: ${err}`);
-//     process.exit(2);
-//   }
-
-//   pm2.start(
-//     {
-//       name: "eisensync",
-//       script: "./server/server.js", // Script to be run
-//       exec_mode: "cluster",
-//       instances: 1,
-//       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
-//       noDaemonMode: false,
-//       watch: true
-//     },
-//     function(err, apps) {
-//       logger.info(`Unable to start PM2: ${err}`);
-//       pm2.disconnect(); // Disconnects from PM2
-//       if (err) throw err;
-//     }
-//   );
-// });
 
 let mainWindow, tray;
 let forceQuit = false;
@@ -76,6 +50,7 @@ app.on("ready", () => {
     height: 650,
     skipTaskbar: true,
     title: "EisenSync - Syncing files made simple",
+    show: false,
     icon: path.join(__dirname, "src/assets/logos/256.png"),
     webPreferences: {
       backgroundThrottling: false,
@@ -84,6 +59,18 @@ app.on("ready", () => {
 
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
+
+  tray.on('right-click', () => {
+    mainWindow.loadURL(
+      url.format({
+        pathname: path.join(__dirname + "/dist/index.html"),
+        protocol: "file:",
+        slashes: true,
+        hash: "/account/manage?cached=1"
+      })
+    );
+    mainWindow.show();
+  });
 
   // Blink the tray icon if the sync is in progress...
   // ipcMain.on('isSyncing', (event, isSyncing) => {
@@ -132,20 +119,6 @@ app.on("ready", () => {
   // Add tray context menu
   let trayMenuItems = [
     {
-      label: "Add a remote folder",
-      click() {
-        mainWindow.loadURL(
-          url.format({
-            pathname: path.join(__dirname + "/dist/index.html"),
-            protocol: "file:",
-            slashes: true,
-            hash: "/account-new"
-          })
-        );
-        mainWindow.show();
-      }
-    },
-    {
       label: "Manage Accounts",
       click() {
         mainWindow.loadURL(
@@ -154,6 +127,20 @@ app.on("ready", () => {
             protocol: "file:",
             slashes: true,
             hash: "/account/manage?cached=1"
+          })
+        );
+        mainWindow.show();
+      }
+    },
+    {
+      label: "Add a remote folder",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/account-new"
           })
         );
         mainWindow.show();

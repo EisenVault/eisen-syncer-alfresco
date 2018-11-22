@@ -68,6 +68,8 @@ exports.getNode = async params => {
   let nodeId = params.nodeId;
 
   if (!nodeId || !account) {
+    console.log('error in api call');
+
     throw new Error("Invalid paramerters");
   }
 
@@ -80,13 +82,18 @@ exports.getNode = async params => {
   };
 
   try {
+    console.log('api call 1', `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${nodeId}?include=path`);
+
     let response = await request(options)
       .on('error', function (e) {
-        console.error(e);
-        return;
+        console.error('onerror api', e);
+        return e;
       });
+    console.log('api call 2');
+
     return JSON.parse(response);
   } catch (error) {
+    console.error('getapiEOORRRR', e);
     await errorLogModel.add(account.id, error);
   }
 };

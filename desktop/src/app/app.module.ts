@@ -25,6 +25,8 @@ import { ManageComponent } from "./accounts/manage/manage.component";
 import { SharedModule } from "./shared/shared.module";
 import { SettingsComponent } from "./settings/settings.component";
 import { DetailComponent } from './accounts/detail/detail.component';
+import { CredentialsComponent } from './accounts/credentials/credentials.component';
+import { SyncPathComponent } from './accounts/sync-path/sync-path.component';
 
 @NgModule({
   declarations: [
@@ -37,7 +39,9 @@ import { DetailComponent } from './accounts/detail/detail.component';
     ErrorComponent,
     ManageComponent,
     SettingsComponent,
-    DetailComponent
+    DetailComponent,
+    CredentialsComponent,
+    SyncPathComponent
   ],
   imports: [
     BrowserModule,
