@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
+const emitter = require('../helpers/emitter').emitter;
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
@@ -50,6 +51,7 @@ exports.getNodeList = async params => {
         console.error(e);
         return;
       });
+
     return JSON.parse(response);
   } catch (error) {
     await errorLogModel.add(account.id, error);
@@ -68,8 +70,6 @@ exports.getNode = async params => {
   let nodeId = params.nodeId;
 
   if (!nodeId || !account) {
-    console.log('error in api call');
-
     throw new Error("Invalid paramerters");
   }
 
@@ -81,21 +81,58 @@ exports.getNode = async params => {
     }
   };
 
-  try {
-    console.log('api call 1', `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${nodeId}?include=path`);
+  request(options)
+    .then(response => {
+      console.log('rseponse', response);
 
-    let response = await request(options)
-      .on('error', function (e) {
-        console.error('onerror api', e);
-        return e;
-      });
-    console.log('api call 2');
+      // emitter.emit('isNodeExists' + nodeId, {
+      //   statusCode: response.statusCode,
+      //   response: JSON.parse(body)
+      // });
+    })
+    .catch(error => {
+      errorLogModel.add(account.id, error);
+    });
 
-    return JSON.parse(response);
-  } catch (error) {
-    console.error('getapiEOORRRR', e);
-    await errorLogModel.add(account.id, error);
-  }
+  // request(options, (error, response, body) => {
+
+  //   if (error) {
+  //     console.log('ECRRRRR', error);
+  //     errorLogModel.add(account.id, error);
+  //     return;
+  //   }
+
+  //   emitter.emit('isNodeExists' + nodeId, {
+  //     statusCode: response.statusCode,
+  //     response: JSON.parse(body)
+  //   });
+
+  // });
+
+  // try {
+  //   await request(options)
+  //     .on('error', function (e) {
+  //       return e;
+  //     })
+  //     .on('response', function (response) {
+
+  //       const statusCode = response.statusCode;
+
+  //       response.on('data', function (data) {
+
+  //         console.log('DATA TYPE', typeof data, String(data));
+  //         emitter.emit('isNodeExists' + nodeId, {
+  //           statusCode,
+  //           response: data ? JSON.parse(String(data)) : {}
+  //         });
+  //       })
+
+  //     });
+
+  //   // return JSON.parse(response);
+  // } catch (error) {
+  //   await errorLogModel.add(account.id, error);
+  // }
 };
 
 /**

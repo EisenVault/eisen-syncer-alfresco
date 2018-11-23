@@ -8,6 +8,7 @@ const nodeModel = require("../../models/node");
 const errorLogModel = require("../../models/log-error");
 const _base = require("./_base");
 const rimraf = require('rimraf');
+const emitter = require('../emitter').emitter;
 
 // Logger
 const { logger } = require("../logger");
@@ -34,7 +35,6 @@ exports.recursiveDownload = async params => {
     account.sync_enabled == 0 ||
     (account.sync_in_progress == 1 && recursive === false)
   ) {
-    console.log('account', account);
     logger.info("download bailed");
     return;
   }
@@ -85,12 +85,12 @@ exports.recursiveDownload = async params => {
     // If the record is present
     if (record) {
       // Case A: Perhaps the file was RENAMED on server. Delete from local
-      if (record.file_name !== path.basename(currentPath)) {
+      if (record.file_name !== node.name) {
         logger.info("Deleted renamed (old) path..." + record.file_path);
         // If a node/folder is renamed on server, we will skip the deletion logic in this iteration assuming that the download will take sometime
         fileRenamed = true;
         // Delete the old file/folder from local
-        fs.removeSync(record.file_path);
+        fs.remove(record.file_path);
 
         // Delete the record from the DB
         if (record.is_file === 1) {
@@ -206,12 +206,7 @@ exports.recursiveUpload = async params => {
 
   // This function will list all files/folders/sub-folders recursively.
   let localFilePathList = glob.sync(rootFolder);
-  var file = fs.createWriteStream(path.resolve(__dirname, '../../logs/array.txt'));
-  file.on('error', function (err) { console.log(err) });
-  localFilePathList.forEach(function (v) {
-    file.write(v + '\n');
-  });
-  file.end();
+
   logger.info("upload step 4");
 
   // Following cases are possible...
@@ -269,41 +264,44 @@ exports.recursiveUpload = async params => {
     ) {
       logger.info("upload step 6-1");
 
-      const isNodeExists = await remote.getNode({
+      emitter.once('isNodeExists' + record.node_id, data => {
+
+        // If the node is not found on the server, delete the file on local
+        if (data.statusCode === 404) {
+          logger.info(
+            "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
+          );
+          rimraf(record.file_path, () => {
+            nodeModel.forceDelete({
+              account,
+              nodeId: record.node_id
+            });
+          });
+        }
+
+        // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
+        if (data.statusCode === 200 && data.response.entry && data.response.entry.path.name !== record.remote_folder_path) {
+          logger.info(
+            "Node was moved to some other location, deleting on local: " + record.file_path + " - " + record.id
+          );
+
+          rimraf(record.file_path, () => {
+            nodeModel.forceDeleteByPath({
+              account,
+              filePath: record.file_path
+            });
+          });
+        }
+      });
+
+
+      await remote.getNode({
         account,
         nodeId: record.node_id
       });
 
-      console.log('isNodeExists', isNodeExists);
-
       logger.info("upload step 6-2");
 
-      // If the node is not found on the server, delete the file on local
-      if (isNodeExists && isNodeExists.error.statusCode === 404) {
-        logger.info(
-          "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
-        );
-        rimraf(record.file_path, () => {
-          nodeModel.forceDelete({
-            account,
-            nodeId: record.node_id
-          });
-        });
-      }
-
-      // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
-      if (isNodeExists && isNodeExists.entry.path.name !== record.remote_folder_path) {
-        logger.info(
-          "Node was moved to some other location, deleting on local: " + record.file_path + " - " + record.id
-        );
-
-        rimraf(record.file_path, () => {
-          nodeModel.forceDeleteByPath({
-            account,
-            filePath: record.file_path
-          });
-        });
-      }
     }
     logger.info("upload step 7");
   } // Filelist iteration end
@@ -318,7 +316,7 @@ exports.recursiveUpload = async params => {
   logger.info("upload step 9");
   logger.info(`Deleting ${missingFiles.length} missing files...`);
   for (const record of missingFiles) {
-    logger.info(`Deleting ${record.file_patj}`);
+    logger.info(`Deleting ${record.file_path}`);
     remote.deleteServerNode({
       account,
       record
