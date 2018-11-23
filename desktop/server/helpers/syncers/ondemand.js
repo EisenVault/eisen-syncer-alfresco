@@ -264,40 +264,39 @@ exports.recursiveUpload = async params => {
     ) {
       logger.info("upload step 6-1");
 
-      emitter.once('isNodeExists' + record.node_id, data => {
+      emitter.once('getNode' + record.node_id, data => {
 
         // If the node is not found on the server, delete the file on local
         if (data.statusCode === 404) {
           logger.info(
-            "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
+            "Node not available on server, deleting on local: " + data.record.file_path + " - " + data.record.id
           );
-          rimraf(record.file_path, () => {
-            nodeModel.forceDelete({
-              account,
-              nodeId: record.node_id
+          rimraf(data.record.file_path, async () => {
+            await nodeModel.forceDelete({
+              account: data.account,
+              nodeId: data.record.node_id
             });
           });
         }
 
         // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
-        if (data.statusCode === 200 && data.response.entry && data.response.entry.path.name !== record.remote_folder_path) {
+        if (data.statusCode === 200 && data.response.entry && data.response.entry.path.name !== data.record.remote_folder_path) {
           logger.info(
-            "Node was moved to some other location, deleting on local: " + record.file_path + " - " + record.id
+            "Node was moved to some other location, deleting on local: " + data.record.file_path + " - " + data.record.id
           );
 
-          rimraf(record.file_path, () => {
-            nodeModel.forceDeleteByPath({
-              account,
-              filePath: record.file_path
+          rimraf(data.record.file_path, async () => {
+            await nodeModel.forceDeleteByPath({
+              account: data.account,
+              filePath: data.record.file_path
             });
           });
         }
       });
 
-
       await remote.getNode({
         account,
-        nodeId: record.node_id
+        record
       });
 
       logger.info("upload step 6-2");

@@ -59,13 +59,55 @@ exports.getNodeList = async params => {
 };
 
 /**
- *
  * @param object params
  * {
  *  nodeId: string
  * }
  */
 exports.getNode = async params => {
+  let account = params.account;
+  let record = params.record;
+
+  if (!record || !account) {
+    throw new Error("Invalid paramerters");
+  }
+
+  var options = {
+    method: "GET",
+    url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
+    headers: {
+      authorization: "Basic " + (await token.get(account))
+    }
+  };
+
+  request(options)
+    .then(response => {
+      emitter.emit('getNode' + record.node_id, {
+        account,
+        record,
+        statusCode: 200,
+        response: JSON.parse(String(response))
+      });
+    })
+    .catch(error => {
+      emitter.emit('getNode' + record.node_id, {
+        account,
+        record,
+        statusCode: error.statusCode,
+        response: {}
+      });
+      errorLogModel.add(account.id, error);
+    });
+};
+
+
+/**
+ * @param object params
+ * {
+ *  nodeId: string
+ * }
+ */
+exports.getNodeByNodeId = async params => {
   let account = params.account;
   let nodeId = params.nodeId;
 
@@ -81,58 +123,11 @@ exports.getNode = async params => {
     }
   };
 
-  request(options)
-    .then(response => {
-      console.log('rseponse', response);
-
-      // emitter.emit('isNodeExists' + nodeId, {
-      //   statusCode: response.statusCode,
-      //   response: JSON.parse(body)
-      // });
-    })
-    .catch(error => {
-      errorLogModel.add(account.id, error);
-    });
-
-  // request(options, (error, response, body) => {
-
-  //   if (error) {
-  //     console.log('ECRRRRR', error);
-  //     errorLogModel.add(account.id, error);
-  //     return;
-  //   }
-
-  //   emitter.emit('isNodeExists' + nodeId, {
-  //     statusCode: response.statusCode,
-  //     response: JSON.parse(body)
-  //   });
-
-  // });
-
-  // try {
-  //   await request(options)
-  //     .on('error', function (e) {
-  //       return e;
-  //     })
-  //     .on('response', function (response) {
-
-  //       const statusCode = response.statusCode;
-
-  //       response.on('data', function (data) {
-
-  //         console.log('DATA TYPE', typeof data, String(data));
-  //         emitter.emit('isNodeExists' + nodeId, {
-  //           statusCode,
-  //           response: data ? JSON.parse(String(data)) : {}
-  //         });
-  //       })
-
-  //     });
-
-  //   // return JSON.parse(response);
-  // } catch (error) {
-  //   await errorLogModel.add(account.id, error);
-  // }
+  try {
+    return await request(options);
+  } catch (error) {
+    errorLogModel.add(account.id, error);
+  }
 };
 
 /**
@@ -283,8 +278,8 @@ exports.download = async params => {
 
     let modifiedDate = _base.getFileModifiedTime(destinationPath);
     if (modifiedDate === 0) {
-      const serverNode = await this.getNode({
-        account: account,
+      const serverNode = await this.getNodeByNodeId({
+        account,
         nodeId: node.id
       });
       if (serverNode) {
