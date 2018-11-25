@@ -305,26 +305,7 @@ exports.recursiveUpload = async params => {
     logger.info("upload step 7");
   } // Filelist iteration end
   logger.info("upload step 8");
-
-  // At the end of folder iteration, we will compile a list of old files that were renamed. We will delete those from the server.
-  let missingFiles = await nodeModel.getMissingFiles({
-    account,
-    watcher,
-    fileList: localFilePathList
-  });
-  logger.info("upload step 9");
-  logger.info(`Deleting ${missingFiles.length} missing files...`);
-  for (const record of missingFiles) {
-    logger.info(`Deleting ${record.file_path}`);
-    remote.deleteServerNode({
-      account,
-      record
-    });
-  }
-  logger.info("upload step 10");
   localFilePathList = [];
-  missingFiles = null;
-
   logger.info("FINISHED UPLOAD...");
   return;
 };

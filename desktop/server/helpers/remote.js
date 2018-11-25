@@ -124,7 +124,8 @@ exports.getNodeByNodeId = async params => {
   };
 
   try {
-    return await request(options);
+    const response = await request(options);
+    return JSON.parse(response);
   } catch (error) {
     errorLogModel.add(account.id, error);
   }
