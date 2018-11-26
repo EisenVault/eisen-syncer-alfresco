@@ -3,21 +3,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AccountService } from '../../services/account.service';
 
 @Component({
-  selector: 'app-instance-info',
-  templateUrl: './instance-info.component.html',
-  styleUrls: ['./instance-info.component.scss']
+  selector: 'app-sync-path',
+  templateUrl: './sync-path.component.html',
+  styleUrls: ['./sync-path.component.scss']
 })
-export class InstanceInfoComponent implements OnInit {
+export class SyncPathComponent implements OnInit {
   public response;
   public loading = false;
   public errors: any = {};
   public accountId = 0;
-  public instance_url = 'https://';
-  public username = '';
-  public password = '';
   public sync_path = '';
-  public sync_frequency = 2;
-  public sync_enabled = false;
   public file = '';
 
   constructor(
@@ -32,38 +27,29 @@ export class InstanceInfoComponent implements OnInit {
       if (this.accountId) {
         this._accountService.getAccount(this.accountId).subscribe(response => {
           if (response) {
-            this.instance_url = (<any>response).instance_url;
-            this.username = (<any>response).username;
-            this.password = (<any>response).password;
-            this.sync_enabled = false;
             this.sync_path = (<any>response).sync_path;
-            this.sync_frequency = (<any>response).sync_frequency;
           }
         });
       }
     });
   }
 
-  addAccount() {
+  update() {
     this.loading = true;
     this.errors = {};
     this._accountService
-      .addAccount({
-        instance_url: this.instance_url,
-        username: this.username,
-        password: this.password,
+      .updateSyncPath({
+        accountId: this.accountId,
         sync_path: this.sync_path,
-        sync_frequency: this.sync_frequency,
-        sync_enabled: this.sync_enabled,
       })
       .subscribe(
         response => {
           this.loading = false;
-          if (response.status == 201) {
-            this._router.navigate([
-              'account-remote-folder',
-              (<any>response).body.account_id
-            ]);
+          if (response.status === 200) {
+            this._router.navigate(
+              ['account-details'],
+              { queryParams: { accountId: (<any>response).body.account_id }}
+            );
           }
         },
         error => {

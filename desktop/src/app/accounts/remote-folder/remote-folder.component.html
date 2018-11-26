@@ -3,8 +3,12 @@
 <div class="clearfix">&nbsp;</div>
 
 <hr>
-<div class="alert alert-info" *ngIf="sites && sites.length == 0">
+<div class="alert alert-info" *ngIf="sites && sites.length == 0 && soSiteData === false">
   <img src="./assets/imgs/spinner.gif" alt=""> Loading data...
+</div>
+
+<div class="alert alert-danger" *ngIf="sites && sites.length == 0 && soSiteData === true">
+  No Department(s) Found
 </div>
 
 <div *ngIf="sites && sites.length > 0">
@@ -40,12 +44,16 @@
 </div>
 
 <div class="mt-5">
-  <button type="button" class="btn btn-danger" (click)="goBack()">
+  <button type="button" class="btn btn-danger" *ngIf="isEdit === false" (click)="goBack()">
     <i class="fas fa-chevron-circle-left"></i>
     Back to Account Settings
   </button>
   <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="disableFinish">
-    <i class="fas fa-check-circle"></i>
-    Finish
+
+    <span *ngIf="isEdit === true">Update</span>
+    <span *ngIf="isEdit === false">
+      <i class="fas fa-check-circle"></i>
+      Finish
+    </span>
   </button>
 </div>

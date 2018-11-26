@@ -2,23 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const { logger } = require("../helpers/logger");
 
-
-// let dbPath = null;
-// if(fs.existsSync(path.join(__dirname.replace('app.asar', 'app.asar.unpacked').replace('config', 'database'), "syncer.db"))) {
-//   dbPath = path.join(__dirname.replace('app.asar', 'app.asar.unpacked').replace('config', 'database'), "syncer.db");
-// }else if (fs.existsSync(path.join(__dirname.replace("config", "database"), "syncer.db"))) {
-//   dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
-// } else {
-//   throw 'Database Not Found';
-// }
-
-// logger.info(path.join(
-//   __dirname,
-//   "..",
-//   "database",
-//   "syncer.db"
-// ));
-
 let dbPath = path.join(__dirname.replace('app.asar', 'app.asar.unpacked').replace('config', 'database'), "syncer.db");
 if (!fs.existsSync(dbPath)) {
   dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
@@ -33,7 +16,9 @@ const knex = require("knex")({
   connection: {
     filename: dbPath
   },
-  useNullAsDefault: true
+  useNullAsDefault: true,
+  // pool: { min: 1, max: 100 },
+  // acquireConnectionTimeout: 10000
 });
 
 // output raw sql queries

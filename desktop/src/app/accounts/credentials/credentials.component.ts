@@ -3,11 +3,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AccountService } from '../../services/account.service';
 
 @Component({
-  selector: 'app-instance-info',
-  templateUrl: './instance-info.component.html',
-  styleUrls: ['./instance-info.component.scss']
+  selector: 'app-credentials',
+  templateUrl: './credentials.component.html',
+  styleUrls: ['./credentials.component.scss']
 })
-export class InstanceInfoComponent implements OnInit {
+export class CredentialsComponent implements OnInit {
+
   public response;
   public loading = false;
   public errors: any = {};
@@ -15,9 +16,6 @@ export class InstanceInfoComponent implements OnInit {
   public instance_url = 'https://';
   public username = '';
   public password = '';
-  public sync_path = '';
-  public sync_frequency = 2;
-  public sync_enabled = false;
   public file = '';
 
   constructor(
@@ -35,35 +33,29 @@ export class InstanceInfoComponent implements OnInit {
             this.instance_url = (<any>response).instance_url;
             this.username = (<any>response).username;
             this.password = (<any>response).password;
-            this.sync_enabled = false;
-            this.sync_path = (<any>response).sync_path;
-            this.sync_frequency = (<any>response).sync_frequency;
           }
         });
       }
     });
   }
 
-  addAccount() {
+  update() {
     this.loading = true;
     this.errors = {};
     this._accountService
-      .addAccount({
+      .updateCredentials({
+        accountId: this.accountId,
         instance_url: this.instance_url,
         username: this.username,
         password: this.password,
-        sync_path: this.sync_path,
-        sync_frequency: this.sync_frequency,
-        sync_enabled: this.sync_enabled,
       })
       .subscribe(
         response => {
           this.loading = false;
-          if (response.status == 201) {
-            this._router.navigate([
-              'account-remote-folder',
-              (<any>response).body.account_id
-            ]);
+          if (response.status === 200) {
+            this._router.navigate(
+              ['account-details'],
+              { queryParams: { accountId: (<any>response).body.account_id } });
           }
         },
         error => {
@@ -81,19 +73,5 @@ export class InstanceInfoComponent implements OnInit {
           }
         }
       );
-  }
-
-  onBrowse() {
-    const file = <HTMLScriptElement>document.getElementById('file');
-    file.click();
-
-    file.addEventListener(
-      'change',
-      () =>
-        (this.sync_path = (document.getElementById(
-          'file'
-        ) as any).files[0].path),
-      false
-    );
   }
 }

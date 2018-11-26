@@ -54,14 +54,26 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, type, description) => {
-  let eventId = await db
-    .insert({
-      account_id: accountId,
-      type: type,
-      description: description,
-      created_at: new Date().getTime()
-    })
-    .into("log_events");
+
+  let eventId = [[]];
+  db.transaction(async (trx) => {
+
+    try {
+      eventId = await db
+        .insert({
+          account_id: accountId,
+          type: type,
+          description: description,
+          created_at: new Date().getTime()
+        })
+        .into("log_events")
+        .transacting(trx);
+      trx.commit;
+    } catch (error) {
+      trx.rollback;
+      log.error("---ERROR---", originatedFrom, error);
+    }
+  });
 
   // Delete old records
   let count = await this.getCount();
@@ -70,14 +82,22 @@ exports.add = async (accountId, type, description) => {
     this.deleteAllLessThan(removableId);
   }
 
-  //log.warn(description);
-  //logger.info(description);
-
   return eventId;
 };
 
 exports.deleteAllLessThan = async id => {
-  await db("log_events")
-    .where("id", "<", id)
-    .delete();
+
+  db.transaction(async (trx) => {
+    try {
+      await db("log_events")
+        .where("id", "<", id)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      log.error("---ERROR---", originatedFrom, error);
+    }
+  });
 };

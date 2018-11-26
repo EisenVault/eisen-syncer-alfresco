@@ -8,16 +8,16 @@ const accountModel = require("./models/account");
 const nodeModel = require("./models/node");
 const errorLogModel = require("./models/log-error");
 const env = require("./config/env");
-var bugsnag = require("bugsnag");
-bugsnag.register(env.BUGSNAG_KEY);
+// var bugsnag = require("bugsnag");
+// bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
 // Logger
 const { logger } = require("./helpers/logger");
 
 // Middlewares
-app.use(bugsnag.errorHandler);
-app.use(bugsnag.requestHandler);
+// app.use(bugsnag.errorHandler);
+// app.use(bugsnag.requestHandler);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -33,6 +33,10 @@ app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
 app.use("/watchers", require("./routes/watcher"));
 
+
+// Set the timezone in the process env
+process.env.TZ = 'Etc/Greenwich';
+
 (async () => {
   let accounts = await accountModel.getAll(1);
   // For every account, set the sync progress to compeleted
@@ -41,6 +45,7 @@ app.use("/watchers", require("./routes/watcher"));
       await accountModel.syncComplete(account.id);
     }
   }
+
 })();
 
 // Start watching all the sync_paths

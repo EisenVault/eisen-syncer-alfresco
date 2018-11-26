@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { SiteService } from '../../services/site.service';
 import { NodeService } from '../../services/node.service';
 import { AccountService } from '../../services/account.service';
@@ -14,6 +14,8 @@ export class RemoteFolderComponent implements OnInit {
   public accountId;
   public disableFinish = true;
   public isLoading = false;
+  public soSiteData = false;
+  public isEdit = false;
   public sites = [];
   public isSelectAllChecked = false;
   public selectedList: WatchList[] = [];
@@ -32,15 +34,23 @@ export class RemoteFolderComponent implements OnInit {
       this.accountId = params.get('accountId');
       this.loadSites();
     });
+
+    this._route.queryParams.subscribe(param => {
+      this.isEdit = param['edit'] === 'true' ? true : false;
+    });
   }
 
   loadSites() {
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
 
-      this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
-        console.log('length', this.sites.length, result.length);
+      if (this.sites.length === 0) {
+        this.soSiteData = true;
+        this.disableFinish = true;
+        return;
+      }
 
+      this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
         if (this.sites.length === result.length) {
           this.isSelectAllChecked = true;
         }
@@ -177,7 +187,11 @@ export class RemoteFolderComponent implements OnInit {
       .subscribe(
         () => {
           // Move to the next screen
-          this._router.navigate(['account-finalize', this.accountId]);
+          if (this.isEdit === true) {
+            this._router.navigate(['account-details'], { queryParams: { accountId: this.accountId } });
+          } else {
+            this._router.navigate(['account-finalize', this.accountId]);
+          }
         },
         error => console.log(error)
       );

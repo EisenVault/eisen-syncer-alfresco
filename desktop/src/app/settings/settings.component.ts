@@ -5,7 +5,7 @@ import { ElectronService } from 'ngx-electron';
 interface Setting {
   id: number;
   name: string;
-  value: number;
+  value: any;
 }
 
 @Component({
@@ -16,6 +16,7 @@ interface Setting {
 export class SettingsComponent implements OnInit {
   public startup_launch;
   public sync_interval = 10;
+  public timezone = 'Asia/Calcutta';
   public isSaved = false;
 
   constructor(
@@ -32,11 +33,16 @@ export class SettingsComponent implements OnInit {
     this._settingService.getSetting('LAUNCH_AT_STARTUP').subscribe((result: Setting) => {
       this.startup_launch = Number(result.value);
     });
+
+    this._settingService.getSetting('TIMEZONE').subscribe((result: Setting) => {
+      this.timezone = result.value;
+    });
   }
 
   saveSettings() {
     const value = this.startup_launch === true ? 1 : 0;
     this._settingService.updateSetting('LAUNCH_AT_STARTUP', value).subscribe(() => { });
+    this._settingService.updateSetting('TIMEZONE', this.timezone).subscribe(() => { });
     this._settingService.updateSetting('SYNC_INTERVAL', this.sync_interval).subscribe(() => { });
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.sendSync(
