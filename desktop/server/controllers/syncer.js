@@ -12,6 +12,7 @@ exports.download = async (request, response) => {
   const account = await accountModel.getOne(request.params.accountId);
 
   if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+    logger.info("Download Bailed");
     return;
   }
 
@@ -58,6 +59,7 @@ exports.upload = async (request, response) => {
   let account = await accountModel.getOne(request.body.account_id);
 
   if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+    logger.info("Upload Bailed");
     return;
   }
 
@@ -96,30 +98,3 @@ exports.upload = async (request, response) => {
   }
 };
 
-
-// Delete records from DB for files that do not exists on local
-exports.delete = async (request, response) => {
-  return;
-  let account = await accountModel.getOne(request.params.accountId);
-
-  try {
-    logger.info("DELETE START...");
-
-    await ondemand.recursiveDelete({
-      account: account
-    });
-
-    // Start watcher now
-    watcher.watchAll();
-    logger.info("DELETE END");
-
-    return response.status(200).json(account);
-  } catch (error) {
-    logger.error("error while deleting file " + JSON.stringify(error));
-    // Start watcher now
-    watcher.watchAll();
-    return response
-      .status(404)
-      .json({ success: false, error: error, error: error });
-  }
-};

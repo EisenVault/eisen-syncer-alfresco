@@ -21,7 +21,8 @@
     "postinstall": "electron-builder install-app-deps",
     "i-linux": "npm run build && build --linux",
     "i-mac": "npm run build && build -m",
-    "i-win": "npm run build && build -w"
+    "i-win": "npm run build && build -w",
+    "make-win-cert":"electron-builder create-self-signedcert -p eisenvault"
   },
   "build": {
     "appId": "com.eisenvault.sync",
@@ -54,6 +55,9 @@
       "icon": "build/icon.png"
     },
     "win": {
+      "certificateFile":"certificates/",
+      "verifyUpdateCodeSignature":false,
+      "publisherName": "eisenvault",
       "target": [
         {
           "target": "nsis",

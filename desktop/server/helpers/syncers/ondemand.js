@@ -257,12 +257,15 @@ exports.recursiveUpload = async params => {
       continue;
     }
 
-    // Case C: File deleted on server, delete on local
+    // Case C: File deleted on server? delete on local
     else if (
       record &&
       (record.last_uploaded_at > 0 || record.last_downloaded_at > 0)
     ) {
       logger.info("upload step 6-1");
+
+      // Sleep for x seconds, so that server does not reject the request...
+      await _base.sleep(1000);
 
       emitter.once('getNode' + record.node_id, data => {
 
@@ -299,7 +302,7 @@ exports.recursiveUpload = async params => {
         record
       });
 
-      logger.info("upload step 6-2");
+      logger.info("upload step 6-2. " + record.file_path);
 
     }
     logger.info("upload step 7");
@@ -308,46 +311,6 @@ exports.recursiveUpload = async params => {
   localFilePathList = [];
   logger.info("FINISHED UPLOAD...");
   return;
-};
-
-/**
- * Recursively delete all files from server that were deleted from local
- *
- * @param object params
- * {
- *  account: Account<Object>,
- * }
- */
-exports.recursiveDelete = async params => {
-  return;
-  let account = params.account;
-
-  if (account.sync_enabled == 0) {
-    return;
-  }
-
-  // Start the sync
-  await accountModel.syncStart(account.id);
-
-  // This function will list all files/folders/sub-folders recursively.
-  let localFilePathList = glob.sync(path.join(account.sync_path, "**", "*"));
-
-  let missingFiles = await nodeModel.getMissingFiles({
-    account: account,
-    fileList: localFilePathList
-  });
-
-  for (const iterator of missingFiles) {
-    // Delete the node from the server, once thats done it will delete the record from the DB as well
-    await remote.deleteServerNode({
-      account: account,
-      deletedNodeId: iterator.node_id
-    });
-    logger.info(`Deleted missing file: ${iterator.stringify()}`);
-  }
-
-  // Set the sync completed time and also set issync flag to off
-  await accountModel.syncComplete(account.id);
 };
 
 /**

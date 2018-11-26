@@ -41,6 +41,7 @@ exports.getNodeList = async params => {
       "&skipCount=" +
       skipCount,
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -54,7 +55,7 @@ exports.getNodeList = async params => {
 
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
   }
 };
 
@@ -76,6 +77,7 @@ exports.getNode = async params => {
     method: "GET",
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -96,7 +98,7 @@ exports.getNode = async params => {
         statusCode: error.statusCode,
         response: {}
       });
-      errorLogModel.add(account.id, error);
+      errorLogModel.add(account.id, error, `${__filename}/getNode/${record.node_id}`);
     });
 };
 
@@ -119,6 +121,7 @@ exports.getNodeByNodeId = async params => {
     method: "GET",
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${nodeId}?include=path`,
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -127,7 +130,7 @@ exports.getNodeByNodeId = async params => {
     const response = await request(options);
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    errorLogModel.add(account.id, error, `${__filename}/getNodeById`);
   }
 };
 
@@ -157,6 +160,7 @@ exports.getChildren = async params => {
       "/children?include=path&maxItems=" +
       maxItems,
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -169,7 +173,7 @@ exports.getChildren = async params => {
       });
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error, `${__filename}/getChildren`);
   }
 };
 
@@ -192,6 +196,7 @@ exports.deleteServerNode = async params => {
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       record.node_id,
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -235,7 +240,7 @@ exports.deleteServerNode = async params => {
         nodeId: record.node_id
       });
     } else {
-      await errorLogModel.add(account.id, error);
+      await errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
     }
   }
 };
@@ -259,6 +264,7 @@ exports.download = async params => {
       node.id +
       "/content?attachment=true",
     headers: {
+      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -270,46 +276,58 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
+    var totalBytes = 0;
+    var recievedSize = 0;
     await request(options)
       .on('error', function (e) {
         console.error(e);
         return;
       })
+      .on('response', function (data) {
+        totalBytes = data.headers['content-length'];
+      })
+      .on('data', async (chunk) => {
+        recievedSize += chunk.length;
+        // Make sure the download is complete
+        if (recievedSize >= totalBytes) {
+          let modifiedDate = _base.getFileModifiedTime(destinationPath);
+          if (modifiedDate === 0) {
+            const serverNode = await this.getNodeByNodeId({
+              account,
+              nodeId: node.id
+            });
+            if (serverNode) {
+              modifiedDate = _base.convertToUTC(serverNode.entry.modifiedAt);
+            }
+          }
+
+          // Add refrence to the nodes table
+          await nodeModel.add({
+            account: account,
+            watcher,
+            nodeId: node.id,
+            remoteFolderPath: remoteFolderPath,
+            filePath: destinationPath,
+            fileUpdateAt: modifiedDate,
+            lastDownloadedAt: _base.getCurrentTime(),
+            isFolder: false,
+            isFile: true
+          });
+
+          // Add an event log
+          await eventLogModel.add(
+            account.id,
+            "DOWNLOAD_FILE",
+            `Downloaded File: ${destinationPath} from ${account.instance_url}`
+          );
+        }
+
+      })
       .pipe(fs.createWriteStream(destinationPath));
 
-    let modifiedDate = _base.getFileModifiedTime(destinationPath);
-    if (modifiedDate === 0) {
-      const serverNode = await this.getNodeByNodeId({
-        account,
-        nodeId: node.id
-      });
-      if (serverNode) {
-        modifiedDate = _base.convertToUTC(serverNode.entry.modifiedAt);
-      }
-    }
-
-    // Add refrence to the nodes table
-    await nodeModel.add({
-      account: account,
-      watcher,
-      nodeId: node.id,
-      remoteFolderPath: remoteFolderPath,
-      filePath: destinationPath,
-      fileUpdateAt: modifiedDate,
-      lastDownloadedAt: _base.getCurrentTime(),
-      isFolder: false,
-      isFile: true
-    });
-
-    // Add an event log
-    await eventLogModel.add(
-      account.id,
-      "DOWNLOAD_FILE",
-      `Downloaded File: ${destinationPath} from ${account.instance_url}`
-    );
     return params;
   } catch (error) {
-    await errorLogModel.add(account.id, error);
+    await errorLogModel.add(account.id, error, `${__filename}/download`);
   }
 };
 
@@ -350,13 +368,14 @@ exports.upload = async params => {
         rootNodeId +
         "/children?include=path",
       headers: {
+        Connection: "keep-alive",
         "content-type": "application/json",
         Authorization: "Basic " + (await token.get(account))
       },
       body: JSON.stringify({
         name: directoryName,
         nodeType: "cm:folder",
-        relativePath: relativePath
+        relativePath
       })
     };
 
@@ -401,7 +420,7 @@ exports.upload = async params => {
         });
       } else {
         // Add an error log
-        await errorLogModel.add(account.id, error);
+        await errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
       }
     }
 
@@ -419,6 +438,7 @@ exports.upload = async params => {
         account.instance_url
         }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
+        Connection: "keep-alive",
         Authorization: "Basic " + (await token.get(account))
       },
       formData: {
@@ -475,7 +495,7 @@ exports.upload = async params => {
         });
       } else {
         // Add an error log
-        await errorLogModel.add(account.id, error);
+        await errorLogModel.add(account.id, error, `${__filename}/upload file`);
       }
     }
   }

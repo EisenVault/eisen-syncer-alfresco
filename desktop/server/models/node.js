@@ -199,44 +199,6 @@ exports.getAllByFolderPath = async params => {
   }
 };
 
-/**
- * This method will return all the records that are not available in the DB.
- * Meaning these files were deleted from the server but are present in local and hence needs to be deleted.
- *
- * @param object params
- * {
- *  account: <Object>,
- *  fileList: <Array>
- * }
- */
-exports.getMissingFiles = async params => {
-  const account = params.account;
-  const watcher = params.watcher;
-  const fileList = params.fileList;
-
-  let missingFiles = [];
-  let listCount = 0;
-  while (listCount <= fileList.length) {
-    let chunk = fileList.slice(listCount, listCount + LIMIT);
-
-    try {
-      let result = await db
-        .select(["node_id", "file_path"])
-        .whereNotIn("file_path", chunk)
-        .where("account_id", account.id)
-        .where("site_id", watcher.site_id)
-        .where("is_deleted", 0)
-        .from("nodes");
-      missingFiles = missingFiles.concat(result);
-      listCount = listCount + LIMIT;
-    } catch (error) {
-      await errorLogModel.add(account, error, __filename + '/getMissingFiles');
-    }
-  }
-
-  return missingFiles;
-};
-
 exports.updateModifiedTime = async params => {
   let account = params.account;
   let filePath = params.filePath;

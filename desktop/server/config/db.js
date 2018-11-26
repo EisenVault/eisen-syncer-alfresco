@@ -18,7 +18,7 @@ const knex = require("knex")({
   },
   useNullAsDefault: true,
   // pool: { min: 1, max: 100 },
-  acquireConnectionTimeout: 10000
+  // acquireConnectionTimeout: 10000
 });
 
 // output raw sql queries
