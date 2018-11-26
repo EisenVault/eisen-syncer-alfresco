@@ -3,7 +3,6 @@ const path = require("path");
 const errorLogModel = require("./log-error");
 const _ = require("lodash");
 const _path = require('../helpers/path');
-const LIMIT = 950;
 
 /**
  *
@@ -29,6 +28,8 @@ exports.add = async params => {
   const lastDownloadedAt = params.lastDownloadedAt || 0;
   const isFolder = params.isFolder;
   const isFile = params.isFile;
+  const downloadInProgress = params.downloadInProgress || 0;
+  const uploadInProgress = params.uploadInProgress || 0;
 
   // If its a new record, simply add it
   db.transaction(async (trx) => {
@@ -55,7 +56,9 @@ exports.add = async params => {
           last_downloaded_at: lastDownloadedAt,
           is_folder: isFolder,
           is_file: isFile,
-          is_deleted: 0
+          is_deleted: 0,
+          download_in_progress: downloadInProgress,
+          upload_in_progress: uploadInProgress,
         })
         .into("nodes")
         .transacting(trx);
@@ -69,6 +72,45 @@ exports.add = async params => {
 
   });
 };
+
+
+exports.setDownloadProgress = async (filePath, account, progress = 0, fileUpdateAt = 0) => {
+  db.transaction(async trx => {
+    try {
+      await db("nodes")
+        .update({
+          download_in_progress: progress,
+          file_update_at: fileUpdateAt
+        })
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .transacting(trx);
+      trx.commit;
+    } catch (error) {
+      trx.rollback;
+      return await errorLogModel.add(account, error);
+    }
+  });
+}
+
+exports.setUploadProgress = async (filePath, account, progress = 0, fileUpdateAt = 0) => {
+  db.transaction(async trx => {
+    try {
+      await db("nodes")
+        .update({
+          upload_in_progress: progress,
+          file_update_at: fileUpdateAt
+        })
+        .where("account_id", account.id)
+        .where("file_path", filePath)
+        .transacting(trx);
+      trx.commit;
+    } catch (error) {
+      trx.rollback;
+      return await errorLogModel.add(account, error);
+    }
+  });
+}
 
 exports.getOneByFilePath = async params => {
   let account = params.account;
