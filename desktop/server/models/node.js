@@ -74,7 +74,10 @@ exports.add = async params => {
 };
 
 
-exports.setDownloadProgress = async (filePath, account, progress = 0, fileUpdateAt = 0) => {
+exports.setDownloadProgress = async params => {
+
+  let { filePath, account, progress, fileUpdateAt } = params;
+
   db.transaction(async trx => {
     try {
       await db("nodes")
@@ -93,13 +96,18 @@ exports.setDownloadProgress = async (filePath, account, progress = 0, fileUpdate
   });
 }
 
-exports.setUploadProgress = async (filePath, account, progress = 0, fileUpdateAt = 0) => {
+exports.setUploadProgress = async params => {
+  let { filePath, account, progress, fileUpdateAt, nodeId, remoteFolderPath, lastUploadedAt } = params;
+
   db.transaction(async trx => {
     try {
       await db("nodes")
         .update({
           upload_in_progress: progress,
-          file_update_at: fileUpdateAt
+          file_update_at: fileUpdateAt,
+          node_id: nodeId,
+          remote_folder_path: remoteFolderPath,
+          last_uploaded_at: lastUploadedAt
         })
         .where("account_id", account.id)
         .where("file_path", filePath)

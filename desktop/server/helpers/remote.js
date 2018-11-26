@@ -246,10 +246,10 @@ exports.download = async params => {
 
     // Add refrence to the nodes table
     await nodeModel.add({
-      account: account,
+      account,
       watcher,
       nodeId: node.id,
-      remoteFolderPath: remoteFolderPath,
+      remoteFolderPath,
       filePath: destinationPath,
       fileUpdateAt: 0,
       lastDownloadedAt: _base.getCurrentTime(),
@@ -273,9 +273,6 @@ exports.download = async params => {
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
           let modifiedDate = _base.getFileModifiedTime(destinationPath);
-
-          console.log('destinationPath', destinationPath);
-
           await nodeModel.setDownloadProgress({
             filePath: destinationPath,
             account,
@@ -349,21 +346,6 @@ exports.upload = async params => {
     };
 
     try {
-      // Add a record in the db
-      await nodeModel.add({
-        account,
-        watcher,
-        nodeId: 0,
-        remoteFolderPath: '',
-        filePath,
-        fileUpdateAt: 0,
-        lastUploadedAt: _base.getCurrentTime(),
-        isFolder: true,
-        isFile: false,
-        uploadInProgress: true
-      });
-
-
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
@@ -372,12 +354,16 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-
-        await nodeModel.setUploadProgress({
-          filePath,
+        await nodeModel.add({
           account,
-          progress: false,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt)
+          watcher,
+          nodeId: response.entry.id,
+          remoteFolderPath: response.entry.path.name,
+          filePath: params.filePath,
+          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+          lastUploadedAt: _base.getCurrentTime(),
+          isFolder: true,
+          isFile: false
         });
 
         // Add an event log
@@ -432,6 +418,22 @@ exports.upload = async params => {
     };
 
     try {
+      // Add a record in the db
+      await nodeModel.add({
+        account,
+        watcher,
+        nodeId: '',
+        remoteFolderPath: '',
+        filePath,
+        fileUpdateAt: 0,
+        lastUploadedAt: _base.getCurrentTime(),
+        isFolder: false,
+        isFile: true,
+        uploadInProgress: true
+      });
+
+      console.log('uploadInProgress', '11111');
+
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
@@ -440,17 +442,15 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        // Add a record in the db
-        await nodeModel.add({
-          account: account,
-          watcher,
+        // Update the node record once uploaded
+        await nodeModel.setUploadProgress({
+          filePath,
+          account,
+          progress: false,
           nodeId: response.entry.id,
           remoteFolderPath: response.entry.path.name,
-          filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
           lastUploadedAt: _base.getCurrentTime(),
-          isFolder: false,
-          isFile: true
         });
 
         // Add an event log
