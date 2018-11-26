@@ -20,14 +20,6 @@ exports.startupLaunch = async () => {
     .where("name", "LAUNCH_AT_STARTUP");
 };
 
-exports.isNewInstallation = async () => {
-  return await db
-    .select("value")
-    .first()
-    .from("settings")
-    .where("name", "NEW_INSTALLATION");
-};
-
 exports.add = async request => {
   return await db
     .insert({

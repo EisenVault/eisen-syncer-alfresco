@@ -14,7 +14,7 @@ exports.get = async account => {
     throw new Error("Account not found");
   }
 
-  account = await accountModel.getPassword(account.id);
+  account = await accountModel.getOneWithPassword(account.id);
 
   return btoa(`${account.username}:${crypt.decrypt(account.password)}`);
 };

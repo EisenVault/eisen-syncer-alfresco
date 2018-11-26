@@ -33,6 +33,23 @@ exports.updateAccount = async (request, response) => {
   });
 };
 
+exports.updateCredentials = async (request, response) => {
+  await accountModel.updateCredentials(request.params.id, request);
+  await watcher.watchAll();
+  return response.status(200).json({
+    account_id: request.params.id
+  });
+};
+
+exports.updateSyncPath = async (request, response) => {
+  await accountModel.updateSyncPath(request.params.id, request);
+  await watcher.watchAll();
+  return response.status(200).json({
+    account_id: request.params.id
+  });
+};
+
+
 exports.addWatchNodes = async (request, response) => {
   // Delete old watch nodes
   await watcherModel.deleteAllByAccountId(request.params.id);

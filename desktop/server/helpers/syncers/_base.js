@@ -1,5 +1,15 @@
 const fs = require("fs");
-const path = require("path");
+
+
+/**
+ * Puts the process to sleep for the mentioned number of milliseconds
+ *
+ * @param integer millis
+ * @return Promise
+ */
+exports.sleep = (millis = 1000) => {
+  return new Promise(resolve => setTimeout(resolve, millis));
+}
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.

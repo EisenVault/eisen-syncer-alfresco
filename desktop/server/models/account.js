@@ -1,6 +1,7 @@
 const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 const _path = require('../helpers/path');
+const errorLogModel = require('../models/log-error');
 
 exports.getAll = async (syncEnabled) => {
   try {
@@ -38,16 +39,26 @@ exports.getOne = async (id) => {
       "sync_path",
       "sync_enabled",
       "sync_frequency",
-      "sync_in_progress"
+      "sync_in_progress",
+      "last_synced_at"
     )
     .first()
     .from("accounts")
     .where("id", id);
 };
 
-exports.getPassword = async id => {
+exports.getOneWithPassword = async (id) => {
   return await db
-    .select("*")
+    .select(
+      "id",
+      "instance_url",
+      "username",
+      "password",
+      "sync_path",
+      "sync_enabled",
+      "sync_frequency",
+      "sync_in_progress"
+    )
     .first()
     .from("accounts")
     .where("id", id);
@@ -123,51 +134,149 @@ exports.findByInstanceAccounts = async (
 };
 
 exports.addAccount = async request => {
-  return await db
-    .insert({
-      instance_url: request.body.instance_url.replace(/\/+$/, ""),
-      username: request.body.username,
-      password: crypt.encrypt(request.body.password),
-      sync_path: _path.toUnix(request.body.sync_path),
-      sync_enabled: request.body.sync_enabled,
-      sync_frequency: request.body.sync_frequency,
-      created_at: new Date().getTime(),
-      updated_at: new Date().getTime()
-    })
-    .into("accounts");
+
+  db.transaction(async trx => {
+    try {
+      const result = await db
+        .insert({
+          instance_url: request.body.instance_url.replace(/\/+$/, ""),
+          username: request.body.username,
+          password: crypt.encrypt(request.body.password),
+          sync_path: _path.toUnix(request.body.sync_path),
+          sync_enabled: request.body.sync_enabled,
+          sync_frequency: request.body.sync_frequency,
+          created_at: new Date().getTime(),
+          updated_at: new Date().getTime()
+        })
+        .into("accounts")
+        .transacting(trx);
+      trx.commit;
+      return result;
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
+
 };
 
 exports.updateAccount = async (accountId, request) => {
-  return await db("accounts")
-    .update({
-      instance_url: request.body.instance_url.replace(/\/+$/, ""),
-      username: request.body.username,
-      password: crypt.encrypt(request.body.password),
-      sync_path: _path.toUnix(request.body.sync_path),
-      sync_enabled: request.body.sync_enabled,
-      sync_frequency: request.body.sync_frequency,
-      updated_at: new Date().getTime()
-    })
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+
+    try {
+      const result = await db("accounts")
+        .update({
+          instance_url: request.body.instance_url.replace(/\/+$/, ""),
+          username: request.body.username,
+          password: crypt.encrypt(request.body.password),
+          sync_path: _path.toUnix(request.body.sync_path),
+          sync_enabled: request.body.sync_enabled,
+          sync_frequency: request.body.sync_frequency,
+          updated_at: new Date().getTime()
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+};
+
+exports.updateCredentials = async (accountId, request) => {
+
+  db.transaction(async (trx) => {
+    try {
+      const result = await db("accounts")
+        .update({
+          instance_url: request.body.instance_url.replace(/\/+$/, ""),
+          username: request.body.username,
+          password: crypt.encrypt(request.body.password),
+          updated_at: new Date().getTime()
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
+
+};
+
+exports.updateSyncPath = async (accountId, request) => {
+
+  db.transaction(async (trx) => {
+    try {
+      const result = await db("accounts")
+        .update({
+          sync_path: _path.toUnix(request.body.sync_path),
+          updated_at: new Date().getTime()
+        })
+        .where("id", accountId);
+      transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
 };
 
 
 exports.updateSync = async (accountId, request) => {
-  return await db("accounts")
-    .update({
-      sync_enabled: request.body.sync_enabled,
-      sync_in_progress: 0,
-      updated_at: new Date().getTime()
-    })
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+    try {
+      const result = await db("accounts")
+        .update({
+          sync_enabled: request.body.sync_enabled,
+          sync_in_progress: 0,
+          updated_at: new Date().getTime()
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
 };
 
 exports.syncStart = async accountId => {
-  await db("accounts")
-    .update({
-      sync_in_progress: 1
-    })
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+    try {
+      await db("accounts")
+        .update({
+          sync_in_progress: 1
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
 
   return await db
     .first()
@@ -176,24 +285,69 @@ exports.syncStart = async accountId => {
 };
 
 exports.syncComplete = async (accountId) => {
-  return await db("accounts")
-    .update({
-      sync_in_progress: 0,
-      last_synced_at: new Date().getTime() / 1000
-    })
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+
+    try {
+      const result = await db("accounts")
+        .update({
+          sync_in_progress: 0,
+          last_synced_at: Math.round(new Date().getTime())
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
 };
 
 exports.forceDelete = async accountId => {
-  return await db("accounts")
-    .update({
-      is_deleted: 1
-    })
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+    try {
+      const result = await db("accounts")
+        .update({
+          is_deleted: 1
+        })
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
+
 };
 
 exports.forceDelete = async accountId => {
-  return await db("accounts")
-    .delete()
-    .where("id", accountId);
+
+  db.transaction(async (trx) => {
+
+    try {
+      const result = await db("accounts")
+        .delete()
+        .where("id", accountId)
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
 };

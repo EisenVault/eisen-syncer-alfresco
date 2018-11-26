@@ -4,9 +4,11 @@
 /desktop/dist
 /desktop/tmp
 /desktop/out-tsc
+/desktop/certificates/
 /desktop/__release-builds/
 /desktop/__installers/
 /desktop/server/logs/
+
 
 # dependencies
 /desktop/node_modules

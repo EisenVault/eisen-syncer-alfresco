@@ -1,4 +1,5 @@
 const { db } = require("../config/db");
+const errorLogModel = require('../models/log-error');
 
 exports.getAllByAccountId = async accountId => {
   return await db
@@ -15,23 +16,49 @@ exports.getAllByAccountId = async accountId => {
 };
 
 exports.addWatcher = async (accountId, object) => {
-  return await db
-    .insert({
-      account_id: accountId,
-      site_name: object.siteName,
-      site_id: object.siteId,
-      document_library_node: object.documentLibraryId,
-      watch_node: object.watchNodeId,
-      watch_folder: object.watchPath,
-    })
-    .into("watchers");
+
+  db.transaction(async (trx) => {
+    try {
+      const result = await db
+        .insert({
+          account_id: accountId,
+          site_name: object.siteName,
+          site_id: object.siteId,
+          document_library_node: object.documentLibraryId,
+          watch_node: object.watchNodeId,
+          watch_folder: object.watchPath,
+        })
+        .into("watchers")
+        .transacting(trx);
+      trx.commit;
+      return result;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+
+  });
+
 };
 
 
 exports.deleteAllByAccountId = async accountId => {
-  await db
-    .from("watchers")
-    .where("account_id", accountId)
-    .delete();
+
+  db.transaction(async (trx) => {
+    try {
+      await db
+        .from("watchers")
+        .where("account_id", accountId)
+        .delete()
+        .transacting(trx);
+      trx.commit;
+
+    } catch (error) {
+      trx.rollback;
+      await errorLogModel.add(account, error);
+    }
+  });
+
 }
 

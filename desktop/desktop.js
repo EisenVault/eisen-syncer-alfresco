@@ -1,39 +1,14 @@
 const electron = require("electron");
+const { session } = require("electron");
+
+const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const url = require("url");
 const path = require("path");
-// var pm2 = require("pm2");
-const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const AutoLaunch = require("auto-launch");
-const { session } = require("electron");
 require("./server/server");
 
 // Set environment
 process.env.NODE_ENV = "dev";
-
-// Start the backend server...
-// pm2.connect(function(err) {
-//   if (err) {
-//     logger.info(`Unable to connect PM2: ${err}`);
-//     process.exit(2);
-//   }
-
-//   pm2.start(
-//     {
-//       name: "eisensync",
-//       script: "./server/server.js", // Script to be run
-//       exec_mode: "cluster",
-//       instances: 1,
-//       max_memory_restart: "5000M", // Optional: Restarts your app if it reaches 5GB
-//       noDaemonMode: false,
-//       watch: true
-//     },
-//     function(err, apps) {
-//       logger.info(`Unable to start PM2: ${err}`);
-//       pm2.disconnect(); // Disconnects from PM2
-//       if (err) throw err;
-//     }
-//   );
-// });
 
 let mainWindow, tray;
 let forceQuit = false;
@@ -73,29 +48,76 @@ app.on("ready", () => {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 650,
+    skipTaskbar: true,
     title: "EisenSync - Syncing files made simple",
-    icon: path.join(__dirname, "src/assets/logos/256.png")
+    show: false,
+    icon: path.join(__dirname, "src/assets/logos/256.png"),
+    webPreferences: {
+      backgroundThrottling: false,
+    }
   });
 
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
 
+  tray.on('right-click', () => {
+    mainWindow.loadURL(
+      url.format({
+        pathname: path.join(__dirname + "/dist/index.html"),
+        protocol: "file:",
+        slashes: true,
+        hash: "/account/manage?cached=1"
+      })
+    );
+    mainWindow.show();
+  });
+
+  // Blink the tray icon if the sync is in progress...
+  // ipcMain.on('isSyncing', (event, isSyncing) => {
+  //   if (isSyncing === true) {
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray_refresh.png`));
+  //   } else {
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+  //   }
+  // });
+
+  // ipcMain.on('isSyncing', (event, isSyncing) => {
+  //   let timer = setInterval(() => {
+  //     let trayMode = false;
+  //     let trayIcon = 'tray.png';
+
+  //     if (isSyncing === true) {
+  //       trayMode = !trayMode;
+  //       if (!trayMode) {
+  //         trayIcon = 'tray_refresh.png';
+  //       }
+  //       tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
+  //     }
+  //   }, 1000);
+
+  //   if (isSyncing === false) {
+  //     clearInterval(timer);
+  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+  //   }
+  // });
+
+  // let trayMode = false;
+  // setInterval(() => {
+
+
+
+
+  //   trayMode = !trayMode;
+  //   let trayIcon = 'tray.png';
+  //   if (!trayMode) {
+  //     trayIcon = 'tray_refresh.png';
+  //   }
+  //   tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
+
+  // }, 1000);
+
   // Add tray context menu
   let trayMenuItems = [
-    {
-      label: "Add a remote folder",
-      click() {
-        mainWindow.loadURL(
-          url.format({
-            pathname: path.join(__dirname + "/dist/index.html"),
-            protocol: "file:",
-            slashes: true,
-            hash: "/account-new"
-          })
-        );
-        mainWindow.show();
-      }
-    },
     {
       label: "Manage Accounts",
       click() {
@@ -105,6 +127,20 @@ app.on("ready", () => {
             protocol: "file:",
             slashes: true,
             hash: "/account/manage?cached=1"
+          })
+        );
+        mainWindow.show();
+      }
+    },
+    {
+      label: "Add a remote folder",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/account-new"
           })
         );
         mainWindow.show();
@@ -226,9 +262,6 @@ if (process.env.NODE_ENV !== "production") {
         click(item, focusedWindow) {
           focusedWindow.toggleDevTools();
         }
-      },
-      {
-        role: "reload"
       }
     ]
   });
