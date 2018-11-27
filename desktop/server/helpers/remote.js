@@ -432,8 +432,6 @@ exports.upload = async params => {
         uploadInProgress: true
       });
 
-      console.log('uploadInProgress', '11111');
-
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
