@@ -191,7 +191,6 @@ exports.recursiveUpload = async params => {
 
   if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
     logger.info("upload bailed");
-    console.log('account', account);
     return;
   }
 
