@@ -28,6 +28,10 @@ ipcMain.on("autolaunch", (event, arg) => {
 
 // Listen for app to be ready
 app.on("ready", () => {
+
+  // Hide on taskbar for mac
+  app.dock.hide();
+
   // Patch to fix the "failed to load dev-tools issue". See https://github.com/electron/electron/issues/13008#issuecomment-400261941
   session.defaultSession.webRequest.onBeforeRequest({}, (details, callback) => {
     if (
