@@ -52,7 +52,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icons"
     },
     "win": {
       "certificateFile": "certificates/eisenvault.pfx",
@@ -125,7 +125,7 @@
     "rimraf": "^2.6.2",
     "rxjs": "^6.0.0",
     "socket.io-client": "^2.1.1",
-    "sqlite3": "^4.0.0",
+    "sqlite3": "^4.0.4",
     "validator": "^10.1.0",
     "watch": "^1.0.2",
     "zone.js": "^0.8.26"

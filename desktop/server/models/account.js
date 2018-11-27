@@ -2,6 +2,7 @@ const { db } = require("../config/db");
 const crypt = require("../config/crypt");
 const _path = require('../helpers/path');
 const errorLogModel = require('../models/log-error');
+const emitter = require('../helpers/emitter').emitter;
 
 exports.getAll = async (syncEnabled) => {
   try {
@@ -151,6 +152,7 @@ exports.addAccount = async request => {
         .into("accounts")
         .transacting(trx);
       trx.commit;
+      emitter.emit('addAccount', result);
       return result;
     } catch (error) {
       trx.rollback;

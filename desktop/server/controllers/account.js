@@ -4,6 +4,7 @@ const watcherModel = require("../models/watcher");
 const errorLogModel = require("../models/log-error");
 const watcher = require("../helpers/watcher");
 const rimraf = require('rimraf');
+const emitter = require('../helpers/emitter').emitter;
 
 exports.getAll = async (request, response) => {
   let syncEnabled = request.query.sync_enabled;
@@ -17,12 +18,15 @@ exports.getOne = async (request, response) => {
 };
 
 exports.addAccount = async (request, response) => {
-  // If its a new account add it to the DB
-  let accountId = await accountModel.addAccount(request);
-  await watcher.watchAll();
-  return response.status(201).json({
-    account_id: accountId[0]
+  emitter.once('addAccount', async (data) => {
+    await watcher.watchAll();
+    return response.status(201).json({
+      account_id: data[0]
+    });
   });
+
+  // If its a new account add it to the DB
+  await accountModel.addAccount(request);
 };
 
 exports.updateAccount = async (request, response) => {
