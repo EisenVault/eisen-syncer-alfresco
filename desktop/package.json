@@ -1,6 +1,6 @@
 {
   "name": "eisensync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Soubhik Chatterjee <soubhik.chatterjee@eisenvault.com>",
   "description": "A two-way file sync desktop application for EisenVault",
   "homepage": "https://www.eisenvault.com",
@@ -22,7 +22,7 @@
     "i-linux": "node prerun && npm run build && build --linux",
     "i-mac": "node prerun && npm run build && build -m",
     "i-win": "node prerun && npm run build && build -w",
-    "make-win-cert": "electron-builder create-self-signedcert -p eisenvault"
+    "make-win-cert": "electron-builder create-self-signed-cert -p eisenvault"
   },
   "build": {
     "appId": "com.eisenvault.sync",
@@ -55,9 +55,10 @@
       "icon": "build/icon.png"
     },
     "win": {
-      "certificateFile": "certificates/",
+      "certificateFile": "certificates/eisenvault.pfx",
       "verifyUpdateCodeSignature": false,
       "publisherName": "eisenvault",
+      "rfc3161TimeStampServer": "http://tsa.starfieldtech.com",
       "target": [
         {
           "target": "nsis",
