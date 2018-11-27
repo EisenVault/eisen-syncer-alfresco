@@ -76,6 +76,11 @@ exports.recursiveDownload = async params => {
     });
     logger.info("download step 6");
 
+    if (record && record.upload_in_progress === 1) {
+      logger.info("Bailed download, upload in progress");
+      continue;
+    }
+
     // Possible cases...
     // Case A: Perhaps the file was RENAMED on server. Delete from local
     // Case B: Check last modified date and download if newer
@@ -186,7 +191,6 @@ exports.recursiveUpload = async params => {
 
   if (account.sync_enabled == 0 || account.sync_in_progress == 1) {
     logger.info("upload bailed");
-    console.log('account', account);
     return;
   }
 
@@ -213,7 +217,6 @@ exports.recursiveUpload = async params => {
   // Case A: File created or renamed on local, upload it
   // Case B: File modified on local, upload it
   // Case C: File deleted on server, delete on local
-
   for (let filePath of localFilePathList) {
     logger.info("upload step 5");
     let localFileModifiedDate = _base.getFileModifiedTime(filePath);
@@ -221,10 +224,15 @@ exports.recursiveUpload = async params => {
     // Get the DB record of the filePath
     let record = await nodeModel.getOneByFilePath({
       account: account,
-      filePath: filePath
+      filePath
     });
 
     logger.info("upload step 6");
+
+    if (record && record.download_in_progress === 1) {
+      logger.info("Bailed upload, download in progress. " + filePath);
+      continue;
+    }
 
     // Case A: File created or renamed on local, upload it
     if (!record) {

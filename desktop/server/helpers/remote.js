@@ -102,38 +102,6 @@ exports.getNode = async params => {
     });
 };
 
-
-/**
- * @param object params
- * {
- *  nodeId: string
- * }
- */
-exports.getNodeByNodeId = async params => {
-  let account = params.account;
-  let nodeId = params.nodeId;
-
-  if (!nodeId || !account) {
-    throw new Error("Invalid paramerters");
-  }
-
-  var options = {
-    method: "GET",
-    url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${nodeId}?include=path`,
-    headers: {
-      Connection: "keep-alive",
-      authorization: "Basic " + (await token.get(account))
-    }
-  };
-
-  try {
-    const response = await request(options);
-    return JSON.parse(response);
-  } catch (error) {
-    errorLogModel.add(account.id, error, `${__filename}/getNodeById`);
-  }
-};
-
 /**
  *
  * @param object params
@@ -276,14 +244,28 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
+    // Add refrence to the nodes table
+    await nodeModel.add({
+      account,
+      watcher,
+      nodeId: node.id,
+      remoteFolderPath,
+      filePath: destinationPath,
+      fileUpdateAt: 0,
+      lastDownloadedAt: _base.getCurrentTime(),
+      isFolder: false,
+      isFile: true,
+      downloadInProgress: true
+    });
+
     var totalBytes = 0;
     var recievedSize = 0;
     await request(options)
       .on('error', function (e) {
-        console.error(e);
+        console.error('ON Error:...', e);
         return;
       })
-      .on('response', function (data) {
+      .on('response', async (data) => {
         totalBytes = data.headers['content-length'];
       })
       .on('data', async (chunk) => {
@@ -291,27 +273,11 @@ exports.download = async params => {
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
           let modifiedDate = _base.getFileModifiedTime(destinationPath);
-          if (modifiedDate === 0) {
-            const serverNode = await this.getNodeByNodeId({
-              account,
-              nodeId: node.id
-            });
-            if (serverNode) {
-              modifiedDate = _base.convertToUTC(serverNode.entry.modifiedAt);
-            }
-          }
-
-          // Add refrence to the nodes table
-          await nodeModel.add({
-            account: account,
-            watcher,
-            nodeId: node.id,
-            remoteFolderPath: remoteFolderPath,
+          await nodeModel.setDownloadProgress({
             filePath: destinationPath,
-            fileUpdateAt: modifiedDate,
-            lastDownloadedAt: _base.getCurrentTime(),
-            isFolder: false,
-            isFile: true
+            account,
+            progress: false,
+            fileUpdateAt: modifiedDate
           });
 
           // Add an event log
@@ -388,7 +354,6 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        // Add a record in the db
         await nodeModel.add({
           account,
           watcher,
@@ -453,6 +418,22 @@ exports.upload = async params => {
     };
 
     try {
+      // Add a record in the db
+      await nodeModel.add({
+        account,
+        watcher,
+        nodeId: '',
+        remoteFolderPath: '',
+        filePath,
+        fileUpdateAt: 0,
+        lastUploadedAt: _base.getCurrentTime(),
+        isFolder: false,
+        isFile: true,
+        uploadInProgress: true
+      });
+
+      console.log('uploadInProgress', '11111');
+
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
@@ -461,17 +442,15 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        // Add a record in the db
-        await nodeModel.add({
-          account: account,
-          watcher,
+        // Update the node record once uploaded
+        await nodeModel.setUploadProgress({
+          filePath,
+          account,
+          progress: false,
           nodeId: response.entry.id,
           remoteFolderPath: response.entry.path.name,
-          filePath: params.filePath,
           fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
           lastUploadedAt: _base.getCurrentTime(),
-          isFolder: false,
-          isFile: true
         });
 
         // Add an event log
