@@ -14,13 +14,15 @@ $box-shadow-color: #888888;
 $input-prepend-bg: #e9ebee;
 $footer-color: #888888;
 
-body {
+html, body {
   background-color: $body-bg;
+  height: 100%;
 }
 
 .wrapper-inner {
   display: flex;
   flex-direction: row;
+  height: 100%;
 }
 
 .left-nav {

@@ -9,6 +9,7 @@ const settingUpdateMiddleware = require("../middlewares/settings/update");
 const settingController = require("../controllers/setting");
 
 router.get("/", settingController.getAll);
+router.get("/about", settingController.about);
 router.get("/:name", settingController.getOne);
 router.post("/", settingAddMiddleware, settingController.add);
 router.put("/startup-launch", settingUpdateMiddleware, settingController.startupLaunch);

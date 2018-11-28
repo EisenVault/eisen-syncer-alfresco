@@ -1,84 +1,84 @@
 <h3>Account Details </h3>
 <hr>
 
-<div class="mt-5 table-responsive">
-  <table class="table">
-    <tr>
-      <th colspan="2">
-        <h5 class="float-left">Instance Settings:</h5>
-        <a class="btn btn-info float-right" title="Edit Instance Settings" href="#" routerLink="/account-credentials"
-          [queryParams]="{ accountId:accountId }">Edit</a>
-      </th>
-    </tr>
-    <tr>
-      <th scope="col"><span class="ml-5">Instance URL</span></th>
-      <td>{{ account?.instance_url }}</td>
-    </tr>
-    <tr>
-      <th scope="col"><span class="ml-5">Username</span></th>
-      <td>{{ account?.username }}</td>
-    </tr>
+<div class="wrapper">
 
-    <tr>
-      <th colspan="2">
-        <h5 class="float-left mt-3">Sync Location:</h5>
-        <a class="btn btn-info float-right" title="Edit Sync Location" href="#" routerLink="/account-sync-path"
-          [queryParams]="{ accountId:accountId }">Edit</a>
-      </th>
-    </tr>
-    <tr>
-      <th scope="col"><span class="ml-5">Path</span></th>
-      <td><kbd>{{ account?.sync_path }}</kbd></td>
-    </tr>
-
-    <tr>
-      <th colspan="2">
-        <h5 class="float-left mt-3">Misc. Info:</h5>
-      </th>
-    </tr>
-    <tr>
-      <th scope="col"><span class="ml-5">Auto Sync Enabled</span></th>
-      <td>
-        <span class="badge badge-{{ account?.sync_enabled ? 'success' : 'danger' }}">
-          {{ account?.sync_enabled ? 'Yes' : 'No' }}
-        </span>
-      </td>
-    </tr>
-    <tr>
-      <th scope="col"><span class="ml-5">Last Synced At</span></th>
-      <td>{{ account?.last_synced_at ? (account.last_synced_at | date:'medium':timezone) : 'Unsynced' }}</td>
-    </tr>
-  </table>
-
-
-  <h5 class="mt-3 mb-3 float-left">Sync Department(s)</h5>
-  <a class="btn btn-info float-right" title="Edit Sync Departments" href="#" [routerLink]="'/account-remote-folder/' + accountId"
-    [queryParams]="{ edit: true }">Edit</a>
-
-  <!-- Department Table -->
-  <table class="table table-bordered table-sm" *ngIf="departments.length > 0; else nodepartment">
-    <thead>
+  <div class="mt-5 table-responsive">
+    <table class="table">
       <tr>
-        <th scope="col">Department Name</th>
-        <th scope="col">Role</th>
+        <th colspan="2">
+          <h5 class="float-left">Instance Settings:</h5>
+          <a class="btn btn-info float-right" title="Edit Instance Settings" href="#" (click)="onEdit($event, '/account-credentials')">Edit</a>
+        </th>
       </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let department of departments">
-        <td>{{ department.title }}</td>
-        <td>{{ department.role }}</td>
+      <tr>
+        <th scope="col"><span class="ml-5">Instance URL</span></th>
+        <td>{{ account?.instance_url }}</td>
       </tr>
-    </tbody>
-  </table>
+      <tr>
+        <th scope="col"><span class="ml-5">Username</span></th>
+        <td>{{ account?.username }}</td>
+      </tr>
 
-  <ng-template #nodepartment>
-    <div class="clearfix">
-      <p *ngIf="departmentLoaded === false">LOADING...</p>
-      <p *ngIf="departmentLoaded === true">No departments are currently being watched.</p>
-    </div>
-  </ng-template>
-  <!-- Department Table End -->
+      <tr>
+        <th colspan="2">
+          <h5 class="float-left mt-3">Sync Location:</h5>
+          <a class="btn btn-info float-right" title="Edit Sync Location" href="#" (click)="onEdit($event, '/account-sync-path')">Edit</a>
+        </th>
+      </tr>
+      <tr>
+        <th scope="col"><span class="ml-5">Path</span></th>
+        <td><kbd>{{ account?.sync_path }}</kbd></td>
+      </tr>
+
+      <tr>
+        <th colspan="2">
+          <h5 class="float-left mt-3">Misc. Info:</h5>
+        </th>
+      </tr>
+      <tr>
+        <th scope="col"><span class="ml-5">Auto Sync Enabled</span></th>
+        <td>
+          <span class="badge badge-{{ account?.sync_enabled ? 'success' : 'danger' }}">
+            {{ account?.sync_enabled ? 'Yes' : 'No' }}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="col"><span class="ml-5">Last Synced At</span></th>
+        <td>{{ account?.last_synced_at ? (account.last_synced_at | date:'medium':timezone) : 'Unsynced' }}</td>
+      </tr>
+    </table>
+
+
+    <h5 class="mt-3 mb-3 float-left">Sync Department(s)</h5>
+    <a class="btn btn-info float-right" title="Edit Sync Departments" href="#" (click)="onEdit($event, '/account-remote-folder/' + accountId)">Edit</a>
+
+    <!-- Department Table -->
+    <table class="table table-bordered table-sm" *ngIf="departments.length > 0; else nodepartment">
+      <thead>
+        <tr>
+          <th scope="col">Department Name</th>
+          <th scope="col">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let department of departments">
+          <td>{{ department.title }}</td>
+          <td>{{ department.role }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #nodepartment>
+      <div class="clearfix">
+        <p *ngIf="departmentLoaded === false">LOADING...</p>
+        <p *ngIf="departmentLoaded === true">No departments are currently being watched.</p>
+      </div>
+    </ng-template>
+    <!-- Department Table End -->
+  </div>
+
+  <a href="#" class="btn btn-info mt-5" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Back to Manage
+    Accounts</a>
 </div>
-
-<a href="#" class="btn btn-info mt-5" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Back to Manage
-  Accounts</a>

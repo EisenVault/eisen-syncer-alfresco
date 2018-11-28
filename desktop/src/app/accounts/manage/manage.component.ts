@@ -50,12 +50,14 @@ export class ManageComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['cached'] === '1') {
         this._getAccounts();
+        this._getSyncStatus();
         this.isAppLoading = false;
       }
     });
 
     setTimeout(() => {
       this._getAccounts();
+      this._getSyncStatus();
 
       // Get the sync interval
       this._settingService
@@ -94,7 +96,7 @@ export class ManageComponent implements OnInit {
     // For every x seconds, we will make a request to the account api and check
     // which accounts are still syncing, so that we can attach loaders for those accounts
     setInterval(() => {
-      this._getAccounts();
+      this._getSyncStatus();
     }, this.INTERVAL);
   }
 
@@ -118,11 +120,6 @@ export class ManageComponent implements OnInit {
     this.showAccountLoaders.splice(position, 1);
     const currentTimestamp = Math.round(new Date().getTime() / 1000);
     const timeDifference = Math.abs(currentTimestamp - account.last_synced_at);
-
-    // Send the syncing status to the mainProcess
-    if (this._electronService.isElectronApp) {
-      // this._electronService.ipcRenderer.sendSync('isSyncing', this.enabledSyncAccounts.length > 0);
-    }
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
@@ -160,6 +157,17 @@ export class ManageComponent implements OnInit {
         this.accounts = accounts;
         this.miscError = '';
         this.isAppLoading = false;
+      },
+      error => {
+        this.isAppLoading = false;
+        this.miscError = 'Cannot connect to the backend service.';
+      }
+    );
+  }
+
+  _getSyncStatus() {
+    this._accountService.getAccounts().subscribe(
+      (accounts: IAccounts[]) => {
         for (const account of accounts) {
           // This is for the spinning loader icon
           const index = this.showAccountLoaders.indexOf(account.id);
@@ -229,8 +237,7 @@ export class ManageComponent implements OnInit {
   deleteAccount(account) {
     if (confirm('Proceed with the account deletion process?')) {
       const answer = confirm(
-        `Account was deleted successfully! \n
-        Would you like to DELETE the contents of the folder '${account.sync_path}' from your local path? This data will however NOT get deleted from the server.`
+        `Account was deleted successfully!\n\nWould you like to DELETE the contents of the folder '${account.sync_path}' from your local path? This data will however NOT get deleted from the server.`
       );
       this._accountService
         .deleteAccount(account.id, answer)

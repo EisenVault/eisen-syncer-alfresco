@@ -180,6 +180,7 @@ exports.updateAccount = async (accountId, request) => {
         .where("id", accountId)
         .transacting(trx);
       trx.commit;
+      emitter.emit('updateAccount', result);
       return result;
 
     } catch (error) {
@@ -204,6 +205,7 @@ exports.updateCredentials = async (accountId, request) => {
         .where("id", accountId)
         .transacting(trx);
       trx.commit;
+      emitter.emit('updateCredentials', result);
       return result;
 
     } catch (error) {
@@ -214,7 +216,7 @@ exports.updateCredentials = async (accountId, request) => {
 
 };
 
-exports.updateSyncPath = async (accountId, request) => {
+exports.updateSyncPath = async (account, request) => {
 
   db.transaction(async (trx) => {
     try {
@@ -223,9 +225,10 @@ exports.updateSyncPath = async (accountId, request) => {
           sync_path: _path.toUnix(request.body.sync_path),
           updated_at: new Date().getTime()
         })
-        .where("id", accountId);
-      transacting(trx);
+        .where("id", account.id)
+        .transacting(trx);
       trx.commit;
+      emitter.emit('updateSyncPath', result);
       return result;
 
     } catch (error) {
@@ -251,6 +254,7 @@ exports.updateSync = async (accountId, request) => {
         .where("id", accountId)
         .transacting(trx);
       trx.commit;
+      emitter.emit('updateSync', result);
       return result;
 
     } catch (error) {
@@ -299,6 +303,7 @@ exports.syncComplete = async (accountId) => {
         .where("id", accountId)
         .transacting(trx);
       trx.commit;
+      emitter.emit('syncComplete', result);
       return result;
 
     } catch (error) {

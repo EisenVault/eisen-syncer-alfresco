@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AccountService } from '../../services/account.service';
 import { SiteService } from '../../services/site.service';
 import { SettingService } from '../../services/setting.service';
-import { ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Setting } from '../../models/setting';
 import { WatchData } from '../../models/watcher';
 import moment from 'moment-timezone';
@@ -32,6 +32,7 @@ export class DetailComponent implements OnInit {
   public timezone: string;
 
   constructor(
+    private _router: Router,
     private _route: ActivatedRoute,
     private _siteService: SiteService,
     private _settingService: SettingService,
@@ -71,6 +72,30 @@ export class DetailComponent implements OnInit {
       .subscribe((result: Setting) => {
         this.timezone = moment(new Date()).tz(result.value).format('Z');
       });
+
+
+  }
+
+  onEdit(event, link) {
+    event.preventDefault();
+
+    this._accountService.getAccount(this.accountId).subscribe(
+      account => {
+        if (account.sync_enabled === 1) {
+          alert('You cannot edit an account when "Auto Sync" is turned on. ' +
+            'Please turn off "Auto Sync" from the manage accounts page first.');
+          return;
+        } else {
+          this._router.navigate([link], {
+            queryParams: { accountId: this.accountId, edit: true }
+          });
+        }
+
+      },
+      error => {
+        console.log(error);
+      }
+    );
 
 
   }
