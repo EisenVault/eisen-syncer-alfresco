@@ -30,27 +30,37 @@ exports.addAccount = async (request, response) => {
 };
 
 exports.updateAccount = async (request, response) => {
-  await accountModel.updateAccount(request.params.id, request);
-  await watcher.watchAll();
-  return response.status(200).json({
-    account_id: request.params.id
+  emitter.once('updateAccount', async (data) => {
+    await watcher.watchAll();
+    return response.status(200).json({
+      account_id: request.params.id
+    });
   });
+
+  await accountModel.updateAccount(request.params.id, request);
 };
 
 exports.updateCredentials = async (request, response) => {
-  await accountModel.updateCredentials(request.params.id, request);
-  await watcher.watchAll();
-  return response.status(200).json({
-    account_id: request.params.id
+  emitter.once('updateCredentials', async (data) => {
+    await watcher.watchAll();
+    return response.status(200).json({
+      account_id: request.params.id
+    });
   });
+
+  await accountModel.updateCredentials(request.params.id, request);
 };
 
 exports.updateSyncPath = async (request, response) => {
-  await accountModel.updateSyncPath(request.params.id, request);
-  await watcher.watchAll();
-  return response.status(200).json({
-    account_id: request.params.id
+  emitter.once('updateSyncPath', async (data) => {
+    await watcher.watchAll();
+    return response.status(200).json({
+      account_id: request.params.id
+    });
   });
+
+  const account = await accountModel.getOne(request.params.id);
+  await accountModel.updateSyncPath(account, request);
 };
 
 

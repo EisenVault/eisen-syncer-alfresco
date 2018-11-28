@@ -80,47 +80,30 @@ app.on("ready", () => {
 
   // Blink the tray icon if the sync is in progress...
   // ipcMain.on('isSyncing', (event, isSyncing) => {
-  //   if (isSyncing === true) {
-  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray_refresh.png`));
-  //   } else {
-  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
-  //   }
-  // });
 
-  // ipcMain.on('isSyncing', (event, isSyncing) => {
-  //   let timer = setInterval(() => {
-  //     let trayMode = false;
-  //     let trayIcon = 'tray.png';
-
+  //   var nozzle = true;
+  //   var timer = setInterval(() => {
   //     if (isSyncing === true) {
-  //       trayMode = !trayMode;
-  //       if (!trayMode) {
-  //         trayIcon = 'tray_refresh.png';
+  //       nozzle = !nozzle;
+  //       if (nozzle) {
+  //         console.log('nozzle', 'yes');
+  //         tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+  //       } else {
+  //         console.log('nozzle', 'no');
+  //         tray.setImage(path.join(__dirname, `/src/assets/logos/tray_refresh.png`));
   //       }
-  //       tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
   //     }
-  //   }, 1000);
+
+  //   }, 500);
 
   //   if (isSyncing === false) {
+  //     console.log('isSyncing', isSyncing);
+
   //     clearInterval(timer);
   //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
   //   }
+
   // });
-
-  // let trayMode = false;
-  // setInterval(() => {
-
-
-
-
-  //   trayMode = !trayMode;
-  //   let trayIcon = 'tray.png';
-  //   if (!trayMode) {
-  //     trayIcon = 'tray_refresh.png';
-  //   }
-  //   tray.setImage(path.join(__dirname, `/src/assets/logos/${trayIcon}`));
-
-  // }, 1000);
 
   // Add tray context menu
   let trayMenuItems = [

@@ -3,6 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Account } from '../models/account';
 
+interface IAccount {
+  id: number;
+  instance_url: string;
+  sync_enabled: number;
+  sync_frequency: number;
+  sync_in_progress: number;
+  sync_path: string;
+  username: string;
+  last_synced_at: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -14,7 +25,7 @@ export class AccountService {
   }
 
   getAccount(accountId) {
-    return this._http.get(`${environment.apiUrl}/accounts/${accountId}`);
+    return this._http.get<IAccount>(`${environment.apiUrl}/accounts/${accountId}`);
   }
 
   addAccount(params) {
