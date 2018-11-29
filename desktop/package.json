@@ -68,7 +68,7 @@
       "oneClick": true,
       "perMachine": true,
       "allowElevation": true,
-      "allowToChangeInstallationDirectory": false,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "runAfterFinish": true,
       "installerIcon": "./build/icon.ico"
