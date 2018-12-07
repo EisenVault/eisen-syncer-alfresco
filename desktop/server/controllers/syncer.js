@@ -3,7 +3,7 @@ const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 const watcherModel = require("../models/watcher");
 const { logger } = require("../helpers/logger");
-
+const path = require('path');
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
@@ -11,7 +11,7 @@ exports.download = async (request, response) => {
 
   const account = await accountModel.getOne(request.params.accountId);
 
-  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+  if (!account || account.sync_enabled == 0) {
     logger.info("Download Bailed");
     return;
   }
@@ -58,7 +58,7 @@ exports.upload = async (request, response) => {
 
   let account = await accountModel.getOne(request.body.account_id);
 
-  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+  if (!account || account.sync_enabled == 0) {
     logger.info("Upload Bailed");
     return;
   }
@@ -70,10 +70,20 @@ exports.upload = async (request, response) => {
     await accountModel.syncStart(account.id);
 
     for (const watcher of watchers) {
+
+      // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
+      const rootFolder = path.join(
+        account.sync_path,
+        watcher.watch_folder.substring(
+          watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
+        ),
+        "/*"
+      );
+
       await ondemand.recursiveUpload({
         account,
         watcher,
-        rootNodeId: watcher.document_library_node
+        rootFolder
       });
     }
 

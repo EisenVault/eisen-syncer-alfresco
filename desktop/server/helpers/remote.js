@@ -8,6 +8,7 @@ const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
+const Utimes = require('@ronomon/utimes');
 
 // Logger
 const { logger } = require("./logger");
@@ -244,6 +245,9 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
+    // work in progress.....
+    // when a file is in progress, how do you expect it to have a modified time?
+    // figure out why some of the downloaded files are not updateing the time
     // Add refrence to the nodes table
     await nodeModel.add({
       account,
@@ -251,7 +255,7 @@ exports.download = async params => {
       nodeId: node.id,
       remoteFolderPath,
       filePath: destinationPath,
-      fileUpdateAt: 0,
+      fileUpdateAt: mtime,
       lastDownloadedAt: _base.getCurrentTime(),
       isFolder: false,
       isFile: true,
@@ -272,22 +276,34 @@ exports.download = async params => {
         recievedSize += chunk.length;
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
-          let modifiedDate = _base.getFileModifiedTime(destinationPath);
-          await nodeModel.setDownloadProgress({
-            filePath: destinationPath,
-            account,
-            progress: false,
-            fileUpdateAt: modifiedDate
-          });
+          // Update the time meta properties of the downloaded file
+          const btime = _base.convertToUTC(node.createdAt);
+          const mtime = _base.convertToUTC(node.modifiedAt);
+          const atime = undefined;
 
-          // Add an event log
-          await eventLogModel.add(
-            account.id,
-            "DOWNLOAD_FILE",
-            `Downloaded File: ${destinationPath} from ${account.instance_url}`
-          );
+          if (mtime <= 0) {
+            console.log('mtime', destinationPath, mtime);
+          }
+
+
+          setTimeout(() => {
+            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => {
+              await nodeModel.setDownloadProgress({
+                filePath: destinationPath,
+                account,
+                progress: false,
+                fileUpdateAt: mtime
+              });
+
+              // Add an event log
+              await eventLogModel.add(
+                account.id,
+                "DOWNLOAD_FILE",
+                `Downloaded File: ${destinationPath} from ${account.instance_url}`
+              );
+            });
+          }, 1000);
         }
-
       })
       .pipe(fs.createWriteStream(destinationPath));
 
@@ -425,7 +441,7 @@ exports.upload = async params => {
         nodeId: '',
         remoteFolderPath: '',
         filePath,
-        fileUpdateAt: 0,
+        fileUpdateAt: 20,
         lastUploadedAt: _base.getCurrentTime(),
         isFolder: false,
         isFile: true,

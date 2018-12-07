@@ -1,6 +1,6 @@
 {
   "name": "eisensync",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Soubhik Chatterjee <soubhik.chatterjee@eisenvault.com>",
   "description": "A two-way file sync desktop application for EisenVault",
   "homepage": "https://www.eisenvault.com",
@@ -103,6 +103,7 @@
     "@angular/platform-browser": "^6.0.0",
     "@angular/platform-browser-dynamic": "^6.0.0",
     "@angular/router": "^6.0.0",
+    "@ronomon/utimes": "^2.3.1",
     "auto-launch": "^5.0.5",
     "body-parser": "^1.18.2",
     "btoa": "^1.2.1",
