@@ -90,7 +90,7 @@ exports.updateSync = async (request, response) => {
 };
 
 exports.updateSyncTime = async (request, response) => {
-  await accountModel.syncComplete(request.params.id);
+  await accountModel.syncComplete({account: request.params.id});
   await watcher.watchAll();
 
   return response.status(200).json({

@@ -74,6 +74,10 @@ exports.getNode = async params => {
     throw new Error("Invalid paramerters");
   }
 
+  if (record.node_id === '') {
+    return;
+  }
+
   var options = {
     method: "GET",
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
@@ -448,8 +452,8 @@ exports.upload = async params => {
         nodeId: '',
         remoteFolderPath: '',
         filePath,
-        fileUpdateAt: 20,
-        lastUploadedAt: _base.getCurrentTime(),
+        fileUpdateAt: 0,
+        lastUploadedAt: 0,
         isFolder: false,
         isFile: true,
         uploadInProgress: true
@@ -457,7 +461,26 @@ exports.upload = async params => {
 
       let response = await request(options)
         .on('error', function (e) {
-          console.error(e);
+          console.error('REPONSE ERROR HAPPEED', e);
+        })
+        .on('data', (data) => {
+
+          try {
+            const uploadedData = JSON.parse(data.toString('utf8'));
+            console.log('size', uploadedData.entry.content.sizeInBytes);
+            if (path.basename(filePath) != uploadedData.entry.name) {
+              console.log('filePath', filePath, uploadedData.entry.name);
+            }
+
+          } catch (error) {
+            console.log('UNABLE TO PARSE JSON', data.toString('utf8'));
+          }
+
+          // const uploadedData = JSON.parse(data.toString('utf8'));
+          // console.log('size', uploadedData.entry.content.sizeInBytes);
+          //           var stats = fs.statSync("myfile.txt")
+          // var fileSizeInBytes = stats["size"]
+          // console.log('FINISHED.....', JSON.parse(data.toString('utf8')));
         });
 
       response = JSON.parse(response.body);
@@ -469,27 +492,26 @@ exports.upload = async params => {
         const atime = undefined;
 
         setTimeout(() => {
-          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
-            // Update the node record once uploaded
-            await nodeModel.setUploadProgress({
-              filePath,
-              account,
-              progress: false,
-              nodeId: response.entry.id,
-              remoteFolderPath: response.entry.path.name,
-              fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-              lastUploadedAt: _base.getCurrentTime(),
-            });
-
-            // Add an event log
-            await eventLogModel.add(
-              account.id,
-              "UPLOAD_FILE",
-              `Uploaded File: ${filePath} to ${account.instance_url}`
-            );
-
-          });
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
         }, 0); //end setTimeout
+
+        // Update the node record once uploaded
+        await nodeModel.setUploadProgress({
+          filePath,
+          account,
+          progress: false,
+          nodeId: response.entry.id,
+          remoteFolderPath: response.entry.path.name,
+          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+          lastUploadedAt: _base.getCurrentTime(),
+        });
+
+        // Add an event log
+        await eventLogModel.add(
+          account.id,
+          "UPLOAD_FILE",
+          `Uploaded File: ${filePath} to ${account.instance_url}`
+        );
 
         return response.entry.id;
       }
@@ -540,7 +562,6 @@ exports.watchFolderGuard = async params => {
       _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
       INTERVAL
     ) {
-      // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
     }
   }

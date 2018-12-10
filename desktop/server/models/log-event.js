@@ -54,7 +54,7 @@ exports.getCount = async () => {
 };
 
 exports.add = async (accountId, type, description) => {
-
+return;
   let eventId = [[]];
   db.transaction(async (trx) => {
 

@@ -38,7 +38,7 @@ exports.create = async (account, params) => {
       watcher.watchAll();
 
       // Set the sync completed time and also set issync flag to off
-      await accountModel.syncComplete(account.id);
+      await accountModel.syncComplete({account: account.id});
     }
 
     // If the node is a file, we will download the file

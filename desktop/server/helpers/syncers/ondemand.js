@@ -32,7 +32,7 @@ exports.recursiveDownload = async params => {
   logger.info("download step 1");
 
   if (
-    account.sync_enabled == 0) {
+    account.sync_enabled == 0 || (recursive === false && account.download_in_progress == 1)) {
     logger.info("download bailed");
     return;
   }
@@ -74,10 +74,12 @@ exports.recursiveDownload = async params => {
     });
     logger.info("download step 6");
 
-    if (record && record.upload_in_progress === 1) {
+    if (record && (record.download_in_progress === 1 || record.upload_in_progress === 1)) {
       logger.info("Bailed download, upload in progress");
       continue;
     }
+
+    logger.info("download step 6-1");
 
     // Possible cases...
     // Case A: Perhaps the file was RENAMED on server. Delete from local
@@ -184,12 +186,11 @@ exports.recursiveDownload = async params => {
 exports.recursiveUpload = async params => {
   const account = params.account;
   const watcher = params.watcher;
-  // const rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
   let rootFolder = params.rootFolder;
 
   logger.info("upload step 1");
 
-  if (account.sync_enabled == 0) {
+  if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("upload bailed");
     return;
   }
@@ -213,7 +214,7 @@ exports.recursiveUpload = async params => {
 
     logger.info("upload step 4");
 
-    if (record && record.download_in_progress === 1) {
+    if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
       logger.info("Bailed upload, download in progress. " + filePath);
       return;
     }
@@ -231,7 +232,7 @@ exports.recursiveUpload = async params => {
 
     logger.info("upload step 5");
 
-    // If the record exists in the DB
+    // If the record exists in the DB (making sure upload is not in progress)
     if (record) {
       logger.info("upload step 6");
 
@@ -251,7 +252,7 @@ exports.recursiveUpload = async params => {
         }
 
         // Case C: File deleted on server? delete on local
-        if (data.statusCode === 404) {
+        if (data && data.statusCode === 404) {
           logger.info(
             "Node not available on server, deleting on local: " + data.record.file_path + " - " + data.record.id
           );
@@ -305,156 +306,6 @@ exports.recursiveUpload = async params => {
   return;
 }
 
-
-
-/**
- *
- * @param object params
- * {
- *  account: Account<Object>,
- *  syncPath: string,
- *  rootNodeId: string,
- * }
- */
-exports.___recursiveUploadOld = async params => {
-  const account = params.account;
-  const watcher = params.watcher;
-  const rootNodeId = params.rootNodeId; // This should be the documentLibrary nodeId
-
-  logger.info("upload step 1");
-
-  if (account.sync_enabled == 0) {
-    logger.info("upload bailed");
-    return;
-  }
-
-  logger.info("upload step 2");
-
-  // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
-  let rootFolder = path.join(
-    account.sync_path,
-    watcher.watch_folder.substring(
-      watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
-    ),
-    "**",
-    "*"
-  );
-
-  logger.info("upload step 3");
-
-  // This function will list all files/folders/sub-folders recursively.
-  let localFilePathList = glob.sync(rootFolder);
-
-  logger.info("upload step 4");
-
-  // Following cases are possible...
-  // Case A: File created or renamed on local, upload it
-  // Case B: File modified on local, upload it
-  // Case C: File deleted on server, delete on local
-  for (let filePath of localFilePathList) {
-    logger.info("upload step 5");
-    let localFileModifiedDate = _base.getFileModifiedTime(filePath);
-
-    // Get the DB record of the filePath
-    let record = await nodeModel.getOneByFilePath({
-      account: account,
-      filePath
-    });
-
-    logger.info("upload step 6");
-
-    if (record && record.download_in_progress === 1) {
-      logger.info("Bailed upload, download in progress. " + filePath);
-      continue;
-    }
-
-    // Case A: File created or renamed on local, upload it
-    if (!record) {
-      logger.info("New file, uploading..." + filePath);
-      await remote.upload({
-        account,
-        watcher,
-        filePath,
-        rootNodeId
-      });
-      continue;
-    }
-
-    // Case B: File modified on local, upload it
-    else if (
-      record &&
-      localFileModifiedDate > record.last_uploaded_at &&
-      localFileModifiedDate > record.last_downloaded_at &&
-      Math.abs(localFileModifiedDate - record.last_downloaded_at) > 10 && // only upload if file wasnt downloaded in the last 10 seconds
-      record.is_file === 1
-    ) {
-      logger.info("File modified on local, uploading..." + filePath);
-      // Upload the local changes to the server.
-      await remote.upload({
-        account,
-        watcher,
-        filePath,
-        rootNodeId
-      });
-      continue;
-    }
-
-    // Case C: File deleted on server? delete on local
-    else if (
-      record &&
-      (record.last_uploaded_at > 0 || record.last_downloaded_at > 0)
-    ) {
-      logger.info("upload step 6-1");
-
-      // Sleep for x seconds, so that server does not reject the request...
-      await _base.sleep(1000);
-
-      emitter.once('getNode' + record.node_id, data => {
-
-        // If the node is not found on the server, delete the file on local
-        if (data.statusCode === 404) {
-          logger.info(
-            "Node not available on server, deleting on local: " + data.record.file_path + " - " + data.record.id
-          );
-          rimraf(data.record.file_path, async () => {
-            await nodeModel.forceDelete({
-              account: data.account,
-              nodeId: data.record.node_id
-            });
-          });
-        }
-
-        // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
-        if (data.statusCode === 200 && data.response.entry && data.response.entry.path.name !== data.record.remote_folder_path) {
-          logger.info(
-            "Node was moved to some other location, deleting on local: " + data.record.file_path + " - " + data.record.id
-          );
-
-          rimraf(data.record.file_path, async () => {
-            await nodeModel.forceDeleteByPath({
-              account: data.account,
-              filePath: data.record.file_path
-            });
-          });
-        }
-      });
-
-      await remote.getNode({
-        account,
-        record
-      });
-
-      logger.info("upload step 6-2. " + record.file_path);
-
-    }
-    logger.info("upload step 7");
-  } // Filelist iteration end
-  logger.info("upload step 8");
-  localFilePathList = [];
-  logger.info("FINISHED UPLOAD...");
-  return;
-};
-
 /**
  *
  * @param object params
@@ -476,7 +327,9 @@ exports.deleteByPath = async params => {
 
   try {
     // Start the sync
-    await accountModel.syncStart(account.id);
+    await accountModel.syncStart({
+      account
+    });
 
     let records = await nodeModel.getAllByFileOrFolderPath({
       account: account,
@@ -491,12 +344,16 @@ exports.deleteByPath = async params => {
       });
     }
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account
+    });
   } catch (error) {
     logger.error(`Error Message : ${JSON.stringify(error)}`);
     await errorLogModel.add(account.id, error);
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account
+    });
   }
 };
 

@@ -14,7 +14,8 @@ if (!fs.existsSync(dbPath)) {
 const knex = require("knex")({
   client: "sqlite3",
   connection: {
-    filename: dbPath
+    filename: dbPath,
+    connectTimeout: 90000
   },
   useNullAsDefault: true,
   // pool: { min: 1, max: 100 },
