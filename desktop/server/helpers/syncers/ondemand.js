@@ -240,7 +240,7 @@ exports.recursiveUpload = async params => {
       emitter.once('getNode' + record.node_id, async data => {
 
         // Case B: File modified on local, upload it
-        if (data.statusCode === 200 && record.is_file === 1 && localFileModifiedDate > _base.convertToUTC(data.response.entry.modifiedAt)) {
+        if (data.statusCode === 200 && data.record.is_file === 1 && localFileModifiedDate > _base.convertToUTC(data.response.entry.modifiedAt)) {
           logger.info("File modified on local, uploading..." + filePath);
           // Upload the local changes to the server.
           await remote.upload({
@@ -252,7 +252,7 @@ exports.recursiveUpload = async params => {
         }
 
         // Case C: File deleted on server? delete on local
-        if (data && data.statusCode === 404) {
+        if (data && data.statusCode === 404 && data.record.download_in_progress == 0  && data.record.upload_in_progress == 0) {
           logger.info(
             "Node not available on server, deleting on local: " + data.record.file_path + " - " + data.record.id
           );

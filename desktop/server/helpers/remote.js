@@ -461,7 +461,7 @@ exports.upload = async params => {
 
       let response = await request(options)
         .on('error', function (e) {
-          console.error('REPONSE ERROR HAPPEED', e);
+          console.error('REPONSE ERROR HAPPEED', filePath);
         })
         .on('data', (data) => {
 
