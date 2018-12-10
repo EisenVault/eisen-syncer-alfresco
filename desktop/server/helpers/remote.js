@@ -255,7 +255,7 @@ exports.download = async params => {
       nodeId: node.id,
       remoteFolderPath,
       filePath: destinationPath,
-      fileUpdateAt: mtime,
+      fileUpdateAt: 0,
       lastDownloadedAt: _base.getCurrentTime(),
       isFolder: false,
       isFile: true,
@@ -273,6 +273,7 @@ exports.download = async params => {
         totalBytes = data.headers['content-length'];
       })
       .on('data', async (chunk) => {
+
         recievedSize += chunk.length;
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
@@ -280,11 +281,6 @@ exports.download = async params => {
           const btime = _base.convertToUTC(node.createdAt);
           const mtime = _base.convertToUTC(node.modifiedAt);
           const atime = undefined;
-
-          if (mtime <= 0) {
-            console.log('mtime', destinationPath, mtime);
-          }
-
 
           setTimeout(() => {
             Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => {
@@ -302,7 +298,7 @@ exports.download = async params => {
                 `Downloaded File: ${destinationPath} from ${account.instance_url}`
               );
             });
-          }, 1000);
+          }, 0);
         }
       })
       .pipe(fs.createWriteStream(destinationPath));
@@ -370,24 +366,35 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        await nodeModel.add({
-          account,
-          watcher,
-          nodeId: response.entry.id,
-          remoteFolderPath: response.entry.path.name,
-          filePath: params.filePath,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),
-          isFolder: true,
-          isFile: false
-        });
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(response.entry.createdAt);
+        const mtime = _base.convertToUTC(response.entry.modifiedAt);
+        const atime = undefined;
 
-        // Add an event log
-        await eventLogModel.add(
-          account.id,
-          "UPLOAD_FOLDER",
-          `Uploaded Folder: ${filePath} to ${account.instance_url}`
-        );
+        setTimeout(() => {
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
+            await nodeModel.add({
+              account,
+              watcher,
+              nodeId: response.entry.id,
+              remoteFolderPath: response.entry.path.name,
+              filePath: filePath,
+              fileUpdateAt: mtime,
+              lastUploadedAt: _base.getCurrentTime(),
+              isFolder: true,
+              isFile: false,
+              progress: false,
+            });
+
+            // Add an event log
+            await eventLogModel.add(
+              account.id,
+              "UPLOAD_FOLDER",
+              `Uploaded Folder: ${filePath} to ${account.instance_url}`
+            );
+          });
+        }, 0);
+
         return response.entry.id;
       }
     } catch (error) {
@@ -456,23 +463,34 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        // Update the node record once uploaded
-        await nodeModel.setUploadProgress({
-          filePath,
-          account,
-          progress: false,
-          nodeId: response.entry.id,
-          remoteFolderPath: response.entry.path.name,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),
-        });
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(response.entry.createdAt);
+        const mtime = _base.convertToUTC(response.entry.modifiedAt);
+        const atime = undefined;
 
-        // Add an event log
-        await eventLogModel.add(
-          account.id,
-          "UPLOAD_FILE",
-          `Uploaded File: ${filePath} to ${account.instance_url}`
-        );
+        setTimeout(() => {
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
+            // Update the node record once uploaded
+            await nodeModel.setUploadProgress({
+              filePath,
+              account,
+              progress: false,
+              nodeId: response.entry.id,
+              remoteFolderPath: response.entry.path.name,
+              fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+              lastUploadedAt: _base.getCurrentTime(),
+            });
+
+            // Add an event log
+            await eventLogModel.add(
+              account.id,
+              "UPLOAD_FILE",
+              `Uploaded File: ${filePath} to ${account.instance_url}`
+            );
+
+          });
+        }, 0); //end setTimeout
+
         return response.entry.id;
       }
 
