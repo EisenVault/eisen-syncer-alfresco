@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
+const request2 = require("request");
 const emitter = require('../helpers/emitter').emitter;
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
@@ -412,7 +413,7 @@ exports.upload = async params => {
         });
       } else {
         // Add an error log
-        await errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
+        errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
       }
     }
 
@@ -460,80 +461,63 @@ exports.upload = async params => {
       });
 
       let response = await request(options)
-        .on('error', function (e) {
-          console.error('REPONSE ERROR HAPPEED', filePath);
+        .then(async (response) => {
+          response = JSON.parse(response.body);
+
+          // Update the time meta properties of the downloaded file
+          const btime = _base.convertToUTC(response.entry.createdAt);
+          const mtime = _base.convertToUTC(response.entry.modifiedAt);
+          const atime = undefined;
+
+          setTimeout(() => {
+            Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
+          }, 0); //end setTimeout
+
+          // Update the node record once uploaded
+          await nodeModel.setUploadProgress({
+            filePath,
+            account,
+            progress: false,
+            nodeId: response.entry.id,
+            remoteFolderPath: response.entry.path.name,
+            fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+            lastUploadedAt: _base.getCurrentTime(),
+          });
+
+          // Add an event log
+          await eventLogModel.add(
+            account.id,
+            "UPLOAD_FILE",
+            `Uploaded File: ${filePath} to ${account.instance_url}`
+          );
+
         })
-        .on('data', (data) => {
-
-          try {
-            const uploadedData = JSON.parse(data.toString('utf8'));
-            console.log('size', uploadedData.entry.content.sizeInBytes);
-            if (path.basename(filePath) != uploadedData.entry.name) {
-              console.log('filePath', filePath, uploadedData.entry.name);
-            }
-
-          } catch (error) {
-            console.log('UNABLE TO PARSE JSON', data.toString('utf8'));
+        .catch(async (error) => {
+          // Ignore "duplicate" status codes
+          if (error.statusCode == 409) {
+            // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+            await nodeModel.updateModifiedTime({
+              account: account,
+              filePath: filePath,
+              fileUpdateAt: _base.getFileModifiedTime(params.filePath)
+            });
+          } else {
+            // Add an error log
+            // await errorLogModel.add(account.id, error, `${__filename}/upload file`);
+            await nodeModel.deleteByPath({
+              account,
+              filePath
+            });
           }
+        })
 
-          // const uploadedData = JSON.parse(data.toString('utf8'));
-          // console.log('size', uploadedData.entry.content.sizeInBytes);
-          //           var stats = fs.statSync("myfile.txt")
-          // var fileSizeInBytes = stats["size"]
-          // console.log('FINISHED.....', JSON.parse(data.toString('utf8')));
-        });
-
-      response = JSON.parse(response.body);
-
-      if (response && response.entry.id) {
-        // Update the time meta properties of the downloaded file
-        const btime = _base.convertToUTC(response.entry.createdAt);
-        const mtime = _base.convertToUTC(response.entry.modifiedAt);
-        const atime = undefined;
-
-        setTimeout(() => {
-          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
-        }, 0); //end setTimeout
-
-        // Update the node record once uploaded
-        await nodeModel.setUploadProgress({
-          filePath,
-          account,
-          progress: false,
-          nodeId: response.entry.id,
-          remoteFolderPath: response.entry.path.name,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),
-        });
-
-        // Add an event log
-        await eventLogModel.add(
-          account.id,
-          "UPLOAD_FILE",
-          `Uploaded File: ${filePath} to ${account.instance_url}`
-        );
-
-        return response.entry.id;
-      }
-
-      return false;
     } catch (error) {
-      // Ignore "duplicate" status codes
-      if (error.statusCode == 409) {
-        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-        nodeModel.updateModifiedTime({
-          account: account,
-          filePath: filePath,
-          fileUpdateAt: _base.getFileModifiedTime(params.filePath)
-        });
-      } else {
-        // Add an error log
-        await errorLogModel.add(account.id, error, `${__filename}/upload file`);
-      }
+      // Add an error log
+      await errorLogModel.add(account.id, error, `${__filename}/upload file`);
     }
   }
 
-  return false;
+  return;
 };
 
 exports.watchFolderGuard = async params => {
