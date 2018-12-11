@@ -80,8 +80,8 @@ exports.add = async (accountId, description, originatedFrom = '') => {
 
     } catch (error) {
       trx.rollback;
-      log.warn(String(error));
-      logger.error(String(error));
+      // log.warn(String(error));
+      // logger.error(String(error));
     }
   });
 
@@ -93,7 +93,7 @@ exports.add = async (accountId, description, originatedFrom = '') => {
   }
 
   if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-    log.error("---ERROR---", originatedFrom, description);
+    //log.error("---ERROR---", originatedFrom, description);
     //   bugsnag.notify(description.toString());
   }
 

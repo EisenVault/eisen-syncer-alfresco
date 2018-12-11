@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
-const request2 = require("request");
 const emitter = require('../helpers/emitter').emitter;
 const errorLogModel = require("../models/log-error");
 const eventLogModel = require("../models/log-event");
@@ -57,7 +56,7 @@ exports.getNodeList = async params => {
 
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
+    errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
   }
 };
 
@@ -147,7 +146,7 @@ exports.getChildren = async params => {
       });
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/getChildren`);
+    errorLogModel.add(account.id, error, `${__filename}/getChildren`);
   }
 };
 
@@ -214,7 +213,7 @@ exports.deleteServerNode = async params => {
         nodeId: record.node_id
       });
     } else {
-      await errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
+      errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
     }
   }
 };
@@ -250,10 +249,6 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    // work in progress.....
-    // when a file is in progress, how do you expect it to have a modified time?
-    // figure out why some of the downloaded files are not updateing the time
-    // Add refrence to the nodes table
     await nodeModel.add({
       account,
       watcher,
@@ -310,7 +305,7 @@ exports.download = async params => {
 
     return params;
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/download`);
+    errorLogModel.add(account.id, error, `${__filename}/download`);
   }
 };
 
@@ -460,61 +455,64 @@ exports.upload = async params => {
         uploadInProgress: true
       });
 
-      let response = await request(options)
-        .then(async (response) => {
-          response = JSON.parse(response.body);
-
-          // Update the time meta properties of the downloaded file
-          const btime = _base.convertToUTC(response.entry.createdAt);
-          const mtime = _base.convertToUTC(response.entry.modifiedAt);
-          const atime = undefined;
-
-          setTimeout(() => {
-            Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
-          }, 0); //end setTimeout
-
-          // Update the node record once uploaded
-          await nodeModel.setUploadProgress({
-            filePath,
-            account,
-            progress: false,
-            nodeId: response.entry.id,
-            remoteFolderPath: response.entry.path.name,
-            fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-            lastUploadedAt: _base.getCurrentTime(),
-          });
-
-          // Add an event log
-          await eventLogModel.add(
-            account.id,
-            "UPLOAD_FILE",
-            `Uploaded File: ${filePath} to ${account.instance_url}`
-          );
-
-        })
-        .catch(async (error) => {
-          // Ignore "duplicate" status codes
-          if (error.statusCode == 409) {
-            // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-            await nodeModel.updateModifiedTime({
-              account: account,
-              filePath: filePath,
-              fileUpdateAt: _base.getFileModifiedTime(params.filePath)
-            });
-          } else {
-            // Add an error log
-            // await errorLogModel.add(account.id, error, `${__filename}/upload file`);
-            await nodeModel.deleteByPath({
-              account,
-              filePath
-            });
-          }
-        })
-
     } catch (error) {
       // Add an error log
-      await errorLogModel.add(account.id, error, `${__filename}/upload file`);
+      errorLogModel.add(account.id, error, `${__filename}/upload file`);
     }
+
+
+    request(options)
+      .then(async (response) => {
+        response = JSON.parse(response.body);
+
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(response.entry.createdAt);
+        const mtime = _base.convertToUTC(response.entry.modifiedAt);
+        const atime = undefined;
+
+        setTimeout(() => {
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
+        }, 0); //end setTimeout
+
+        // Update the node record once uploaded
+        await nodeModel.setUploadProgress({
+          filePath,
+          account,
+          progress: false,
+          nodeId: response.entry.id,
+          remoteFolderPath: response.entry.path.name,
+          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
+          lastUploadedAt: _base.getCurrentTime(),
+        });
+
+        // Add an event log
+        eventLogModel.add(
+          account.id,
+          "UPLOAD_FILE",
+          `Uploaded File: ${filePath} to ${account.instance_url}`
+        );
+
+      })
+      .catch(async (error) => {
+        // Ignore "duplicate" status codes
+        if (error.statusCode == 409) {
+          // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+          nodeModel.updateModifiedTime({
+            account: account,
+            filePath: filePath,
+            fileUpdateAt: _base.getFileModifiedTime(params.filePath)
+          });
+        }
+        try {
+          // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
+          nodeModel.forceDeleteByPath({
+            account,
+            filePath
+          });
+        } catch (error) {
+          console.log('Cannot forceDeleteByPath', filePath);
+        }
+      })
   }
 
   return;
