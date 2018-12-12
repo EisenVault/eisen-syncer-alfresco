@@ -15,6 +15,8 @@ exports.getAll = async (syncEnabled) => {
         "sync_enabled",
         "sync_frequency",
         "sync_in_progress",
+        "download_in_progress",
+        "upload_in_progress",
         "last_synced_at",
       )
       .modify(queryBuilder => {
@@ -41,6 +43,8 @@ exports.getOne = async (id) => {
       "sync_enabled",
       "sync_frequency",
       "sync_in_progress",
+      "download_in_progress",
+      "upload_in_progress",
       "last_synced_at"
     )
     .first()
@@ -58,7 +62,9 @@ exports.getOneWithPassword = async (id) => {
       "sync_path",
       "sync_enabled",
       "sync_frequency",
-      "sync_in_progress"
+      "sync_in_progress",
+      "download_in_progress",
+      "upload_in_progress",
     )
     .first()
     .from("accounts")
@@ -249,6 +255,8 @@ exports.updateSync = async (accountId, request) => {
         .update({
           sync_enabled: request.body.sync_enabled,
           sync_in_progress: 0,
+          download_in_progress: 0,
+          upload_in_progress: 0,
           updated_at: new Date().getTime()
         })
         .where("id", accountId)
@@ -266,15 +274,20 @@ exports.updateSync = async (accountId, request) => {
 
 };
 
-exports.syncStart = async accountId => {
+exports.syncStart = async params => {
+  const account = params.account;
+  const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
+  const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
 
   db.transaction(async (trx) => {
     try {
       await db("accounts")
         .update({
-          sync_in_progress: 1
+          sync_in_progress: 1,
+          download_in_progress: downloadProgress,
+          upload_in_progress: uploadProgress
         })
-        .where("id", accountId)
+        .where("id", account.id)
         .transacting(trx);
       trx.commit;
 
@@ -287,10 +300,13 @@ exports.syncStart = async accountId => {
   return await db
     .first()
     .from("accounts")
-    .where("id", accountId);
+    .where("id", account.id);
 };
 
-exports.syncComplete = async (accountId) => {
+exports.syncComplete = async params => {
+  const account = params.account;
+  const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
+  const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
 
   db.transaction(async (trx) => {
 
@@ -298,9 +314,11 @@ exports.syncComplete = async (accountId) => {
       const result = await db("accounts")
         .update({
           sync_in_progress: 0,
+          download_in_progress: downloadProgress,
+          upload_in_progress: uploadProgress,
           last_synced_at: Math.round(new Date().getTime())
         })
-        .where("id", accountId)
+        .where("id", account.id)
         .transacting(trx);
       trx.commit;
       emitter.emit('syncComplete', result);

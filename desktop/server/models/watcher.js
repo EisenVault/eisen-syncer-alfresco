@@ -8,7 +8,9 @@ exports.getAllByAccountId = async accountId => {
       "accounts.sync_path",
       "accounts.sync_enabled",
       "accounts.last_synced_at",
-      "accounts.sync_in_progress"
+      "accounts.sync_in_progress",
+      "accounts.download_in_progress",
+      "accounts.upload_in_progress"
     ])
     .from("watchers")
     .where("account_id", accountId)

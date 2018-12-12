@@ -3,7 +3,7 @@ const accountModel = require("../models/account");
 const watcher = require("../helpers/watcher");
 const watcherModel = require("../models/watcher");
 const { logger } = require("../helpers/logger");
-
+const path = require('path');
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
@@ -11,7 +11,7 @@ exports.download = async (request, response) => {
 
   const account = await accountModel.getOne(request.params.accountId);
 
-  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+  if (!account || account.sync_enabled == 0 || account.download_in_progress == 1) {
     logger.info("Download Bailed");
     return;
   }
@@ -20,7 +20,10 @@ exports.download = async (request, response) => {
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart(account.id);
+    await accountModel.syncStart({
+      account,
+      downloadProgress: 1
+    });
 
     for (const watcher of watchFolders) {
       await ondemand.recursiveDownload({
@@ -32,7 +35,10 @@ exports.download = async (request, response) => {
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account,
+      downloadProgress: 0
+    });
 
     // Start watcher now
     watcher.watchAll();
@@ -41,7 +47,11 @@ exports.download = async (request, response) => {
     return response.status(200).json({ success: true });
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account,
+      downloadProgress: 0
+    });
+
     // Start watcher now
     watcher.watchAll();
     return response
@@ -58,7 +68,7 @@ exports.upload = async (request, response) => {
 
   let account = await accountModel.getOne(request.body.account_id);
 
-  if (!account || account.sync_enabled == 0 || account.sync_in_progress == 1) {
+  if (!account || account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("Upload Bailed");
     return;
   }
@@ -67,18 +77,34 @@ exports.upload = async (request, response) => {
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart(account.id);
+    await accountModel.syncStart({
+      account,
+      uploadProgress: 1
+    });
 
     for (const watcher of watchers) {
+
+      // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
+      const rootFolder = path.join(
+        account.sync_path,
+        watcher.watch_folder.substring(
+          watcher.watch_folder.indexOf(`${watcher.site_name}/documentLibrary`)
+        ),
+        "/*"
+      );
+
       await ondemand.recursiveUpload({
         account,
         watcher,
-        rootNodeId: watcher.document_library_node
+        rootFolder
       });
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account,
+      uploadProgress: 0
+    });
 
     // Start watcher now
     watcher.watchAll();
@@ -89,7 +115,10 @@ exports.upload = async (request, response) => {
       .json(await accountModel.getOne(request.body.account_id));
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete(account.id);
+    await accountModel.syncComplete({
+      account,
+      uploadProgress: 0
+    });
     // Start watcher now
     watcher.watchAll();
     return response

@@ -42,10 +42,14 @@ process.env.TZ = 'Etc/Greenwich';
   // For every account, set the sync progress to compeleted
   for (const account of accounts) {
     if (account && account.id) {
-      await accountModel.syncComplete(account.id);
+      await accountModel.syncComplete({
+        account,
+        downloadProgress: 0,
+        uploadProgress: 0
+      });
     }
   }
-
+  return;
 })();
 
 // Start watching all the sync_paths

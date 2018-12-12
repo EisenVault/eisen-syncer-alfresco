@@ -11,10 +11,12 @@ export class SyncerService {
   start(accountId: number) {
     // Fire Download then upload api...
     this.syncDownloads(accountId).subscribe(() => {
-      this.syncUploads(accountId).subscribe(() => {
-        return true;
-      }); // End Upload subscribe
+      return true;
     }); // End Download subscribe
+
+    this.syncUploads(accountId).subscribe(() => {
+      return true;
+    }); // End Upload subscribe
   }
 
   syncDownloads(accountId: number) {

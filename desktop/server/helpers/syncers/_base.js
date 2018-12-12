@@ -48,11 +48,11 @@ exports.getFileModifiedTime = filePath => {
 };
 
 exports.convertToUTC = time => {
-  return Math.round(Date.parse(new Date(time).toUTCString()) / 1000);
+  return Math.round(Date.parse(new Date(time).toUTCString()));
 };
 
 exports.getCurrentTime = () => {
-  return Math.round(new Date().getTime() / 1000);
+  return Math.round(new Date().getTime());
 };
 
 exports.getRelativePath = params => {

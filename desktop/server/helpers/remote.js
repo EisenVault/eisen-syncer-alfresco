@@ -8,6 +8,7 @@ const eventLogModel = require("../models/log-event");
 const nodeModel = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
+const Utimes = require('@ronomon/utimes');
 
 // Logger
 const { logger } = require("./logger");
@@ -55,7 +56,7 @@ exports.getNodeList = async params => {
 
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
+    errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
   }
 };
 
@@ -71,6 +72,10 @@ exports.getNode = async params => {
 
   if (!record || !account) {
     throw new Error("Invalid paramerters");
+  }
+
+  if (record.node_id === '') {
+    return;
   }
 
   var options = {
@@ -141,7 +146,7 @@ exports.getChildren = async params => {
       });
     return JSON.parse(response);
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/getChildren`);
+    errorLogModel.add(account.id, error, `${__filename}/getChildren`);
   }
 };
 
@@ -208,7 +213,7 @@ exports.deleteServerNode = async params => {
         nodeId: record.node_id
       });
     } else {
-      await errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
+      errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
     }
   }
 };
@@ -244,7 +249,6 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    // Add refrence to the nodes table
     await nodeModel.add({
       account,
       watcher,
@@ -269,31 +273,39 @@ exports.download = async params => {
         totalBytes = data.headers['content-length'];
       })
       .on('data', async (chunk) => {
+
         recievedSize += chunk.length;
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
-          let modifiedDate = _base.getFileModifiedTime(destinationPath);
-          await nodeModel.setDownloadProgress({
-            filePath: destinationPath,
-            account,
-            progress: false,
-            fileUpdateAt: modifiedDate
-          });
+          // Update the time meta properties of the downloaded file
+          const btime = _base.convertToUTC(node.createdAt);
+          const mtime = _base.convertToUTC(node.modifiedAt);
+          const atime = undefined;
 
-          // Add an event log
-          await eventLogModel.add(
-            account.id,
-            "DOWNLOAD_FILE",
-            `Downloaded File: ${destinationPath} from ${account.instance_url}`
-          );
+          setTimeout(() => {
+            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => {
+              await nodeModel.setDownloadProgress({
+                filePath: destinationPath,
+                account,
+                progress: false,
+                fileUpdateAt: mtime
+              });
+
+              // Add an event log
+              await eventLogModel.add(
+                account.id,
+                "DOWNLOAD_FILE",
+                `Downloaded File: ${destinationPath} from ${account.instance_url}`
+              );
+            });
+          }, 0);
         }
-
       })
       .pipe(fs.createWriteStream(destinationPath));
 
     return params;
   } catch (error) {
-    await errorLogModel.add(account.id, error, `${__filename}/download`);
+    errorLogModel.add(account.id, error, `${__filename}/download`);
   }
 };
 
@@ -354,24 +366,35 @@ exports.upload = async params => {
       response = JSON.parse(response.body);
 
       if (response && response.entry.id) {
-        await nodeModel.add({
-          account,
-          watcher,
-          nodeId: response.entry.id,
-          remoteFolderPath: response.entry.path.name,
-          filePath: params.filePath,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),
-          isFolder: true,
-          isFile: false
-        });
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(response.entry.createdAt);
+        const mtime = _base.convertToUTC(response.entry.modifiedAt);
+        const atime = undefined;
 
-        // Add an event log
-        await eventLogModel.add(
-          account.id,
-          "UPLOAD_FOLDER",
-          `Uploaded Folder: ${filePath} to ${account.instance_url}`
-        );
+        setTimeout(() => {
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
+            await nodeModel.add({
+              account,
+              watcher,
+              nodeId: response.entry.id,
+              remoteFolderPath: response.entry.path.name,
+              filePath: filePath,
+              fileUpdateAt: mtime,
+              lastUploadedAt: _base.getCurrentTime(),
+              isFolder: true,
+              isFile: false,
+              progress: false,
+            });
+
+            // Add an event log
+            await eventLogModel.add(
+              account.id,
+              "UPLOAD_FOLDER",
+              `Uploaded Folder: ${filePath} to ${account.instance_url}`
+            );
+          });
+        }, 0);
+
         return response.entry.id;
       }
     } catch (error) {
@@ -385,7 +408,7 @@ exports.upload = async params => {
         });
       } else {
         // Add an error log
-        await errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
+        errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
       }
     }
 
@@ -426,20 +449,31 @@ exports.upload = async params => {
         remoteFolderPath: '',
         filePath,
         fileUpdateAt: 0,
-        lastUploadedAt: _base.getCurrentTime(),
+        lastUploadedAt: 0,
         isFolder: false,
         isFile: true,
         uploadInProgress: true
       });
 
-      let response = await request(options)
-        .on('error', function (e) {
-          console.error(e);
-        });
+    } catch (error) {
+      // Add an error log
+      errorLogModel.add(account.id, error, `${__filename}/upload file`);
+    }
 
-      response = JSON.parse(response.body);
 
-      if (response && response.entry.id) {
+    request(options)
+      .then(async (response) => {
+        response = JSON.parse(response.body);
+
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(response.entry.createdAt);
+        const mtime = _base.convertToUTC(response.entry.modifiedAt);
+        const atime = undefined;
+
+        setTimeout(() => {
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
+        }, 0); //end setTimeout
+
         // Update the node record once uploaded
         await nodeModel.setUploadProgress({
           filePath,
@@ -452,32 +486,36 @@ exports.upload = async params => {
         });
 
         // Add an event log
-        await eventLogModel.add(
+        eventLogModel.add(
           account.id,
           "UPLOAD_FILE",
           `Uploaded File: ${filePath} to ${account.instance_url}`
         );
-        return response.entry.id;
-      }
 
-      return false;
-    } catch (error) {
-      // Ignore "duplicate" status codes
-      if (error.statusCode == 409) {
-        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-        nodeModel.updateModifiedTime({
-          account: account,
-          filePath: filePath,
-          fileUpdateAt: _base.getFileModifiedTime(params.filePath)
-        });
-      } else {
-        // Add an error log
-        await errorLogModel.add(account.id, error, `${__filename}/upload file`);
-      }
-    }
+      })
+      .catch(async (error) => {
+        // Ignore "duplicate" status codes
+        if (error.statusCode == 409) {
+          // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+          nodeModel.updateModifiedTime({
+            account: account,
+            filePath: filePath,
+            fileUpdateAt: _base.getFileModifiedTime(params.filePath)
+          });
+        }
+        try {
+          // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
+          nodeModel.forceDeleteByPath({
+            account,
+            filePath
+          });
+        } catch (error) {
+          console.log('Cannot forceDeleteByPath', filePath);
+        }
+      })
   }
 
-  return false;
+  return;
 };
 
 exports.watchFolderGuard = async params => {
@@ -506,7 +544,6 @@ exports.watchFolderGuard = async params => {
       _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
       INTERVAL
     ) {
-      // logger.info(`Upload blocked 2: ${record.file_path}`);
       return false;
     }
   }

@@ -3,6 +3,7 @@ const path = require("path");
 const errorLogModel = require("./log-error");
 const _ = require("lodash");
 const _path = require('../helpers/path');
+const _base = require("../helpers/syncers/_base");
 
 /**
  *
@@ -59,6 +60,7 @@ exports.add = async params => {
           is_deleted: 0,
           download_in_progress: downloadInProgress,
           upload_in_progress: uploadInProgress,
+          created_at: _base.getCurrentTime(),
         })
         .into("nodes")
         .transacting(trx);
