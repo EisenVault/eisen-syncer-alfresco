@@ -1,54 +1,109 @@
-const accountModel = require("../models/account");
-const nodeModel = require("../models/node");
-const watcherModel = require("../models/watcher");
-const errorLogModel = require("../models/log-error");
+const { accountModel } = require("../models/account");
+const { nodeModel } = require("../models/node");
+const { watcherModel } = require("../models/watcher");
+const { errorLogModel } = require("../models/log-error");
 const watcher = require("../helpers/watcher");
 const rimraf = require('rimraf');
+const crypt = require("../config/crypt");
+const _path = require('../helpers/path');
 const emitter = require('../helpers/emitter').emitter;
 
 exports.getAll = async (request, response) => {
-  let syncEnabled = request.query.sync_enabled;
-  return response.status(200).json(await accountModel.getAll(syncEnabled, 0));
+  const syncEnabled = request.query.sync_enabled;
+  accountModel.findAll({
+    attributes: { exclude: ['password'] },
+    where: {
+      sync_enabled: syncEnabled
+    }
+  })
+    .then(data => {
+      return response.status(200).json(data.map(data => data.dataValues));
+    })
+    .catch(error => {
+      return response.status(400).json(error);
+    });
 };
 
 exports.getOne = async (request, response) => {
-  return response
-    .status(200)
-    .json(await accountModel.getOne(request.params.id));
+  accountModel.findByPk(request.params.id, {
+    attributes: { exclude: ['password'] },
+  })
+    .then(data => {
+      return response.status(200).json(data.dataValues);
+    })
+    .catch(error => {
+      return response.status(400).json(error);
+    })
 };
 
 exports.addAccount = async (request, response) => {
-  emitter.once('addAccount', async (data) => {
-    await watcher.watchAll();
-    return response.status(201).json({
-      account_id: data[0]
+  accountModel.create({
+    instance_url: request.body.instance_url.replace(/\/+$/, ""),
+    username: request.body.username,
+    password: crypt.encrypt(request.body.password),
+    sync_path: _path.toUnix(request.body.sync_path),
+    sync_enabled: request.body.sync_enabled,
+    sync_frequency: request.body.sync_frequency
+  })
+    .then(data => {
+      return response.status(200).json(data.dataValues);
+    })
+    .catch(error => {
+      errorLogModel.add(account, error);
+      return response.status(500).json(data.dataValues);
     });
-  });
-
-  // If its a new account add it to the DB
-  await accountModel.addAccount(request);
 };
 
 exports.updateAccount = async (request, response) => {
-  emitter.once('updateAccount', async (data) => {
-    await watcher.watchAll();
-    return response.status(200).json({
-      account_id: request.params.id
+  accountModel.update({
+    instance_url: request.body.instance_url.replace(/\/+$/, ""),
+    username: request.body.username,
+    password: crypt.encrypt(request.body.password),
+    sync_path: _path.toUnix(request.body.sync_path),
+    sync_enabled: request.body.sync_enabled,
+    sync_frequency: request.body.sync_frequency,
+    updated_at: new Date().getTime()
+  }, {
+      where: {
+        id: request.params.id
+      }
+    })
+    .then(() => {
+      return response.status(200).json({ account_id: request.params.id });
+    })
+    .catch(error => {
+      errorLogModel.add(account, error);
+      return response.status(500).json(data.dataValues);
     });
-  });
-
-  await accountModel.updateAccount(request.params.id, request);
 };
 
 exports.updateCredentials = async (request, response) => {
-  emitter.once('updateCredentials', async (data) => {
-    await watcher.watchAll();
-    return response.status(200).json({
-      account_id: request.params.id
+  accountModel.update({
+    instance_url: request.body.instance_url.replace(/\/+$/, ""),
+    username: request.body.username,
+    password: crypt.encrypt(request.body.password),
+    updated_at: new Date().getTime()
+  }, {
+      where: {
+        id: request.params.id
+      }
+    })
+    .then(() => {
+      return response.status(200).json({ account_id: request.params.id });
+    })
+    .catch(error => {
+      errorLogModel.add(account, error);
+      return response.status(500).json(data.dataValues);
     });
-  });
 
-  await accountModel.updateCredentials(request.params.id, request);
+  // emitter.once('updateCredentials', async (data) => {
+  //   await watcher.watchAll();
+  //   return response.status(200).json({
+  //     account_id: request.params.id
+  //   });
+  // });
+
+  // await accountModel.updateCredentials(request.params.id, request);
 };
 
 exports.updateSyncPath = async (request, response) => {
@@ -90,7 +145,7 @@ exports.updateSync = async (request, response) => {
 };
 
 exports.updateSyncTime = async (request, response) => {
-  await accountModel.syncComplete({account: request.params.id});
+  await accountModel.syncComplete({ account: request.params.id });
   await watcher.watchAll();
 
   return response.status(200).json({

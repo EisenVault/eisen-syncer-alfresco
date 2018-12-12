@@ -4,9 +4,9 @@ const cors = require("cors");
 const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
 const onevent = require("./helpers/syncers/onevent");
-const accountModel = require("./models/account");
-const nodeModel = require("./models/node");
-const errorLogModel = require("./models/log-error");
+const { accountModel } = require("./models/account");
+const { nodeModel } = require("./models/node");
+const { errorLogModel } = require("./models/log-error");
 const env = require("./config/env");
 // var bugsnag = require("bugsnag");
 // bugsnag.register(env.BUGSNAG_KEY);
@@ -38,17 +38,29 @@ app.use("/watchers", require("./routes/watcher"));
 process.env.TZ = 'Etc/Greenwich';
 
 (async () => {
-  let accounts = await accountModel.getAll(1);
-  // For every account, set the sync progress to compeleted
-  for (const account of accounts) {
-    if (account && account.id) {
-      await accountModel.syncComplete({
-        account,
-        downloadProgress: 0,
-        uploadProgress: 0
-      });
+  accountModel.findAll({
+    where: {
+      sync_enabled: 1
     }
-  }
+  })
+    .then(accounts => {
+      // For every account, set the sync progress to compeleted
+      for (const account of accounts) {
+        if (account && account.dataValues.id) {
+          accountModel.update({
+            sync_in_progress: 0,
+            download_in_progress: 0,
+            upload_in_progress: 0,
+            last_synced_at: Math.round(new Date().getTime())
+          }, {
+              where: {
+                id: account.id
+              }
+            })
+        }
+      }
+    })
+    .catch(error => console.log(error));
   return;
 })();
 
