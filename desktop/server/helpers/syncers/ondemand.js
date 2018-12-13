@@ -223,12 +223,13 @@ exports.recursiveUpload = async params => {
     let localFileModifiedDate = _base.getFileModifiedTime(filePath);
 
     // Get the DB record of the filePath
-    let { dataValues: record } = await nodeModel.findOne({
+    let nodeData = await nodeModel.findOne({
       where: {
         account_id: account.id,
         file_path: filePath
       }
     });
+    const { dataValues: record } = { ...nodeData };
     logger.info("upload step 4");
 
     if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
@@ -378,6 +379,6 @@ _createItemOnLocal = async params => {
     }
   } catch (error) {
     logger.error(`Error Message : ${JSON.stringify(error)}`);
-    await errorLogAdd(account.id, error);
+    errorLogAdd(account.id, error, `${__filename}/_createItemOnLocal`);
   }
 };

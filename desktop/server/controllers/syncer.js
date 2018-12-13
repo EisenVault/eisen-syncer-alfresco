@@ -70,23 +70,29 @@ exports.upload = async (request, response) => {
   // Stop watcher for a while
   // watcher.unwatchAll();
 
-  let account = await accountModel.getOne(request.body.account_id);
+  let accountData = await accountModel.findByPk(request.body.account_id);
+  const { dataValues: account } = { ...accountData };
 
   if (!account || account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("Upload Bailed");
     return;
   }
 
-  const watchers = await watcherModel.getAllByAccountId(account.id);
+  const watchers = await watcherModel.findAll({
+    where: {
+      account_id: account.id
+    }
+  });
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart({
+    syncStart({
       account,
       uploadProgress: 1
     });
 
-    for (const watcher of watchers) {
+    for (const item of watchers) {
+      const { dataValues: watcher } = item;
 
       // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
       const rootFolder = path.join(
@@ -105,7 +111,7 @@ exports.upload = async (request, response) => {
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       uploadProgress: 0
     });
@@ -116,13 +122,17 @@ exports.upload = async (request, response) => {
 
     return response
       .status(200)
-      .json(await accountModel.getOne(request.body.account_id));
+      .json(await accountModel.findByPk(request.body.account_id, {
+        attributes: { exclude: ['password'] },
+      }));
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       uploadProgress: 0
     });
+
+    console.log('errorrrr', error);
     // Start watcher now
     watcher.watchAll();
     return response

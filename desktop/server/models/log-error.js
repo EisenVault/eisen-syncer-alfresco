@@ -45,9 +45,9 @@ exports.add = (accountId, description, originatedFrom = '') => {
                         exports.deleteAllLessThan(removableId);
                     }
 
-                    // if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-                    //     //log.error("---ERROR---", originatedFrom, description);
-                    // }
+                    if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
+                        //log.error("---ERROR---", originatedFrom, description);
+                    }
                 })
                 .catch(error => console.log(error));
         })

@@ -9,6 +9,7 @@ const { nodeModel } = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
+const _path = require('./path');
 
 // Logger
 const { logger } = require("./logger");
@@ -255,7 +256,7 @@ exports.download = async params => {
     await nodeModel.destroy({
       where: {
         account_id: account.id,
-        file_path: _path.toUnix(currentPath)
+        file_path: _path.toUnix(destinationDirectory)
       }
     });
 
@@ -288,8 +289,6 @@ exports.download = async params => {
         totalBytes = data.headers['content-length'];
       })
       .on('data', async (chunk) => {
-        console.log('ondata', chunk.length);
-
         recievedSize += chunk.length;
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
@@ -326,6 +325,7 @@ exports.download = async params => {
 
     return params;
   } catch (error) {
+    console.log('errrorrrr', error);
     errorLogAdd(account.id, error, `${__filename}/download`);
   }
 };
@@ -430,8 +430,10 @@ exports.upload = async params => {
         await nodeModel.update({
           file_update_at: _base.getFileModifiedTime(filePath)
         }, {
-            account_id: account.id,
-            file_path: filePath
+            where: {
+              account_id: account.id,
+              file_path: filePath
+            }
           });
       } else {
         // Add an error log
