@@ -1,7 +1,18 @@
-const watcherModel = require("../models/watcher");
-
+const { watcherModel } = require("../models/watcher");
+const { accountModel } = require("../models/account");
 
 exports.getAll = async (request, response) => {
   const accountId = request.params.accountId;
-  return response.status(200).json(await watcherModel.getAllByAccountId(accountId));
+
+  const watchers = await watcherModel.findAll({
+    where: {
+      account_id: accountId
+    },
+    include: [{
+      model: accountModel,
+      attributes: { exclude: ['password'] }
+    }],
+  })
+
+  return response.status(200).json(watchers);
 };

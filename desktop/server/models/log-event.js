@@ -30,3 +30,10 @@ exports.connection = db.connection.sync({
 });
 
 exports.eventLogModel = eventLogModel;
+
+exports.types = {
+    DELETE_NODE: 'DELETE_NODE',
+    DOWNLOAD_FILE: 'DOWNLOAD_FILE',
+    UPLOAD_FOLDER: 'UPLOAD_FOLDER',
+    UPLOAD_FILE: 'UPLOAD_FILE',
+}

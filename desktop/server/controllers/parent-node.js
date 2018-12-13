@@ -1,11 +1,11 @@
-const accountModel = require("../models/account");
+const { accountModel } = require("../models/account");
 const http = require("request-promise-native");
-const errorLogModel = require("../models/log-error");
+const { add: errorLogAdd } = require("../models/log-error");
 const token = require("../helpers/token");
 
 exports.getAll = async (request, response) => {
   let nodeId = request.params.node_id;
-  let account = await accountModel.getOneByAccountId(request.params.account_id);
+  let account = await accountModel.findByPk(request.params.account_id);
 
   if (!account) {
     return response.status(401).json({ error: "Account not found" });
@@ -28,6 +28,6 @@ exports.getAll = async (request, response) => {
     let data = await http(options);
     return response.status(200).json(JSON.parse(data));
   } catch (error) {
-    errorLogModel.add(account.id, error);
+    errorLogAdd(account.id, error);
   }
 };

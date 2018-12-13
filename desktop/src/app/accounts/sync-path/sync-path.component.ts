@@ -48,7 +48,7 @@ export class SyncPathComponent implements OnInit {
           if (response.status === 200) {
             this._router.navigate(
               ['account-details'],
-              { queryParams: { accountId: (<any>response).body.account_id }}
+              { queryParams: { accountId: (<any>response).body.account_id } }
             );
           }
         },
@@ -81,5 +81,11 @@ export class SyncPathComponent implements OnInit {
         ) as any).files[0].path),
       false
     );
+  }
+
+  goBack() {
+    this._router.navigate(['account-details'], {
+      queryParams: { accountId: this.accountId }
+    });
   }
 }

@@ -12,7 +12,6 @@ router.get("/", settingController.getAll);
 router.get("/about", settingController.about);
 router.get("/:name", settingController.getOne);
 router.post("/", settingAddMiddleware, settingController.add);
-router.put("/startup-launch", settingUpdateMiddleware, settingController.startupLaunch);
 router.put("/:name", settingUpdateMiddleware, settingController.update);
 
 module.exports = router;

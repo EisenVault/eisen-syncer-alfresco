@@ -17,10 +17,4 @@ export class SettingService {
       value: value
     });
   }
-
-  startupSettings(value) {
-    return this._httpClient.put(environment.apiUrl + '/settings/startup-launch', {
-      value: value
-    });
-  }
 }

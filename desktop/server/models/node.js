@@ -26,10 +26,8 @@ const nodeModel = db.connection.define('node', {
         hooks: {
             beforeCreate: (node) => {
                 node.created_at = new Date().getTime();
-            },
-            beforeUpdate: (node) => {
                 node.updated_at = new Date().getTime();
-            },
+            }
         }
     });
 

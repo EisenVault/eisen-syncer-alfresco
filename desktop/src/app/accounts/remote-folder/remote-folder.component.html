@@ -11,6 +11,21 @@
   No Department(s) Found
 </div>
 
+<div class="mb-5">
+  <button type="button" class="btn btn-danger" (click)="goBack()">
+    <i class="fas fa-chevron-circle-left"></i>
+    Cancel
+  </button>
+  <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="disableFinish">
+
+    <span *ngIf="isEdit === true">Update</span>
+    <span *ngIf="isEdit === false">
+      <i class="fas fa-check-circle"></i>
+      Finish
+    </span>
+  </button>
+</div>
+
 <div *ngIf="sites && sites.length > 0">
   <h5>Select a Department</h5>
   <ul class="list-group">
@@ -44,9 +59,9 @@
 </div>
 
 <div class="mt-5">
-  <button type="button" class="btn btn-danger" *ngIf="isEdit === false" (click)="goBack()">
+  <button type="button" class="btn btn-danger" (click)="goBack()">
     <i class="fas fa-chevron-circle-left"></i>
-    Back to Account Settings
+    Cancel
   </button>
   <button type="button" class="btn btn-success float-right" (click)="finalize()" [disabled]="disableFinish">
 

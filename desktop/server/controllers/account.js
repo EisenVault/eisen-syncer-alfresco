@@ -1,20 +1,22 @@
 const { accountModel } = require("../models/account");
 const { nodeModel } = require("../models/node");
 const { watcherModel } = require("../models/watcher");
-const { errorLogModel } = require("../models/log-error");
+const { add: errorLogAdd } = require("../models/log-error");
 const watcher = require("../helpers/watcher");
 const rimraf = require('rimraf');
 const crypt = require("../config/crypt");
 const _path = require('../helpers/path');
-const emitter = require('../helpers/emitter').emitter;
 
 exports.getAll = async (request, response) => {
   const syncEnabled = request.query.sync_enabled;
+  let whereCondition = {};
+  if (syncEnabled) {
+    whereCondition.sync_enabled = syncEnabled
+  }
+
   accountModel.findAll({
     attributes: { exclude: ['password'] },
-    where: {
-      sync_enabled: syncEnabled
-    }
+    where: whereCondition
   })
     .then(data => {
       return response.status(200).json(data.map(data => data.dataValues));
@@ -46,10 +48,9 @@ exports.addAccount = async (request, response) => {
     sync_frequency: request.body.sync_frequency
   })
     .then(data => {
-      return response.status(200).json(data.dataValues);
+      return response.status(201).json(data.dataValues);
     })
-    .catch(error => {
-      errorLogModel.add(account, error);
+    .catch(() => {
       return response.status(500).json(data.dataValues);
     });
 };
@@ -72,7 +73,7 @@ exports.updateAccount = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogModel.add(account, error);
+      errorLogAdd(request.params.id, error);
       return response.status(500).json(data.dataValues);
     });
 };
@@ -92,94 +93,127 @@ exports.updateCredentials = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogModel.add(account, error);
+      errorLogAdd(request.params.id, error);
       return response.status(500).json(data.dataValues);
     });
-
-  // emitter.once('updateCredentials', async (data) => {
-  //   await watcher.watchAll();
-  //   return response.status(200).json({
-  //     account_id: request.params.id
-  //   });
-  // });
-
-  // await accountModel.updateCredentials(request.params.id, request);
 };
 
 exports.updateSyncPath = async (request, response) => {
-  emitter.once('updateSyncPath', async (data) => {
-    await watcher.watchAll();
-    return response.status(200).json({
-      account_id: request.params.id
+  accountModel.update({
+    sync_path: _path.toUnix(request.body.sync_path),
+    updated_at: new Date().getTime()
+  }, {
+      where: {
+        id: request.params.id
+      }
+    })
+    .then(() => {
+      return response.status(200).json({ account_id: request.params.id });
+    })
+    .catch(error => {
+      errorLogAdd(request.params.id, error);
+      return response.status(500).json(data.dataValues);
     });
-  });
-
-  const account = await accountModel.getOne(request.params.id);
-  await accountModel.updateSyncPath(account, request);
 };
 
-
 exports.addWatchNodes = async (request, response) => {
-  // Delete old watch nodes
-  await watcherModel.deleteAllByAccountId(request.params.id);
-
-  let insertedRecords = [];
-  for (const iterator of request.body) {
-    if (insertedRecords.indexOf(iterator.watchPath) === -1) {
-      await watcherModel.addWatcher(request.params.id, iterator);
-      insertedRecords.push(iterator.watchPath);
+  watcherModel.destroy({
+    where: {
+      account_id: request.params.id
     }
-  }
+  })
+    .then(() => {
+      let insertedRecords = [];
+      for (const iterator of request.body) {
+        if (insertedRecords.indexOf(iterator.watchPath) === -1) {
+          watcherModel.create({
+            account_id: request.params.id,
+            site_name: iterator.siteName,
+            site_id: iterator.siteId,
+            document_library_node: iterator.documentLibraryId,
+            watch_node: iterator.watchNodeId,
+            watch_folder: iterator.watchPath,
+          })
+            .then(() => {
+              return response.status(200).json({ account_id: request.params.id });
+            })
+            .catch(error => {
+              errorLogAdd(request.params.id, error);
+              return response.status(500).json(error);
+            });
+          insertedRecords.push(iterator.watchPath);
+        }
+      }
 
-  return response.status(200).json({
-    success: true
-  });
+    })
+    .catch(error => {
+      errorLogAdd(request.params.id, error);
+      return response.status(500).json(error);
+    });
 };
 
 exports.updateSync = async (request, response) => {
-  await accountModel.updateSync(request.params.id, request);
-  await watcher.watchAll();
-  return response.status(200).json({
-    success: true
-  });
-};
-
-exports.updateSyncTime = async (request, response) => {
-  await accountModel.syncComplete({ account: request.params.id });
-  await watcher.watchAll();
-
-  return response.status(200).json({
-    success: true
-  });
+  accountModel.update({
+    sync_enabled: request.body.sync_enabled,
+    sync_in_progress: 0,
+    download_in_progress: 0,
+    upload_in_progress: 0,
+    updated_at: new Date().getTime()
+  }, {
+      where: {
+        id: request.params.id
+      }
+    })
+    .then(() => {
+      return response.status(200).json({ account_id: request.params.id });
+    })
+    .catch(error => {
+      errorLogAdd(request.params.id, error);
+      return response.status(500).json(error);
+    });
 };
 
 exports.deleteAccount = async (request, response) => {
   const accountId = request.params.id;
   const forceDelete = request.params.force_delete;
-  let deleteAccount = null;
 
-  if (forceDelete === "true") {
-    // Permanantly delete account, files and all node data from the db
-    const account = await accountModel.getOne(accountId);
-    const watchers = await watcherModel.getAllByAccountId(accountId);
+  accountModel.findByPk(accountId)
+    .then(account => {
+      watcherModel.findAll({ account_id: accountId })
+        .then(watchers => {
+          // Permanantly delete account, files and all node data from the db
+          if (forceDelete === 'true') {
+            for (const watcher of watchers) {
+              // Remove the files physically...
+              rimraf(account.dataValues.sync_path + '/' + watcher.dataValues.site_name, () => { });
+            }
+          }
 
-    for (const iterator of watchers) {
-      try {
-        // Remove the files physically...
-        rimraf(account.sync_path + '/' + iterator.site_name, () => {
-          console.log('Done');
-        });
-      } catch (error) {
-        errorLogModel.add(account.id, error);
-      }
-    }
+          accountModel.destroy({
+            where: {
+              id: accountId
+            }
+          })
+            .then(() => {
+              nodeModel.destroy({
+                where: {
+                  account_id: accountId
+                }
+              })
+                .then(() => {
+                  watcherModel.destroy({
+                    where: {
+                      account_id: accountId
+                    }
+                  }).then()
+                })
+            })
+            .catch(error => console.log(error));
 
-  }
-
-  deleteAccount = await accountModel.forceDelete(accountId);
-  await nodeModel.forceDeleteAll(accountId);
-  await watcherModel.deleteAllByAccountId(accountId);
-
-  await watcher.watchAll();
-  return response.status(200).json(deleteAccount);
+          watcher.watchAll();
+          return response.status(200).json({});
+        })
+        .catch(error => console.log(error));
+    })
+    .catch(error => console.log(error));
 };

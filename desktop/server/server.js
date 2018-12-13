@@ -45,8 +45,8 @@ process.env.TZ = 'Etc/Greenwich';
   })
     .then(accounts => {
       // For every account, set the sync progress to compeleted
-      for (const account of accounts) {
-        if (account && account.dataValues.id) {
+      for (const { dataValues: account } of accounts) {
+        if (account && account.id) {
           accountModel.update({
             sync_in_progress: 0,
             download_in_progress: 0,

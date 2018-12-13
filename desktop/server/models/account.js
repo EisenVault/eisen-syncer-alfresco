@@ -31,9 +31,11 @@ const accountModel = db.connection.define('account', {
         hooks: {
             beforeCreate: (account) => {
                 account.created_at = new Date().getTime();
+                account.updated_at = new Date().getTime();
             }
         }
     });
+
 
 exports.connection = db.connection.sync({
     force: db.flush,
@@ -41,3 +43,40 @@ exports.connection = db.connection.sync({
 });
 
 exports.accountModel = accountModel;
+
+exports.syncStart = params => {
+    const account = params.account;
+    const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
+    const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
+
+    accountModel.update({
+        sync_in_progress: 1,
+        download_in_progress: downloadProgress,
+        upload_in_progress: uploadProgress
+    }, {
+            where: {
+                id: account.id
+            }
+        })
+        .then()
+        .catch(error => console.log(error));
+};
+
+exports.syncComplete = params => {
+    const account = params.account;
+    const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
+    const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
+
+    accountModel.update({
+        sync_in_progress: 0,
+        download_in_progress: downloadProgress,
+        upload_in_progress: uploadProgress,
+        last_synced_at: Math.round(new Date().getTime())
+    }, {
+            where: {
+                id: account.id
+            }
+        })
+        .then()
+        .catch(error => console.log(error));
+};

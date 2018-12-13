@@ -173,6 +173,12 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   goBack() {
+    if (this.isEdit === true) {
+      return this._router.navigate(['account-details'], {
+        queryParams: { accountId: this.accountId }
+      });
+    }
+
     this._router.navigate(['account-new'], {
       queryParams: { accountId: this.accountId }
     });

@@ -1,7 +1,7 @@
 const ondemand = require("../helpers/syncers/ondemand");
-const accountModel = require("../models/account");
+const { accountModel, syncStart, syncComplete } = require("../models/account");
+const { watcherModel } = require("../models/watcher");
 const watcher = require("../helpers/watcher");
-const watcherModel = require("../models/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
 
@@ -9,33 +9,37 @@ const path = require('path');
 exports.download = async (request, response) => {
   logger.info("DOWNLOAD API START");
 
-  const account = await accountModel.getOne(request.params.accountId);
+  const { dataValues: account } = await accountModel.findByPk(request.params.accountId);
 
   if (!account || account.sync_enabled == 0 || account.download_in_progress == 1) {
     logger.info("Download Bailed");
     return;
   }
 
-  const watchFolders = await watcherModel.getAllByAccountId(account.id);
+  const watchFolders = await watcherModel.findAll({
+    where: {
+      account_id: account.id
+    }
+  });
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart({
+    syncStart({
       account,
       downloadProgress: 1
     });
 
-    for (const watcher of watchFolders) {
+    for (const { dataValues: watcher } of watchFolders) {
       await ondemand.recursiveDownload({
         account,
         watcher,
         sourceNodeId: watcher.watch_node,
-        destinationPath: watcher.sync_path
+        destinationPath: account.sync_path
       });
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       downloadProgress: 0
     });
@@ -47,7 +51,7 @@ exports.download = async (request, response) => {
     return response.status(200).json({ success: true });
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       downloadProgress: 0
     });

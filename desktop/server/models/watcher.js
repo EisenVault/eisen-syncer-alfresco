@@ -1,5 +1,6 @@
 const Sequelize = require('sequelize');
 const db = require('../config/db');
+const { accountModel } = require('./account');
 
 const watcherModel = db.connection.define('watcher', {
     account_id: {
@@ -18,13 +19,13 @@ const watcherModel = db.connection.define('watcher', {
         hooks: {
             beforeCreate: (watcher) => {
                 watcher.created_at = new Date().getTime();
-            },
-            beforeUpdate: (watcher) => {
                 watcher.updated_at = new Date().getTime();
-            },
+            }
         }
     });
 
+
+watcherModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
 exports.connection = db.connection.sync({
     force: db.flush,
