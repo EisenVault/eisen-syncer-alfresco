@@ -1,3 +1,4 @@
+"use strict";
 const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
@@ -184,12 +185,12 @@ exports.deleteServerNode = async params => {
 
     if (response.statusCode == 204) {
       // Delete the record from the DB
-      if (record.is_file === 1) {
+      if (record.is_file === true) {
         await nodeModel.forceDelete({
           account,
           nodeId: record.node_id
         });
-      } else if (record.is_folder === 1) {
+      } else if (record.is_folder === true) {
         await nodeModel.forceDeleteAllByFileOrFolderPath({
           account,
           path: record.file_path
@@ -251,14 +252,6 @@ exports.download = async params => {
     if (!fs.existsSync(destinationDirectory)) {
       mkdirp.sync(destinationDirectory);
     }
-
-    // Delete the record if it already exists
-    await nodeModel.destroy({
-      where: {
-        account_id: account.id,
-        file_path: _path.toUnix(destinationDirectory)
-      }
-    });
 
     // Add reference to the nodes table
     await nodeModel.create({
@@ -325,7 +318,6 @@ exports.download = async params => {
 
     return params;
   } catch (error) {
-    console.log('errrorrrr', error);
     errorLogAdd(account.id, error, `${__filename}/download`);
   }
 };
@@ -393,37 +385,38 @@ exports.upload = async params => {
         const atime = undefined;
 
         setTimeout(() => {
-          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
-
-            await nodeModel.create({
-              account_id: account.id,
-              site_id: watcher.site_id,
-              node_id: response.entry.id,
-              remote_folder_path: response.entry.path.name,
-              file_name: path.basename(filePath),
-              file_path: _path.toUnix(filePath),
-              local_folder_path: path.dirname(destinationPath),
-              file_update_at: mtime,
-              last_uploaded_at: _base.getCurrentTime(),
-              last_downloaded_at: 0,
-              is_folder: true,
-              is_file: false,
-              download_in_progress: 0,
-              upload_in_progress: 0,
-            });
-
-            // Add an event log
-            await eventLogModel.create({
-              account_id: account.id,
-              type: eventType.UPLOAD_FOLDER,
-              description: `Uploaded Folder: ${filePath} to ${account.instance_url}`
-            });
-          });
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, () => { });
         }, 0);
+
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: response.entry.id,
+          remote_folder_path: response.entry.path.name,
+          file_name: path.basename(filePath),
+          file_path: _path.toUnix(filePath),
+          local_folder_path: path.dirname(filePath),
+          file_update_at: mtime,
+          last_uploaded_at: _base.getCurrentTime(),
+          last_downloaded_at: 0,
+          is_folder: true,
+          is_file: false,
+          download_in_progress: 0,
+          upload_in_progress: 0,
+        });
+
+        // Add an event log
+        await eventLogModel.create({
+          account_id: account.id,
+          type: eventType.UPLOAD_FOLDER,
+          description: `Uploaded Folder: ${filePath} to ${account.instance_url}`
+        });
 
         return response.entry.id;
       }
     } catch (error) {
+      console.log('error', error);
+
       // Ignore "duplicate" status codes
       if (error.statusCode == 409) {
         // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
@@ -515,8 +508,10 @@ exports.upload = async params => {
           remote_folder_path: response.entry.path.name,
           last_uploaded_at: _base.getCurrentTime()
         }, {
-            account_id: account.id,
-            file_path: filePath
+            where: {
+              account_id: account.id,
+              file_path: filePath
+            }
           });
 
         // Add an event log
@@ -533,8 +528,10 @@ exports.upload = async params => {
           await nodeModel.update({
             file_update_at: _base.getFileModifiedTime(filePath)
           }, {
-              account_id: account.id,
-              file_path: filePath
+              where: {
+                account_id: account.id,
+                file_path: filePath
+              }
             });
         }
         try {

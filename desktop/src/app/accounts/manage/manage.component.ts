@@ -123,8 +123,9 @@ export class ManageComponent implements OnInit {
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
-      forceSync === true || (account.sync_in_progress === 0 && timeDifference >= this.syncIntervalSetting)
+      forceSync === true || (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting)
     ) {
+
       // This is for the spinning loader icon
       const index = this.showAccountLoaders.indexOf(account.id);
       if (index === -1) {

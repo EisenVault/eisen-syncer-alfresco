@@ -1,5 +1,7 @@
 const Sequelize = require('sequelize');
 const db = require('../config/db');
+const { logger } = require("../helpers/logger");
+
 const MIN_THRESHOLD = 200;
 
 const errorLogModel = db.connection.define('log_error', {
@@ -46,7 +48,7 @@ exports.add = (accountId, description, originatedFrom = '') => {
                     }
 
                     if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-                        //log.error("---ERROR---", originatedFrom, description);
+                        logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
                     }
                 })
                 .catch(error => console.log(error));

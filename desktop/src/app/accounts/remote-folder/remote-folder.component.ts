@@ -56,14 +56,16 @@ export class RemoteFolderComponent implements OnInit {
         }
 
         result.map((item) => {
-          this.preSelectedSiteIdList.push(item.site_id);
-          this.selectedList.push({
-            siteName: item.site_name,
-            siteId: item.site_id,
-            documentLibraryId: item.document_library_node,
-            watchNodeId: item.watch_node,
-            watchPath: item.watch_folder
-          });
+          if (this.sites[0].entry.guid === item.site_id) {
+            this.preSelectedSiteIdList.push(item.site_id);
+            this.selectedList.push({
+              siteName: item.site_name,
+              siteId: item.site_id,
+              documentLibraryId: item.document_library_node,
+              watchNodeId: item.watch_node,
+              watchPath: item.watch_folder
+            });
+          }
 
           if (this.selectedList.length > 0) {
             this.disableFinish = false;

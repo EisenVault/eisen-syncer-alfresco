@@ -10,9 +10,9 @@ import moment from 'moment-timezone';
 interface Account {
   id: number;
   instance_url: string;
-  sync_enabled: number;
+  sync_enabled: boolean;
   sync_frequency: number;
-  sync_in_progress: number;
+  sync_in_progress: boolean;
   sync_path: string;
   username: string;
   last_synced_at: number;
@@ -81,7 +81,7 @@ export class DetailComponent implements OnInit {
 
     this._accountService.getAccount(this.accountId).subscribe(
       account => {
-        if (account.sync_enabled === 1) {
+        if (account.sync_enabled === true) {
           alert('You cannot edit an account when "Auto Sync" is turned on. ' +
             'Please turn off "Auto Sync" from the manage accounts page first.');
           return;

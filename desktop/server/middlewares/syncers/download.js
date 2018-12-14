@@ -1,4 +1,3 @@
-const validator = require("validator");
 const _ = require("lodash");
 const { accountModel } = require("../../models/account");
 
@@ -11,7 +10,9 @@ module.exports = async (request, response, next) => {
     errors.push({ accountId: "Account ID is mandatory" });
   }
 
-  let { dataValues: account } = await accountModel.findByPk(request.params.accountId);
+  let accountData = await accountModel.findByPk(request.params.accountId);
+  const { dataValues: account } = { ...accountData };
+
   if (account === undefined) {
     errors.push({ accountId: "Account ID is invalid" });
   }

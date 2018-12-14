@@ -1,3 +1,4 @@
+"use strict";
 const ondemand = require("../helpers/syncers/ondemand");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { watcherModel } = require("../models/watcher");

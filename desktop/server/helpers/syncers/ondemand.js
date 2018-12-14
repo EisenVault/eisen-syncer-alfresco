@@ -1,13 +1,14 @@
+"use strict";
 const Sequelize = require("sequelize");
 const fs = require("fs-extra");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const glob = require("glob");
-const { accountModel } = require("../../models/account");
 const { nodeModel } = require("../../models/node");
 const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
+const _path = require("../path");
 const rimraf = require('rimraf');
 const emitter = require('../emitter').emitter;
 
@@ -33,7 +34,7 @@ exports.recursiveDownload = async params => {
   logger.info("download step 1");
 
   if (
-    account.sync_enabled == 0 || (recursive === false && account.download_in_progress == 1)) {
+    account.sync_enabled == false || (recursive === false && account.download_in_progress == true)) {
     logger.info("download bailed");
     return;
   }
@@ -79,7 +80,7 @@ exports.recursiveDownload = async params => {
     let { dataValues: record } = { ...recordData };
     logger.info("download step 6");
 
-    if (record && (record.download_in_progress === 1 || record.upload_in_progress === 1)) {
+    if (record && (record.download_in_progress === true || record.upload_in_progress === true)) {
       logger.info("Bailed download, upload in progress");
       continue;
     }
@@ -103,14 +104,19 @@ exports.recursiveDownload = async params => {
         fs.remove(record.file_path);
 
         // Delete the record from the DB
-        if (record.is_file === 1) {
+        if (record.is_file === true) {
+          console.log('destroy', {
+            account_id: account.id,
+            node_id: record.node_id
+          });
+
           await nodeModel.destroy({
             where: {
               account_id: account.id,
               node_id: record.node_id
             }
           });
-        } else if (record.is_folder === 1) {
+        } else if (record.is_folder === true) {
           // Delete all records that are relavant to the file/folder path
           await nodeModel.destroy({
             where: {
@@ -135,7 +141,7 @@ exports.recursiveDownload = async params => {
       else if (
         _base.convertToUTC(node.modifiedAt) > _base.getFileModifiedTime(record.file_path) &&
         record.file_name === path.basename(currentPath) &&
-        record.is_file === 1
+        record.is_file === true
       ) {
         logger.info("downloaded since new " + currentPath);
         await _createItemOnLocal({
@@ -239,7 +245,7 @@ exports.recursiveUpload = async params => {
 
     // Case A: File created or renamed on local, upload it
     if (!record) {
-      logger.info("New file, uploading..." + filePath);
+      logger.info("New file, uploading... > " + filePath);
       await remote.upload({
         account,
         watcher,
@@ -258,7 +264,7 @@ exports.recursiveUpload = async params => {
       emitter.once('getNode' + record.node_id, async data => {
 
         // Case B: File modified on local, upload it
-        if (data.statusCode === 200 && data.record.is_file === 1 && localFileModifiedDate > _base.convertToUTC(data.response.entry.modifiedAt)) {
+        if (data.statusCode === 200 && data.record.is_file === true && localFileModifiedDate > _base.convertToUTC(data.response.entry.modifiedAt)) {
           logger.info("File modified on local, uploading..." + filePath);
           // Upload the local changes to the server.
           await remote.upload({
@@ -270,7 +276,7 @@ exports.recursiveUpload = async params => {
         }
 
         // Case C: File deleted on server? delete on local
-        if (data && data.statusCode === 404 && data.record.download_in_progress == 0 && data.record.upload_in_progress == 0) {
+        if (data && data.statusCode === 404 && data.record.download_in_progress == false && data.record.upload_in_progress == false) {
           logger.info(
             "Node not available on server, deleting on local: " + data.record.file_path + " - " + data.record.id
           );
@@ -300,6 +306,11 @@ exports.recursiveUpload = async params => {
             });
           });
         }
+
+        if (data.statusCode != 200) {
+          console.log('(data.statusCode', data.statusCode);
+
+        }
       }); // end event listener
 
       // Make a request to the server to get the node details
@@ -328,7 +339,7 @@ exports.recursiveUpload = async params => {
   return;
 }
 
-_createItemOnLocal = async params => {
+var _createItemOnLocal = async params => {
   const account = params.account;
   const watcher = params.watcher;
   const node = params.node;
@@ -340,23 +351,15 @@ _createItemOnLocal = async params => {
         mkdirp.sync(currentPath);
       }
 
-      // Delete the record if it already exists
-      await nodeModel.destroy({
-        where: {
-          account_id: account.id,
-          file_path: _path.toUnix(currentPath)
-        }
-      });
-
       // Add reference to the nodes table
       await nodeModel.create({
         account_id: account.id,
         site_id: watcher.site_id,
         node_id: node.id,
         remote_folder_path: node.path.name,
-        file_name: path.basename(filePath),
+        file_name: path.basename(currentPath),
         file_path: _path.toUnix(currentPath),
-        local_folder_path: path.dirname(filePath),
+        local_folder_path: path.dirname(currentPath),
         file_update_at: _base.convertToUTC(node.modifiedAt),
         last_uploaded_at: 0,
         last_downloaded_at: _base.getCurrentTime(),
@@ -365,6 +368,7 @@ _createItemOnLocal = async params => {
         download_in_progress: 0,
         upload_in_progress: 0
       });
+      return;
     }
 
     // If the child is a file, download the file...
@@ -378,7 +382,6 @@ _createItemOnLocal = async params => {
       });
     }
   } catch (error) {
-    logger.error(`Error Message : ${JSON.stringify(error)}`);
     errorLogAdd(account.id, error, `${__filename}/_createItemOnLocal`);
   }
 };
