@@ -52,8 +52,8 @@ app.on("ready", () => {
 
   // Create main window
   mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 650,
+    width: 1300,
+    height: 700,
     skipTaskbar: true,
     title: "EisenSync - Syncing files made simple",
     show: false,
@@ -79,31 +79,27 @@ app.on("ready", () => {
   });
 
   // Blink the tray icon if the sync is in progress...
-  // ipcMain.on('isSyncing', (event, isSyncing) => {
+  var blinker = null;
+  var on = false;
+  ipcMain.on('isSyncing', (event, isSyncing) => {
 
-  //   var nozzle = true;
-  //   var timer = setInterval(() => {
-  //     if (isSyncing === true) {
-  //       nozzle = !nozzle;
-  //       if (nozzle) {
-  //         console.log('nozzle', 'yes');
-  //         tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
-  //       } else {
-  //         console.log('nozzle', 'no');
-  //         tray.setImage(path.join(__dirname, `/src/assets/logos/tray_refresh.png`));
-  //       }
-  //     }
+    if (isSyncing === true && blinker === null) {
+      blinker = setInterval(function () {
+        if (on) {
+          tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+        } else {
+          tray.setImage(path.join(__dirname, `/src/assets/logos/tray_grey.png`));
+        }
+        on = !on;
+      }, 500);
+    }
 
-  //   }, 500);
-
-  //   if (isSyncing === false) {
-  //     console.log('isSyncing', isSyncing);
-
-  //     clearInterval(timer);
-  //     tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
-  //   }
-
-  // });
+    if (isSyncing === false) {
+      clearInterval(blinker);
+      blinker = null;
+      tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
+    }
+  });
 
   // Add tray context menu
   let trayMenuItems = [

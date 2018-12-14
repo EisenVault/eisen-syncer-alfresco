@@ -1,7 +1,7 @@
 const Sequelize = require('sequelize');
 const db = require('../config/db');
 const { logger } = require("../helpers/logger");
-
+const { accountModel } = require('./account');
 const MIN_THRESHOLD = 200;
 
 const errorLogModel = db.connection.define('log_error', {
@@ -23,6 +23,9 @@ const errorLogModel = db.connection.define('log_error', {
         }
     });
 
+
+errorLogModel.belongsTo(accountModel, { foreignKey: 'account_id' });
+
 exports.connection = db.connection.sync({
     force: db.flush,
     logging: db.logging
@@ -31,9 +34,15 @@ exports.connection = db.connection.sync({
 exports.errorLogModel = errorLogModel;
 
 exports.add = (accountId, description, originatedFrom = '') => {
+
+    if (description && (description.toString().indexOf("StatusCodeError: 404") > -1 || description.toString().indexOf("StatusCodeError: 409") > -1)) {
+        return;
+    }
+
+    logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
     errorLogModel.create({
         account_id: accountId,
-        description: String(description),
+        description: description ? JSON.stringify(description).replace(/[a-zA-Z0-9]/g, '') : '',
         created_at: new Date().getTime()
     })
         .then(({ dataValues: logData }) => {
@@ -46,10 +55,6 @@ exports.add = (accountId, description, originatedFrom = '') => {
                         let removableId = logData.id - MIN_THRESHOLD;
                         exports.deleteAllLessThan(removableId);
                     }
-
-                    if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-                        logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
-                    }
                 })
                 .catch(error => console.log(error));
         })
@@ -61,7 +66,9 @@ exports.add = (accountId, description, originatedFrom = '') => {
 exports.deleteAllLessThan = id => {
     errorLogModel.destroy({
         where: {
-            [Sequelize.Op.lt]: id
+            id: {
+                [Sequelize.Op.lt]: id
+            }
         }
     })
         .then()

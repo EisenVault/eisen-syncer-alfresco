@@ -14,7 +14,9 @@ exports.download = async (request, response) => {
 
   if (!account || account.sync_enabled == 0 || account.download_in_progress == 1) {
     logger.info("Download Bailed");
-    return;
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to download" });
   }
 
   const watchFolders = await watcherModel.findAll({
@@ -76,7 +78,9 @@ exports.upload = async (request, response) => {
 
   if (!account || account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("Upload Bailed");
-    return;
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to upload", error: error });
   }
 
   const watchers = await watcherModel.findAll({

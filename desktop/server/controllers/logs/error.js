@@ -1,7 +1,14 @@
 const { errorLogModel } = require("../../models/log-error");
+const { accountModel } = require("../../models/account");
 
 exports.getAll = async (request, response) => {
-  return response.status(200).json(await errorLogModel.findAll());
+  const errors = await errorLogModel.findAll({
+    include: [{
+      model: accountModel,
+      attributes: { exclude: ['password'] }
+    }],
+  });
+  return response.status(200).json(errors);
 };
 
 exports.getAllByAccountId = async (request, response) => {

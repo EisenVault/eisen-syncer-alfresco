@@ -64,6 +64,7 @@ exports.recursiveDownload = async params => {
     let relevantPath = node.path.name.substring(
       node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
     );
+
     let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
     const currentPath = path.join(destinationPath, relevantPath, node.name);
 
@@ -95,6 +96,7 @@ exports.recursiveDownload = async params => {
 
     // If the record is present
     if (record) {
+
       // Case A: Perhaps the file was RENAMED on server. Delete from local
       if (record.file_name !== node.name) {
         logger.info("Deleted renamed (old) path..." + record.file_path);
@@ -105,11 +107,6 @@ exports.recursiveDownload = async params => {
 
         // Delete the record from the DB
         if (record.is_file === true) {
-          console.log('destroy', {
-            account_id: account.id,
-            node_id: record.node_id
-          });
-
           await nodeModel.destroy({
             where: {
               account_id: account.id,
@@ -139,6 +136,7 @@ exports.recursiveDownload = async params => {
       // Case B: ...check last modified date and download the file if newer (lets not download any folders)
       // Convert the time to UTC and then get the unixtimestamp.
       else if (
+        fs.existsSync(currentPath) &&
         _base.convertToUTC(node.modifiedAt) > _base.getFileModifiedTime(record.file_path) &&
         record.file_name === path.basename(currentPath) &&
         record.is_file === true
@@ -151,6 +149,7 @@ exports.recursiveDownload = async params => {
           account
         });
       } // end Case B
+
 
       // Case C: Perhaps the file was DELETED on local but not on the server.(will skip if the node was renamed on server)
       else if (
@@ -188,6 +187,7 @@ exports.recursiveDownload = async params => {
         recursive: true
       });
     }
+
     logger.info("download step 7");
   }
 
@@ -307,10 +307,6 @@ exports.recursiveUpload = async params => {
           });
         }
 
-        if (data.statusCode != 200) {
-          console.log('(data.statusCode', data.statusCode);
-
-        }
       }); // end event listener
 
       // Make a request to the server to get the node details
@@ -350,6 +346,16 @@ var _createItemOnLocal = async params => {
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
       }
+
+      // Delete if record already exists
+      await nodeModel.destroy({
+        where: {
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: node.id,
+          file_path: _path.toUnix(currentPath),
+        }
+      });
 
       // Add reference to the nodes table
       await nodeModel.create({

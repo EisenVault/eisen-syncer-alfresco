@@ -1,4 +1,5 @@
 "use strict";
+const Sequelize = require("sequelize");
 const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
@@ -179,21 +180,34 @@ exports.deleteServerNode = async params => {
   try {
     let response = await request(options)
       .on('error', function (e) {
-        console.error(e);
+        console.error('error on response', e);
         return;
       });
 
     if (response.statusCode == 204) {
       // Delete the record from the DB
       if (record.is_file === true) {
-        await nodeModel.forceDelete({
-          account,
-          nodeId: record.node_id
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            node_id: record.node_id
+          }
         });
       } else if (record.is_folder === true) {
-        await nodeModel.forceDeleteAllByFileOrFolderPath({
-          account,
-          path: record.file_path
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            [Sequelize.Op.or]: [
+              {
+                file_path: {
+                  [Sequelize.Op.like]: record.file_path + "%"
+                }
+              },
+              {
+                local_folder_path: record.file_path
+              }
+            ]
+          }
         });
       }
 
@@ -252,6 +266,16 @@ exports.download = async params => {
     if (!fs.existsSync(destinationDirectory)) {
       mkdirp.sync(destinationDirectory);
     }
+
+    // Delete if record already exists
+    await nodeModel.destroy({
+      where: {
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: node.id,
+        file_path: _path.toUnix(destinationPath),
+      }
+    });
 
     // Add reference to the nodes table
     await nodeModel.create({
@@ -388,6 +412,16 @@ exports.upload = async params => {
           Utimes.utimes(`${filePath}`, btime, mtime, atime, () => { });
         }, 0);
 
+        // Delete if record already exists
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: response.entry.id,
+            file_path: _path.toUnix(filePath),
+          }
+        });
+
         await nodeModel.create({
           account_id: account.id,
           site_id: watcher.site_id,
@@ -415,8 +449,6 @@ exports.upload = async params => {
         return response.entry.id;
       }
     } catch (error) {
-      console.log('error', error);
-
       // Ignore "duplicate" status codes
       if (error.statusCode == 409) {
         // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
@@ -534,17 +566,13 @@ exports.upload = async params => {
               }
             });
         }
-        try {
-          // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
-          await nodeModel.destroy({
-            where: {
-              account_id: account.id,
-              file_path: filePath
-            }
-          });
-        } catch (error) {
-          console.log('Cannot forceDeleteByPath', filePath);
-        }
+        // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            file_path: filePath
+          }
+        });
       })
   }
 
