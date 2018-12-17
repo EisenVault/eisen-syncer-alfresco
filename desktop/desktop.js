@@ -55,7 +55,7 @@ app.on("ready", () => {
     width: 1300,
     height: 700,
     skipTaskbar: true,
-    title: "EisenSync - Syncing files made simple",
+    title: "EisenVaultSync - A two-way file sync desktop application for EisenVault DMS",
     show: false,
     icon: path.join(__dirname, "src/assets/logos/256.png"),
     webPreferences: {
@@ -161,7 +161,7 @@ app.on("ready", () => {
       }
     },
     {
-      label: "About EisenSync",
+      label: "About EisenVaultSync",
       click() {
         mainWindow.loadURL(
           url.format({
@@ -194,7 +194,7 @@ app.on("ready", () => {
   ];
 
   const trayMenu = Menu.buildFromTemplate(trayMenuItems);
-  tray.setToolTip("EisenSync");
+  tray.setToolTip("EisenVaultSync");
   tray.setContextMenu(trayMenu);
 
   // Load the html file into window
