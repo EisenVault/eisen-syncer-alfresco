@@ -1,5 +1,5 @@
 {
-  "name": "eisensync",
+  "name": "eisenvaultsync",
   "version": "1.2.0",
   "author": "Soubhik Chatterjee <soubhik.chatterjee@eisenvault.com>",
   "description": "A two-way file sync desktop application for EisenVault",
@@ -27,7 +27,7 @@
   },
   "build": {
     "appId": "com.eisenvault.sync",
-    "productName": "EisenSync",
+    "productName": "EisenVaultSync",
     "copyright": "Copyright © 2018 Argali Knowledge Services Pvt. Ltd.",
     "asar": true,
     "asarUnpack": [
