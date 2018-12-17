@@ -1,7 +1,7 @@
 const watch = require("watch");
 const fs = require("fs");
 const syncer = require("../helpers/syncers/ondemand");
-const accountModel = require("../models/account");
+const { accountModel } = require("../models/account");
 const remote = require("./remote");
 // Logger
 const { logger } = require('./logger');

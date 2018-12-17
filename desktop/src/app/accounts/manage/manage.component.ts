@@ -123,8 +123,9 @@ export class ManageComponent implements OnInit {
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
-      forceSync === true || (account.sync_in_progress === 0 && timeDifference >= this.syncIntervalSetting)
+      forceSync === true || (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting)
     ) {
+
       // This is for the spinning loader icon
       const index = this.showAccountLoaders.indexOf(account.id);
       if (index === -1) {
@@ -143,11 +144,16 @@ export class ManageComponent implements OnInit {
       : new Date().getTime();
     const index = this.enabledSyncAccounts.indexOf(account.id);
 
-    return (
-      (index !== -1 &&
-        Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
-      this.showAccountLoaders.indexOf(account.id) >= 0
-    );
+    // Determine is the account is in loading status
+    const isLoading = (index !== -1 &&
+      Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
+      this.showAccountLoaders.indexOf(account.id) >= 0;
+
+    if (this._electronService.isElectronApp) {
+      this._electronService.ipcRenderer.send('isSyncing', isLoading);
+    }
+
+    return isLoading;
   }
 
   _getAccounts() {
@@ -178,7 +184,7 @@ export class ManageComponent implements OnInit {
           }
         } // End forloop
       },
-      error => {
+      () => {
         this.isAppLoading = false;
         this.miscError = 'Cannot connect to the backend service.';
       }

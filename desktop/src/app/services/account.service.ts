@@ -6,9 +6,9 @@ import { Account } from '../models/account';
 interface IAccount {
   id: number;
   instance_url: string;
-  sync_enabled: number;
+  sync_enabled: boolean;
   sync_frequency: number;
-  sync_in_progress: number;
+  sync_in_progress: boolean;
   sync_path: string;
   username: string;
   last_synced_at: number;

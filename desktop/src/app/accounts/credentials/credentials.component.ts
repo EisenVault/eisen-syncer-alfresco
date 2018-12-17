@@ -74,4 +74,10 @@ export class CredentialsComponent implements OnInit {
         }
       );
   }
+
+  goBack() {
+    this._router.navigate(['account-details'], {
+      queryParams: { accountId: this.accountId }
+    });
+  }
 }

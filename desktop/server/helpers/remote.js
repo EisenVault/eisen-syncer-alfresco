@@ -1,64 +1,20 @@
+"use strict";
+const Sequelize = require("sequelize");
 const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
 const emitter = require('../helpers/emitter').emitter;
-const errorLogModel = require("../models/log-error");
-const eventLogModel = require("../models/log-event");
-const nodeModel = require("../models/node");
+const { add: errorLogAdd } = require("../models/log-error");
+const { eventLogModel, types: eventType } = require("../models/log-event");
+const { nodeModel } = require("../models/node");
 const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
+const _path = require('./path');
 
 // Logger
 const { logger } = require("./logger");
-
-/**
- *
- * @param object params
- * {
- *  account: Account<Object>,
- *  nodeId: string
- * }
- */
-exports.getNodeList = async params => {
-  let account = params.account;
-  let nodeId = params.nodeId;
-  let maxItems = params.maxItems || 10;
-  let skipCount = params.skipCount || 0;
-
-  if (!account) {
-    throw new Error("Account not found");
-  }
-
-  var options = {
-    method: "GET",
-    url:
-      account.instance_url +
-      "/alfresco/s/com/eisenvault/totalNodesCount/" +
-      nodeId +
-      "/shownodes?maxItems=" +
-      maxItems +
-      "&skipCount=" +
-      skipCount,
-    headers: {
-      Connection: "keep-alive",
-      authorization: "Basic " + (await token.get(account))
-    }
-  };
-
-  try {
-    let response = await request(options)
-      .on('error', function (e) {
-        console.error(e);
-        return;
-      });
-
-    return JSON.parse(response);
-  } catch (error) {
-    errorLogModel.add(account.id, error, `${__filename}/getNodeList`);
-  }
-};
 
 /**
  * @param object params
@@ -103,7 +59,7 @@ exports.getNode = async params => {
         statusCode: error.statusCode,
         response: {}
       });
-      errorLogModel.add(account.id, error, `${__filename}/getNode/${record.node_id}`);
+      errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
     });
 };
 
@@ -146,7 +102,7 @@ exports.getChildren = async params => {
       });
     return JSON.parse(response);
   } catch (error) {
-    errorLogModel.add(account.id, error, `${__filename}/getChildren`);
+    errorLogAdd(account.id, error, `${__filename}/getChildren`);
   }
 };
 
@@ -177,30 +133,43 @@ exports.deleteServerNode = async params => {
   try {
     let response = await request(options)
       .on('error', function (e) {
-        console.error(e);
+        console.error('error on response', e);
         return;
       });
 
     if (response.statusCode == 204) {
       // Delete the record from the DB
-      if (record.is_file === 1) {
-        await nodeModel.forceDelete({
-          account,
-          nodeId: record.node_id
+      if (record.is_file === true) {
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            node_id: record.node_id
+          }
         });
-      } else if (record.is_folder === 1) {
-        await nodeModel.forceDeleteAllByFileOrFolderPath({
-          account,
-          path: record.file_path
+      } else if (record.is_folder === true) {
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            [Sequelize.Op.or]: [
+              {
+                file_path: {
+                  [Sequelize.Op.like]: record.file_path + "%"
+                }
+              },
+              {
+                local_folder_path: record.file_path
+              }
+            ]
+          }
         });
       }
 
       // Add an event log
-      await eventLogModel.add(
-        account.id,
-        "DELETE_NODE",
-        `Deleted NodeId: ${record.node_id} from ${account.instance_url}`
-      );
+      await eventLogModel.create({
+        account_id: account.id,
+        type: eventType.DELETE_NODE,
+        description: `Deleted NodeId: ${record.node_id} from ${account.instance_url}`
+      });
     }
 
     return response.statusCode;
@@ -208,12 +177,14 @@ exports.deleteServerNode = async params => {
     // Looks like the node was not available on the server, no point in keeping the record in the DB
     // So lets delete it
     if (error.statusCode == 404) {
-      await nodeModel.forceDelete({
-        account: account,
-        nodeId: record.node_id
+      await nodeModel.destroy({
+        where: {
+          account_id: account.id,
+          node_id: record.node_id
+        }
       });
     } else {
-      errorLogModel.add(account.id, error, `${__filename}/getServerNode`);
+      errorLogAdd(account.id, error, `${__filename}/getServerNode`);
     }
   }
 };
@@ -249,17 +220,32 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    await nodeModel.add({
-      account,
-      watcher,
-      nodeId: node.id,
-      remoteFolderPath,
-      filePath: destinationPath,
-      fileUpdateAt: 0,
-      lastDownloadedAt: _base.getCurrentTime(),
-      isFolder: false,
-      isFile: true,
-      downloadInProgress: true
+    // Delete if record already exists
+    await nodeModel.destroy({
+      where: {
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: node.id,
+        file_path: _path.toUnix(destinationPath),
+      }
+    });
+
+    // Add reference to the nodes table
+    await nodeModel.create({
+      account_id: account.id,
+      site_id: watcher.site_id,
+      node_id: node.id,
+      remote_folder_path: remoteFolderPath,
+      file_name: path.basename(destinationPath),
+      file_path: _path.toUnix(destinationPath),
+      local_folder_path: path.dirname(destinationPath),
+      file_update_at: _base.convertToUTC(node.modifiedAt),
+      last_uploaded_at: 0,
+      last_downloaded_at: _base.getCurrentTime(),
+      is_folder: false,
+      is_file: true,
+      download_in_progress: 1,
+      upload_in_progress: 0,
     });
 
     var totalBytes = 0;
@@ -273,7 +259,6 @@ exports.download = async params => {
         totalBytes = data.headers['content-length'];
       })
       .on('data', async (chunk) => {
-
         recievedSize += chunk.length;
         // Make sure the download is complete
         if (recievedSize >= totalBytes) {
@@ -284,19 +269,24 @@ exports.download = async params => {
 
           setTimeout(() => {
             Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => {
-              await nodeModel.setDownloadProgress({
-                filePath: destinationPath,
-                account,
-                progress: false,
-                fileUpdateAt: mtime
-              });
+
+              // set download progress to false
+              await nodeModel.update({
+                download_in_progress: 0,
+                file_update_at: mtime
+              }, {
+                  where: {
+                    account_id: account.id,
+                    file_path: destinationPath
+                  }
+                });
 
               // Add an event log
-              await eventLogModel.add(
-                account.id,
-                "DOWNLOAD_FILE",
-                `Downloaded File: ${destinationPath} from ${account.instance_url}`
-              );
+              await eventLogModel.create({
+                account_id: account.id,
+                type: eventType.DOWNLOAD_FILE,
+                description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+              });
             });
           }, 0);
         }
@@ -305,7 +295,7 @@ exports.download = async params => {
 
     return params;
   } catch (error) {
-    errorLogModel.add(account.id, error, `${__filename}/download`);
+    errorLogAdd(account.id, error, `${__filename}/download`);
   }
 };
 
@@ -372,28 +362,42 @@ exports.upload = async params => {
         const atime = undefined;
 
         setTimeout(() => {
-          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => {
-            await nodeModel.add({
-              account,
-              watcher,
-              nodeId: response.entry.id,
-              remoteFolderPath: response.entry.path.name,
-              filePath: filePath,
-              fileUpdateAt: mtime,
-              lastUploadedAt: _base.getCurrentTime(),
-              isFolder: true,
-              isFile: false,
-              progress: false,
-            });
-
-            // Add an event log
-            await eventLogModel.add(
-              account.id,
-              "UPLOAD_FOLDER",
-              `Uploaded Folder: ${filePath} to ${account.instance_url}`
-            );
-          });
+          Utimes.utimes(`${filePath}`, btime, mtime, atime, () => { });
         }, 0);
+
+        // Delete if record already exists
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: response.entry.id,
+            file_path: _path.toUnix(filePath),
+          }
+        });
+
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: response.entry.id,
+          remote_folder_path: response.entry.path.name,
+          file_name: path.basename(filePath),
+          file_path: _path.toUnix(filePath),
+          local_folder_path: path.dirname(filePath),
+          file_update_at: mtime,
+          last_uploaded_at: _base.getCurrentTime(),
+          last_downloaded_at: 0,
+          is_folder: true,
+          is_file: false,
+          download_in_progress: 0,
+          upload_in_progress: 0,
+        });
+
+        // Add an event log
+        await eventLogModel.create({
+          account_id: account.id,
+          type: eventType.UPLOAD_FOLDER,
+          description: `Uploaded Folder: ${filePath} to ${account.instance_url}`
+        });
 
         return response.entry.id;
       }
@@ -401,14 +405,17 @@ exports.upload = async params => {
       // Ignore "duplicate" status codes
       if (error.statusCode == 409) {
         // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-        nodeModel.updateModifiedTime({
-          account: account,
-          filePath: filePath,
-          fileUpdateAt: _base.getFileModifiedTime(params.filePath)
-        });
+        await nodeModel.update({
+          file_update_at: _base.getFileModifiedTime(filePath)
+        }, {
+            where: {
+              account_id: account.id,
+              file_path: filePath
+            }
+          });
       } else {
         // Add an error log
-        errorLogModel.add(account.id, error, `${__filename}/upload Directory`);
+        errorLogAdd(account.id, error, `${__filename}/upload Directory`);
       }
     }
 
@@ -440,27 +447,6 @@ exports.upload = async params => {
       }
     };
 
-    try {
-      // Add a record in the db
-      await nodeModel.add({
-        account,
-        watcher,
-        nodeId: '',
-        remoteFolderPath: '',
-        filePath,
-        fileUpdateAt: 0,
-        lastUploadedAt: 0,
-        isFolder: false,
-        isFile: true,
-        uploadInProgress: true
-      });
-
-    } catch (error) {
-      // Add an error log
-      errorLogModel.add(account.id, error, `${__filename}/upload file`);
-    }
-
-
     request(options)
       .then(async (response) => {
         response = JSON.parse(response.body);
@@ -474,119 +460,53 @@ exports.upload = async params => {
           Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
         }, 0); //end setTimeout
 
-        // Update the node record once uploaded
-        await nodeModel.setUploadProgress({
-          filePath,
-          account,
-          progress: false,
-          nodeId: response.entry.id,
-          remoteFolderPath: response.entry.path.name,
-          fileUpdateAt: _base.convertToUTC(response.entry.modifiedAt),
-          lastUploadedAt: _base.getCurrentTime(),
+        // Add a record in the db
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: response.entry.id,
+          remote_folder_path: response.entry.path.name,
+          file_name: path.basename(filePath),
+          file_path: _path.toUnix(filePath),
+          local_folder_path: path.dirname(filePath),
+          file_update_at: _base.convertToUTC(response.entry.modifiedAt),
+          last_uploaded_at: _base.getCurrentTime(),
+          last_downloaded_at: 0,
+          is_folder: false,
+          is_file: true,
+          download_in_progress: 0,
+          upload_in_progress: 0,
         });
 
         // Add an event log
-        eventLogModel.add(
-          account.id,
-          "UPLOAD_FILE",
-          `Uploaded File: ${filePath} to ${account.instance_url}`
-        );
-
+        await eventLogModel.create({
+          account_id: account.id,
+          type: eventType.UPLOAD_FILE,
+          description: `Uploaded File: ${filePath} to ${account.instance_url}`
+        });
       })
       .catch(async (error) => {
         // Ignore "duplicate" status codes
         if (error.statusCode == 409) {
           // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-          nodeModel.updateModifiedTime({
-            account: account,
-            filePath: filePath,
-            fileUpdateAt: _base.getFileModifiedTime(params.filePath)
-          });
+          await nodeModel.update({
+            file_update_at: _base.getFileModifiedTime(filePath)
+          }, {
+              where: {
+                account_id: account.id,
+                file_path: filePath
+              }
+            });
         }
-        try {
-          // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
-          nodeModel.forceDeleteByPath({
-            account,
-            filePath
-          });
-        } catch (error) {
-          console.log('Cannot forceDeleteByPath', filePath);
-        }
+        // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            file_path: filePath
+          }
+        });
       })
   }
 
   return;
-};
-
-exports.watchFolderGuard = async params => {
-  const INTERVAL = 10;
-  let { account, filePath, node, action } = params;
-
-  // UPLOAD Guard
-  if (action && action.toUpperCase() === "UPLOAD") {
-    const record = await nodeModel.getOneByFilePath({
-      account,
-      filePath
-    });
-
-    // Check if the file was just downloaded, bail out!
-    if (
-      record &&
-      _base.getCurrentTime() - record.last_downloaded_at <= INTERVAL
-    ) {
-      // logger.info(`Upload blocked 1: ${filePath}`);
-      return false;
-    }
-
-    // If the file was already uploaded, bail out!
-    if (
-      record &&
-      _base.getFileModifiedTime(record.file_path) - record.last_uploaded_at <=
-      INTERVAL
-    ) {
-      return false;
-    }
-  }
-
-  // DOWNLOAD Guard
-  if (action && action.toUpperCase() === "DOWNLOAD") {
-    const record = await nodeModel.getOneByFilePath({
-      account,
-      filePath
-    });
-    // Check if the file was just uploaded, bail out!
-    if (
-      record &&
-      _base.getCurrentTime() - record.last_uploaded_at <= INTERVAL
-    ) {
-      // logger.info(`Download blocked 1: ${filePath}`);
-      return false;
-    }
-
-    // If the latest file was already downloaded, bail out!
-    if (
-      record &&
-      _base.convertToUTC(node.modified_at) - record.last_downloaded_at <=
-      INTERVAL
-    ) {
-      // logger.info(`Download blocked 2: ${filePath}`);
-      return false;
-    }
-  }
-
-  // Only allow if its happening under the watched folder
-  let watchFolder = account.watch_folder.split("documentLibrary").pop();
-  let relativeFilePath = filePath.replace(account.sync_path, "");
-
-  // Strip any starting slashes..
-  watchFolder = watchFolder.replace(/[\/|\\]/, "");
-  relativeFilePath = relativeFilePath.replace(/[\/|\\]/, "").split("/")[0];
-
-  // If the folder or file being uploaded does not belong to the watched folder and if the watched folder is not the documentLibrary, bail out!
-  if (watchFolder !== "" && watchFolder !== relativeFilePath) {
-    logger.info(`Bailed ${relativeFilePath}`);
-    return false;
-  }
-
-  return true;
 };

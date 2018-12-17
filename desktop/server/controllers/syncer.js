@@ -1,7 +1,8 @@
+"use strict";
 const ondemand = require("../helpers/syncers/ondemand");
-const accountModel = require("../models/account");
+const { accountModel, syncStart, syncComplete } = require("../models/account");
+const { watcherModel } = require("../models/watcher");
 const watcher = require("../helpers/watcher");
-const watcherModel = require("../models/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
 
@@ -9,33 +10,39 @@ const path = require('path');
 exports.download = async (request, response) => {
   logger.info("DOWNLOAD API START");
 
-  const account = await accountModel.getOne(request.params.accountId);
+  const { dataValues: account } = await accountModel.findByPk(request.params.accountId);
 
   if (!account || account.sync_enabled == 0 || account.download_in_progress == 1) {
     logger.info("Download Bailed");
-    return;
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to download" });
   }
 
-  const watchFolders = await watcherModel.getAllByAccountId(account.id);
+  const watchFolders = await watcherModel.findAll({
+    where: {
+      account_id: account.id
+    }
+  });
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart({
+    syncStart({
       account,
       downloadProgress: 1
     });
 
-    for (const watcher of watchFolders) {
+    for (const { dataValues: watcher } of watchFolders) {
       await ondemand.recursiveDownload({
         account,
         watcher,
         sourceNodeId: watcher.watch_node,
-        destinationPath: watcher.sync_path
+        destinationPath: account.sync_path
       });
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       downloadProgress: 0
     });
@@ -47,7 +54,7 @@ exports.download = async (request, response) => {
     return response.status(200).json({ success: true });
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       downloadProgress: 0
     });
@@ -66,23 +73,31 @@ exports.upload = async (request, response) => {
   // Stop watcher for a while
   // watcher.unwatchAll();
 
-  let account = await accountModel.getOne(request.body.account_id);
+  let accountData = await accountModel.findByPk(request.body.account_id);
+  const { dataValues: account } = { ...accountData };
 
   if (!account || account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("Upload Bailed");
-    return;
+    return response
+      .status(404)
+      .json({ success: false, error: "Nothing to upload", error: error });
   }
 
-  const watchers = await watcherModel.getAllByAccountId(account.id);
+  const watchers = await watcherModel.findAll({
+    where: {
+      account_id: account.id
+    }
+  });
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    await accountModel.syncStart({
+    syncStart({
       account,
       uploadProgress: 1
     });
 
-    for (const watcher of watchers) {
+    for (const item of watchers) {
+      const { dataValues: watcher } = item;
 
       // Get the folder path as /var/sync/documentLibrary or /var/sync/documentLibrary/watchedFolder
       const rootFolder = path.join(
@@ -101,7 +116,7 @@ exports.upload = async (request, response) => {
     }
 
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       uploadProgress: 0
     });
@@ -112,10 +127,12 @@ exports.upload = async (request, response) => {
 
     return response
       .status(200)
-      .json(await accountModel.getOne(request.body.account_id));
+      .json(await accountModel.findByPk(request.body.account_id, {
+        attributes: { exclude: ['password'] },
+      }));
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    await accountModel.syncComplete({
+    syncComplete({
       account,
       uploadProgress: 0
     });
