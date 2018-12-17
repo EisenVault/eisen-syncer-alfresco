@@ -136,8 +136,6 @@ exports.upload = async (request, response) => {
       account,
       uploadProgress: 0
     });
-
-    console.log('errorrrr', error);
     // Start watcher now
     watcher.watchAll();
     return response

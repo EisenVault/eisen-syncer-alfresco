@@ -230,11 +230,11 @@ exports.recursiveUpload = async params => {
     logger.info("upload step 3 " + filePath);
 
     if (counter >= 50) {
-      logger.info("Going to sleep for 1.5 seconds");
-      console.log('"Going to sleep for 1.5 seconds"', counter);
+      logger.info("Going to sleep for 30 seconds");
+      console.log('"Going to sleep for 30 seconds"', counter);
 
       counter = 0;
-      await _base.sleep(15000);
+      await _base.sleep(30000);
     }
 
     let localFileModifiedDate = _base.getFileModifiedTime(filePath);
