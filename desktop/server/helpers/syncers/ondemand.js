@@ -207,6 +207,7 @@ exports.recursiveDownload = async params => {
  *  rootNodeId: string,
  * }
  */
+var counter = 0;
 exports.recursiveUpload = async params => {
   const account = params.account;
   const watcher = params.watcher;
@@ -220,12 +221,22 @@ exports.recursiveUpload = async params => {
   }
 
   logger.info("upload step 2");
+
   // Following cases are possible...
   // Case A: File created or renamed on local, upload it
   // Case B: File modified on local, upload it
   // Case C: File deleted on server, delete on local
   glob.sync(rootFolder).map(async filePath => {
-    logger.info("upload step 3");
+    logger.info("upload step 3 " + filePath);
+
+    if (counter >= 50) {
+      logger.info("Going to sleep for 1.5 seconds");
+      console.log('"Going to sleep for 1.5 seconds"', counter);
+
+      counter = 0;
+      await _base.sleep(15000);
+    }
+
     let localFileModifiedDate = _base.getFileModifiedTime(filePath);
 
     // Get the DB record of the filePath
@@ -245,6 +256,7 @@ exports.recursiveUpload = async params => {
 
     // Case A: File created or renamed on local, upload it
     if (!record) {
+      counter++;
       logger.info("New file, uploading... > " + filePath);
       await remote.upload({
         account,
@@ -267,6 +279,7 @@ exports.recursiveUpload = async params => {
         if (data.statusCode === 200 && data.record.is_file === true && localFileModifiedDate > _base.convertToUTC(data.response.entry.modifiedAt)) {
           logger.info("File modified on local, uploading..." + filePath);
           // Upload the local changes to the server.
+          counter++;
           await remote.upload({
             account,
             watcher,
@@ -309,6 +322,7 @@ exports.recursiveUpload = async params => {
 
       }); // end event listener
 
+      counter++;
       // Make a request to the server to get the node details
       await remote.getNode({
         account,

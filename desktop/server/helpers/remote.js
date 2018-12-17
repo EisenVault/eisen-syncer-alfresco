@@ -17,53 +17,6 @@ const _path = require('./path');
 const { logger } = require("./logger");
 
 /**
- *
- * @param object params
- * {
- *  account: Account<Object>,
- *  nodeId: string
- * }
- */
-exports.getNodeList = async params => {
-  let account = params.account;
-  let nodeId = params.nodeId;
-  let maxItems = params.maxItems || 10;
-  let skipCount = params.skipCount || 0;
-
-  if (!account) {
-    throw new Error("Account not found");
-  }
-
-  var options = {
-    method: "GET",
-    url:
-      account.instance_url +
-      "/alfresco/s/com/eisenvault/totalNodesCount/" +
-      nodeId +
-      "/shownodes?maxItems=" +
-      maxItems +
-      "&skipCount=" +
-      skipCount,
-    headers: {
-      Connection: "keep-alive",
-      authorization: "Basic " + (await token.get(account))
-    }
-  };
-
-  try {
-    let response = await request(options)
-      .on('error', function (e) {
-        console.error(e);
-        return;
-      });
-
-    return JSON.parse(response);
-  } catch (error) {
-    errorLogAdd(account.id, error, `${__filename}/getNodeList`);
-  }
-};
-
-/**
  * @param object params
  * {
  *  nodeId: string
@@ -494,30 +447,6 @@ exports.upload = async params => {
       }
     };
 
-    try {
-      // Add a record in the db
-      await nodeModel.create({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: '',
-        remote_folder_path: '',
-        file_name: path.basename(filePath),
-        file_path: _path.toUnix(filePath),
-        local_folder_path: path.dirname(filePath),
-        file_update_at: 0,
-        last_uploaded_at: 0,
-        last_downloaded_at: 0,
-        is_folder: false,
-        is_file: true,
-        download_in_progress: 0,
-        upload_in_progress: 1,
-      });
-
-    } catch (error) {
-      // Add an error log
-      errorLogAdd(account.id, error, `${__filename}/upload file`);
-    }
-
     request(options)
       .then(async (response) => {
         response = JSON.parse(response.body);
@@ -531,20 +460,23 @@ exports.upload = async params => {
           Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
         }, 0); //end setTimeout
 
-        // Update the node record once uploaded
-
-        await nodeModel.update({
-          upload_in_progress: 0,
-          file_update_at: _base.convertToUTC(response.entry.modifiedAt),
+        // Add a record in the db
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
           node_id: response.entry.id,
           remote_folder_path: response.entry.path.name,
-          last_uploaded_at: _base.getCurrentTime()
-        }, {
-            where: {
-              account_id: account.id,
-              file_path: filePath
-            }
-          });
+          file_name: path.basename(filePath),
+          file_path: _path.toUnix(filePath),
+          local_folder_path: path.dirname(filePath),
+          file_update_at: _base.convertToUTC(response.entry.modifiedAt),
+          last_uploaded_at: _base.getCurrentTime(),
+          last_downloaded_at: 0,
+          is_folder: false,
+          is_file: true,
+          download_in_progress: 0,
+          upload_in_progress: 0,
+        });
 
         // Add an event log
         await eventLogModel.create({
