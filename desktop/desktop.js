@@ -178,17 +178,7 @@ app.on("ready", () => {
       label: "Exit",
       click() {
         forceQuit = true;
-
         app.quit();
-
-        // Let pm2 stop the process after which we can quit the app gracefully...
-        // setTimeout(() => {
-        //   app.quit();
-        // }, 1000);
-
-        // pm2.stop("eisensync", errback => {
-        //   console.log("errback", errback);
-        // });
       }
     }
   ];
