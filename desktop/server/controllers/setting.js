@@ -1,14 +1,18 @@
-const settingModel = require("../models/setting");
+const { settingModel } = require("../models/setting");
 var package = require('../../package.json');
 
 exports.getAll = async (request, response) => {
-  return response.status(200).json(await settingModel.getAll());
+  return response.status(200).json(await settingModel.findAll());
 };
 
 exports.getOne = async (request, response) => {
   return response
     .status(200)
-    .json(await settingModel.getOne(request.params.name));
+    .json(await settingModel.findOne({
+      where: {
+        name: request.params.name
+      }
+    }));
 };
 
 exports.about = async (request, response) => {
@@ -21,7 +25,10 @@ exports.about = async (request, response) => {
 };
 
 exports.add = async (request, response) => {
-  let setting = await settingModel.add(request);
+  let setting = await settingModel.create({
+    name: request.body.name,
+    value: request.body.value
+  });
 
   return response.status(201).json({
     setting: setting
@@ -29,15 +36,14 @@ exports.add = async (request, response) => {
 };
 
 exports.update = async (request, response) => {
-  let setting = await settingModel.update(request.params.name, request);
-  return response.status(200).json({
-    setting: setting
-  });
-};
+  let setting = await settingModel.update({
+    value: request.body.value
+  }, {
+      where: {
+        name: request.params.name
+      }
+    });
 
-exports.startupLaunch = async (request, response) => {
-  await settingModel.update("LAUNCH_AT_STARTUP", request);
-  let setting = await settingModel.getOne('LAUNCH_AT_STARTUP');
   return response.status(200).json({
     setting: setting
   });

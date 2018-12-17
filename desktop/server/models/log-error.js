@@ -1,118 +1,76 @@
-var bugsnag = require("bugsnag");
-const log = require("electron-log");
+const Sequelize = require('sequelize');
+const db = require('../config/db');
 const { logger } = require("../helpers/logger");
-const { db } = require("../config/db");
+const { accountModel } = require('./account');
 const MIN_THRESHOLD = 200;
 
-exports.getAll = async () => {
-  return await db
-    .select(
-      "log_errors.id",
-      "log_errors.account_id",
-      "log_errors.description",
-      "log_errors.created_at",
-      "accounts.instance_url",
-      "accounts.username",
-      "accounts.sync_path",
-      "accounts.sync_enabled"
-    )
-    .from("log_errors")
-    .innerJoin("accounts", "log_errors.account_id", "accounts.id")
-    .orderBy("log_errors.id", "DESC");
-};
+const errorLogModel = db.connection.define('log_error', {
+    account_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    description: {
+        type: Sequelize.TEXT,
+        allowNull: false
+    },
+    created_at: Sequelize.INTEGER
+}, {
+        timestamps: false,
+        hooks: {
+            beforeCreate: (log) => {
+                log.created_at = new Date().getTime();
+            }
+        }
+    });
 
-exports.getAllByAccountId = async accountId => {
-  return await db
-    .select(
-      "log_errors.id",
-      "log_errors.account_id",
-      "log_errors.description",
-      "log_errors.created_at",
-      "accounts.instance_url",
-      "accounts.username",
-      "accounts.sync_path",
-      "accounts.sync_enabled"
-    )
-    .from("log_errors")
-    .innerJoin("accounts", "log_errors.account_id", "accounts.id")
-    .where("log_errors.account_id", accountId)
-    .orderBy("log_errors.id", "DESC");
-};
 
-exports.getOne = async id => {
-  return await db
-    .select(
-      "log_errors.id",
-      "log_errors.account_id",
-      "log_errors.description",
-      "log_errors.created_at",
-      "accounts.instance_url",
-      "accounts.username",
-      "accounts.sync_path",
-      "accounts.sync_enabled"
-    )
-    .first()
-    .from("log_errors")
-    .innerJoin("accounts", "log_errors.account_id", "accounts.id")
-    .where("id", id);
-};
+errorLogModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
-exports.getCount = async () => {
-  return await db("log_errors")
-    .count("id as total")
-    .first();
-};
+exports.connection = db.connection.sync({
+    force: db.flush,
+    logging: db.logging
+});
 
-exports.add = async (accountId, description, originatedFrom = '') => {
+exports.errorLogModel = errorLogModel;
 
-  let eventId = [[]];
-  db.transaction(async (trx) => {
-    try {
-      eventId = await db
-        .insert({
-          account_id: accountId,
-          description: String(description),
-          created_at: new Date().getTime()
+exports.add = (accountId, description, originatedFrom = '') => {
+
+    if (description && (description.toString().indexOf("StatusCodeError: 404") > -1 || description.toString().indexOf("StatusCodeError: 409") > -1)) {
+        return;
+    }
+
+    logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
+    errorLogModel.create({
+        account_id: accountId,
+        description: description ? JSON.stringify(description).replace(/[a-zA-Z0-9]/g, '') : '',
+        created_at: new Date().getTime()
+    })
+        .then(({ dataValues: logData }) => {
+            errorLogModel.findOne({
+                attributes: [[Sequelize.fn('COUNT', Sequelize.col('id')), 'total']]
+            })
+                .then(({ dataValues: count }) => {
+                    // Delete old records
+                    if (count.total > MIN_THRESHOLD) {
+                        let removableId = logData.id - MIN_THRESHOLD;
+                        exports.deleteAllLessThan(removableId);
+                    }
+                })
+                .catch(error => console.log(error));
         })
-        .into("log_errors")
-        .transacting(trx);
-      trx.commit;
-
-    } catch (error) {
-      trx.rollback;
-      // log.warn(String(error));
-      // logger.error(String(error));
-    }
-  });
-
-  // Delete old records
-  let count = await this.getCount();
-  if (count.total > MIN_THRESHOLD) {
-    let removableId = eventId[0] - MIN_THRESHOLD;
-    exports.deleteAllLessThan(removableId);
-  }
-
-  if (description && description.toString().indexOf("StatusCodeError: 404") === -1) {
-    //log.error("---ERROR---", originatedFrom, description);
-    //   bugsnag.notify(description.toString());
-  }
-
-  return eventId;
+        .catch(error => {
+            console.log('error', error);
+        });
 };
 
-exports.deleteAllLessThan = async id => {
-
-  db.transaction(async (trx) => {
-    try {
-      await db("log_errors")
-        .where("id", "<", id)
-        .delete()
-        .transacting(trx);
-      trx.commit;
-    } catch (error) {
-      trx.rollback;
-      log.error("---ERROR---logerror delete", originatedFrom, error);
-    }
-
-  });
+exports.deleteAllLessThan = id => {
+    errorLogModel.destroy({
+        where: {
+            id: {
+                [Sequelize.Op.lt]: id
+            }
+        }
+    })
+        .then()
+        .catch(error => console.log(error))
 };

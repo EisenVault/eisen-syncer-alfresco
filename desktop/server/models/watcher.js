@@ -1,66 +1,35 @@
-const { db } = require("../config/db");
-const errorLogModel = require('../models/log-error');
+const Sequelize = require('sequelize');
+const db = require('../config/db');
+const { accountModel } = require('./account');
 
-exports.getAllByAccountId = async accountId => {
-  return await db
-    .select(["watchers.*",
-      "accounts.instance_url",
-      "accounts.sync_path",
-      "accounts.sync_enabled",
-      "accounts.last_synced_at",
-      "accounts.sync_in_progress",
-      "accounts.download_in_progress",
-      "accounts.upload_in_progress"
-    ])
-    .from("watchers")
-    .where("account_id", accountId)
-    .join('accounts', 'accounts.id', 'watchers.account_id');
-};
-
-exports.addWatcher = async (accountId, object) => {
-
-  db.transaction(async (trx) => {
-    try {
-      const result = await db
-        .insert({
-          account_id: accountId,
-          site_name: object.siteName,
-          site_id: object.siteId,
-          document_library_node: object.documentLibraryId,
-          watch_node: object.watchNodeId,
-          watch_folder: object.watchPath,
-        })
-        .into("watchers")
-        .transacting(trx);
-      trx.commit;
-      return result;
-
-    } catch (error) {
-      trx.rollback;
-      await errorLogModel.add(account, error);
-    }
-
-  });
-
-};
+const watcherModel = db.connection.define('watcher', {
+    account_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    site_name: Sequelize.STRING,
+    site_id: Sequelize.STRING,
+    document_library_node: Sequelize.STRING,
+    watch_node: Sequelize.STRING,
+    watch_folder: Sequelize.TEXT,
+    created_at: Sequelize.INTEGER,
+    updated_at: Sequelize.INTEGER
+}, {
+        timestamps: false,
+        hooks: {
+            beforeCreate: (watcher) => {
+                watcher.created_at = new Date().getTime();
+                watcher.updated_at = new Date().getTime();
+            }
+        }
+    });
 
 
-exports.deleteAllByAccountId = async accountId => {
+watcherModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
-  db.transaction(async (trx) => {
-    try {
-      await db
-        .from("watchers")
-        .where("account_id", accountId)
-        .delete()
-        .transacting(trx);
-      trx.commit;
+exports.connection = db.connection.sync({
+    force: db.flush,
+    logging: db.logging
+});
 
-    } catch (error) {
-      trx.rollback;
-      await errorLogModel.add(account, error);
-    }
-  });
-
-}
-
+exports.watcherModel = watcherModel;

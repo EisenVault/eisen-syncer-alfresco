@@ -1,30 +1,30 @@
+const Sequelize = require('sequelize');
 const path = require("path");
 const fs = require("fs");
-const { logger } = require("../helpers/logger");
+
+let logging = false;
 
 let dbPath = path.join(__dirname.replace('app.asar', 'app.asar.unpacked').replace('config', 'database'), "syncer.db");
 if (!fs.existsSync(dbPath)) {
-  dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
+    dbPath = path.join(__dirname.replace("config", "database"), "syncer.db");
 
-  if (!fs.existsSync(dbPath)) {
-    throw `Database Not Found. __dirname: ${__dirname} dbPath: ${dbPath}`;
-  }
+    if (!fs.existsSync(dbPath)) {
+        throw `Database Not Found. __dirname: ${__dirname} dbPath: ${dbPath}`;
+    }
 }
 
-const knex = require("knex")({
-  client: "sqlite3",
-  connection: {
-    filename: dbPath,
-    connectTimeout: 90000
-  },
-  useNullAsDefault: true,
-  // pool: { min: 1, max: 100 },
-  // acquireConnectionTimeout: 10000
+const connection = new Sequelize(`sqlite:${dbPath}`, {
+    dialect: 'sqlite',
+    pool: {
+        max: 5,
+        idle: 30000,
+        acquire: 60000,
+    },
+    operatorsAliases: false,
+    logging
 });
 
-// output raw sql queries
-knex.on('query', function (queryData) {
-  // console.log(queryData.sql);
-});
+exports.flush = false;
+exports.logging = logging;
+exports.connection = connection;
 
-exports.db = knex;

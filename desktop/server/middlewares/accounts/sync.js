@@ -1,6 +1,6 @@
 const validator = require("validator");
 const _ = require("lodash");
-const watcherModel = require('../../models/watcher');
+const { watcherModel } = require('../../models/watcher');
 
 module.exports = async (request, response, next) => {
   let errors = [];
@@ -14,8 +14,12 @@ module.exports = async (request, response, next) => {
     });
   }
 
-  const removeFolders = await watcherModel.getAllByAccountId(request.params.id);
-  if(removeFolders.length === 0) {
+  const removeFolders = await watcherModel.findAll({
+    where: {
+      account_id: request.params.id
+    }
+  });
+  if (removeFolders.length === 0) {
     errors.push({
       sync_enabled: ["Sync cannot be enabled for this account since no remote folder was selected."]
     });

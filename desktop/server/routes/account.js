@@ -18,7 +18,6 @@ router.put("/credentials/:id", accountCredentialsMiddleware, accountController.u
 router.put("/sync_path/:id", accountSyncPathMiddleware, accountController.updateSyncPath);
 router.put("/:id/sync", accountUpdateSyncMiddleware, accountController.updateSync);
 router.post("/:id/watchnode", accountController.addWatchNodes);
-router.put("/:id/synctime", accountController.updateSyncTime);
 router.delete("/:id/force_delete/:force_delete", accountController.deleteAccount);
 
 module.exports = router;

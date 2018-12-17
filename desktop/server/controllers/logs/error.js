@@ -1,24 +1,20 @@
-const express = require("express");
-const errorLogModel = require("../../models/log-error");
+const { errorLogModel } = require("../../models/log-error");
+const { accountModel } = require("../../models/account");
 
 exports.getAll = async (request, response) => {
-  return response.status(200).json(await errorLogModel.getAll());
+  const errors = await errorLogModel.findAll({
+    include: [{
+      model: accountModel,
+      attributes: { exclude: ['password'] }
+    }],
+  });
+  return response.status(200).json(errors);
 };
 
 exports.getAllByAccountId = async (request, response) => {
-  return response.status(200).json(await errorLogModel.getAllByAccountId(request.params.account_id));
-};
-
-exports.getOne = async (request, response) => {
-  return response
-    .status(200)
-    .json(await errorLogModel.getOne(request.params.id));
-};
-
-exports.add = async (request, response) => {
-  let eventId = await errorLogModel.add(request.body.account_id, request.body.description);
-
-  return response.status(201).json({
-    id: eventId[0]
-  });
+  return response.status(200).json(await errorLogModel.findAll({
+    where: {
+      account_id: request.params.account_id
+    }
+  }));
 };

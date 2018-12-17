@@ -1,39 +1,23 @@
-const { db } = require("../config/db");
+const Sequelize = require('sequelize');
+const db = require('../config/db');
 
-exports.getAll = async () => {
-  return await db.select("*").from("settings");
-};
+const settingModel = db.connection.define('setting', {
+    name: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
+    },
+    value: {
+        type: Sequelize.TEXT,
+        allowNull: true
+    }
+}, {
+        timestamps: false
+    });
 
-exports.getOne = async name => {
-  return await db
-    .select("*")
-    .first()
-    .from("settings")
-    .where("name", name);
-};
+exports.connection = db.connection.sync({
+    force: db.flush,
+    logging: db.logging
+});
 
-exports.startupLaunch = async () => {
-  return await db
-    .select("value")
-    .first()
-    .from("settings")
-    .where("name", "LAUNCH_AT_STARTUP");
-};
-
-exports.add = async request => {
-  return await db
-    .insert({
-      name: request.body.name,
-      value: request.body.value
-    })
-    .into("settings");
-};
-
-exports.update = async (name, request) => {
-  
-  return await db("settings")
-    .update({
-      value: request.body.value
-    })
-    .where("name", name);
-};
+exports.settingModel = settingModel;
