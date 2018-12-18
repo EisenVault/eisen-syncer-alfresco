@@ -7,6 +7,9 @@ exports.getAll = async (request, response) => {
       model: accountModel,
       attributes: { exclude: ['password'] }
     }],
+    order: [
+      ['id', 'DESC']
+    ]
   });
   return response.status(200).json(errors);
 };
