@@ -251,7 +251,7 @@ exports.download = async params => {
     var totalBytes = 0;
     var recievedSize = 0;
     await request(options)
-      .on('error', function (e) {
+      .on('error', await function (e) {
         console.error('ON Error:...', e);
         await nodeModel.destroy({
           where: {
