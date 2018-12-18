@@ -14,5 +14,4 @@ Run `npm run i-linux` to build the project for linux.
 - `npm install`
 - `npm run rebuild`
 - Generate a certificate first `npm run make-win-cert`
-- Move `eisenvault.pfx` file under `certificates` folder
 - Run `npm run i-win` to build the installer.
