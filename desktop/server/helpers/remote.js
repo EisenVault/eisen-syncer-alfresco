@@ -253,6 +253,13 @@ exports.download = async params => {
     await request(options)
       .on('error', function (e) {
         console.error('ON Error:...', e);
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            file_path: _path.toUnix(destinationPath),
+          }
+        });
         return;
       })
       .on('response', async (data) => {
@@ -277,7 +284,7 @@ exports.download = async params => {
               }, {
                   where: {
                     account_id: account.id,
-                    file_path: destinationPath
+                    file_path: _path.toUnix(destinationPath)
                   }
                 });
 
