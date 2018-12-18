@@ -53,7 +53,7 @@
       "certificateFile": "eisenvault.pfx",
       "verifyUpdateCodeSignature": false,
       "publisherName": "eisenvault",
-      "rfc3161TimeStampServer": "http://tsa.starfieldtech.com",
+      "rfc3161TimeStampServer": "http://sha256timestamp.ws.symantec.com/sha256/timestamp",
       "target": [
         {
           "target": "nsis",
