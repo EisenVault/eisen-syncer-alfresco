@@ -13,13 +13,14 @@ if (!fs.existsSync(dbPath)) {
     }
 }
 
-const connection = new Sequelize(`sqlite:${dbPath}`, {
+const connection = new Sequelize(null, null, null, {
     dialect: 'sqlite',
     pool: {
         max: 5,
         idle: 30000,
         acquire: 60000,
     },
+    storage: `${dbPath}`,
     operatorsAliases: false,
     logging
 });
