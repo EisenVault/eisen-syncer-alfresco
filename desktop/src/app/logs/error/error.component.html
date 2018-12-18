@@ -14,8 +14,8 @@
     <tbody>
       <tr *ngFor="let log of logs">
         <td>{{ log.created_at | date:'full' }}</td>
-        <td>{{ log.instance_url }}</td>
-        <td>{{ log.username }}</td>
+        <td>{{ log.account.instance_url }}</td>
+        <td>{{ log.account.username }}</td>
         <td>{{ log.description | cleanString }}</td>
       </tr>
     </tbody>

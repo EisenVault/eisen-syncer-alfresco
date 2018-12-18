@@ -55,8 +55,13 @@ export class RemoteFolderComponent implements OnInit {
           this.isSelectAllChecked = true;
         }
 
+        const siteIdList = [];
+        this.sites.forEach(item => {
+          siteIdList.push(item.entry.guid);
+        });
+
         result.map((item) => {
-          if (this.sites[0].entry.guid === item.site_id) {
+          if (siteIdList.indexOf(item.site_id) !== -1) {
             this.preSelectedSiteIdList.push(item.site_id);
             this.selectedList.push({
               siteName: item.site_name,
@@ -127,7 +132,7 @@ export class RemoteFolderComponent implements OnInit {
 
   setSite(e, site) {
     this.isSelectAllChecked = false;
-
+    this.disableFinish = true;
     if (e.target.checked === true) {
 
       this._nodeService.getNodes(this.accountId, site.guid).subscribe(response => {

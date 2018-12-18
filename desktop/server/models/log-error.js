@@ -42,7 +42,7 @@ exports.add = (accountId, description, originatedFrom = '') => {
     logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
     errorLogModel.create({
         account_id: accountId,
-        description: description ? JSON.stringify(description).replace(/[a-zA-Z0-9]/g, '') : '',
+        description: description ? JSON.stringify(description).replace(/"/g, '') : '',
         created_at: new Date().getTime()
     })
         .then(({ dataValues: logData }) => {
@@ -53,6 +53,7 @@ exports.add = (accountId, description, originatedFrom = '') => {
                     // Delete old records
                     if (count.total > MIN_THRESHOLD) {
                         let removableId = logData.id - MIN_THRESHOLD;
+
                         exports.deleteAllLessThan(removableId);
                     }
                 })
