@@ -50,7 +50,7 @@
       "icon": "build/icons"
     },
     "win": {
-      "certificateFile": "certificates/eisenvault.pfx",
+      "certificateFile": "eisenvault.pfx",
       "verifyUpdateCodeSignature": false,
       "publisherName": "eisenvault",
       "rfc3161TimeStampServer": "http://tsa.starfieldtech.com",
