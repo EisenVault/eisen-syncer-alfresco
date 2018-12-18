@@ -226,8 +226,8 @@ exports.recursiveUpload = async params => {
   // Case A: File created or renamed on local, upload it
   // Case B: File modified on local, upload it
   // Case C: File deleted on server, delete on local
-  glob.sync(rootFolder).map(async filePath => {
-    logger.info("upload step 3 " + filePath);
+  glob.sync(rootFolder).forEach(async filePath => {
+    logger.info("upload step 3 ");
 
     if (counter >= 50) {
       logger.info("Going to sleep for 30 seconds");

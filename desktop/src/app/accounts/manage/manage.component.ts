@@ -50,14 +50,12 @@ export class ManageComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['cached'] === '1') {
         this._getAccounts();
-        this._getSyncStatus();
         this.isAppLoading = false;
       }
     });
 
     setTimeout(() => {
       this._getAccounts();
-      this._getSyncStatus();
 
       // Get the sync interval
       this._settingService
@@ -92,12 +90,6 @@ export class ManageComponent implements OnInit {
       // When the app loads, lets try and sync the files from and to server.
       this._runSyncEnabledAccounts();
     }, 5000);
-
-    // For every x seconds, we will make a request to the account api and check
-    // which accounts are still syncing, so that we can attach loaders for those accounts
-    setInterval(() => {
-      this._getSyncStatus();
-    }, this.INTERVAL);
   }
 
   _runSyncEnabledAccounts() {
@@ -116,8 +108,8 @@ export class ManageComponent implements OnInit {
 
   _processSync(account, forceSync = false) {
     // Stop the loading icon by default. Start when before running the sync api
-    const position = this.showAccountLoaders.indexOf(account.id);
-    this.showAccountLoaders.splice(position, 1);
+    // const position = this.showAccountLoaders.indexOf(account.id);
+    // this.showAccountLoaders.splice(position, 1);
     const currentTimestamp = Math.round(new Date().getTime() / 1000);
     const timeDifference = Math.abs(currentTimestamp - account.last_synced_at);
 
@@ -127,12 +119,10 @@ export class ManageComponent implements OnInit {
     ) {
 
       // This is for the spinning loader icon
-      const index = this.showAccountLoaders.indexOf(account.id);
-      if (index === -1) {
-        this.showAccountLoaders.push(account.id);
-      }
-      console.log('started sync');
-
+      // const index = this.showAccountLoaders.indexOf(account.id);
+      // if (index === -1) {
+      //   this.showAccountLoaders.push(account.id);
+      // }
       // Fire the syncer endpoint...
       this._syncerService.start(account.id);
     }
@@ -147,7 +137,7 @@ export class ManageComponent implements OnInit {
     // Determine is the account is in loading status
     const isLoading = (index !== -1 &&
       Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
-      this.showAccountLoaders.indexOf(account.id) >= 0;
+      (account.sync_in_progress === true || account.download_in_progress === true || account.upload_in_progress === true);
 
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.send('isSyncing', isLoading);
@@ -165,26 +155,6 @@ export class ManageComponent implements OnInit {
         this.isAppLoading = false;
       },
       error => {
-        this.isAppLoading = false;
-        this.miscError = 'Cannot connect to the backend service.';
-      }
-    );
-  }
-
-  _getSyncStatus() {
-    this._accountService.getAccounts().subscribe(
-      (accounts: IAccounts[]) => {
-        for (const account of accounts) {
-          // This is for the spinning loader icon
-          const index = this.showAccountLoaders.indexOf(account.id);
-          if (index === -1 && account.sync_in_progress === 1) {
-            this.showAccountLoaders.push(account.id);
-          } else if (account.sync_in_progress === 0) {
-            this.showAccountLoaders.splice(index, 1);
-          }
-        } // End forloop
-      },
-      () => {
         this.isAppLoading = false;
         this.miscError = 'Cannot connect to the backend service.';
       }
