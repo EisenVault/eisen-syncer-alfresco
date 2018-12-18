@@ -59,10 +59,10 @@ export class InstanceInfoComponent implements OnInit {
       .subscribe(
         response => {
           this.loading = false;
-          if (response.status == 201) {
+          if (response.status === 201) {
             this._router.navigate([
               'account-remote-folder',
-              (<any>response).body.account_id
+              (<any>response).body.id
             ]);
           }
         },
