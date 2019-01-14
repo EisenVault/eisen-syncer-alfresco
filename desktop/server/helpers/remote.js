@@ -13,9 +13,6 @@ const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
 const _path = require('./path');
 
-// Logger
-const { logger } = require("./logger");
-
 /**
  * @param object params
  * {
@@ -116,6 +113,10 @@ exports.getChildren = async params => {
 exports.deleteServerNode = async params => {
   let account = params.account;
   let record = params.record;
+
+  if (!account || !record) {
+    return;
+  }
 
   var options = {
     resolveWithFullResponse: true,
@@ -287,6 +288,8 @@ exports.download = async params => {
                     file_path: _path.toUnix(destinationPath)
                   }
                 });
+
+              console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
 
               // Add an event log
               await eventLogModel.create({
@@ -484,6 +487,8 @@ exports.upload = async params => {
           download_in_progress: 0,
           upload_in_progress: 0,
         });
+
+        console.log(`Uploaded File: ${filePath} to ${account.instance_url}`);
 
         // Add an event log
         await eventLogModel.create({

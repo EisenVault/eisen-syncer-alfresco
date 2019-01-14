@@ -1,8 +1,12 @@
 const watch = require("watch");
 const fs = require("fs");
-const syncer = require("../helpers/syncers/ondemand");
 const { accountModel } = require("../models/account");
+const { nodeModel } = require("../models/node");
+const { watcherModel } = require("../models/watcher");
 const remote = require("./remote");
+const { getSiteNameFromPath } = require('../helpers/path');
+const _base = require("./syncers/_base");
+
 // Logger
 const { logger } = require('./logger');
 
@@ -14,7 +18,6 @@ exports.watch = account => {
     return watchlist;
   }
 
-  var uniqueFileSet = new Set();
   watch.watchTree(account.sync_path, { ignoreDotFiles: true }, function (
     f,
     curr,
@@ -25,36 +28,32 @@ exports.watch = account => {
       // Finished walking the tree
     } else if (prev === null) {
       // f is a new file/folder
-      setTimeout(() => {
-        if (watchlist.indexOf(f) === -1) {
-          let type = "file";
-          if (fs.lstatSync(f).isDirectory()) {
-            type = "directory";
-          }
-          _upload(account, f);
-          logger.info(`${f} is a new ${type}`);
-        }
-      }, 1000);
-
       watchlist.push(f);
+      if (_countElements(f, watchlist) <= 1) {
+        let type = "file";
+        if (fs.lstatSync(f).isDirectory()) {
+          type = "directory";
+        }
+        _upload(account, f);
+        logger.info(`${f} is a new ${type}`);
+      }
+
 
     } else if (curr.nlink === 0) {
-      // f was removed
-      setTimeout(() => {
-        if (watchlist.indexOf(f) === -1) {
-          _delete(account, f);
-          logger.info(`${f} was removed`);
-        }
-      }, 1000);
       watchlist.push(f);
+      // f was removed
+      if (_countElements(f, watchlist) <= 1) {
+        _delete(account, f);
+        logger.info(`${f} was removed`);
+      }
 
     } else {
       // f was changed
-      if (watchlist.indexOf(f) === -1) {
+      watchlist.push(f);
+      if (_countElements(f, watchlist) <= 1) {
         _upload(account, f);
         logger.info(`${f} was changed...`);
       }
-      watchlist.push(f);
     }
   });
 
@@ -65,53 +64,93 @@ exports.watch = account => {
 
 // remove a watchlist
 exports.unwatchAll = async () => {
-  let accounts = await accountModel.getAll();
+  accounts = await accountModel.findAll();
   logger.info("Watcher paused");
 
   // Remove all watchers
-  for (let account of accounts) {
-    watch.unwatchTree(account.sync_path);
+  if (accounts) {
+    for (let { dataValues: account } of accounts) {
+      watch.unwatchTree(account.sync_path);
+    }
   }
 };
 
 exports.watchAll = async () => {
 
-  // Disabling the file watcher since the watch module is trigerring multuple change events.
-  return;
-  let accounts = await accountModel.getAll();
-
   // Remove all watchers first
-  // await this.unwatchAll();
+  await this.unwatchAll();
 
   logger.info("Watcher started");
 
   // Add new watchers
-  accounts = await accountModel.getAll(1);
-  for (let account of accounts) {
-    this.watch(account);
+  accounts = await accountModel.findAll({
+    where: {
+      sync_enabled: true
+    }
+  });
+
+  if (accounts) {
+    for (let { dataValues: account } of accounts) {
+      this.watch(account);
+    }
   }
+
+
 };
 
-async function _upload(account, syncPath) {
-  if (fs.statSync(syncPath).isFile()) {
-    // If syncPath is a file, just upload it and bail out! 
-    return remote.upload({
+async function _upload(account, filePath) {
+  let nodeData = await nodeModel.findOne({
+    where: {
+      file_path: filePath
+    }
+  });
+
+  if (nodeData) {
+    const { dataValues: node } = nodeData;
+    // No need to upload a file, that was already uploaded and doesn't have any changes
+    if (_base.getFileModifiedTime(filePath) <= node.last_uploaded_at) {
+      return;
+    }
+  }
+
+  let watcherData = await watcherModel.findOne({
+    where: {
+      site_name: getSiteNameFromPath(filePath)
+    }
+  });
+
+  if (!watcherData) {
+    return;
+  }
+
+  let { dataValues: watcher } = watcherData;
+  return remote.upload({
+    account,
+    watcher,
+    filePath,
+    rootNodeId: watcher.document_library_node
+  });
+}
+
+async function _delete(account, filePath) {
+  let nodeData = await nodeModel.findOne({
+    where: {
+      file_path: filePath
+    }
+  });
+
+  if (record) {
+    let { dataValues: record } = nodeData;
+    await remote.deleteServerNode({
       account,
-      filePath: syncPath,
-      rootNodeId: account.watch_node
-    });
-  } else {
-    await syncer.recursiveUpload({
-      account: account,
-      sync_path: syncPath,
-      rootNodeId: account.watch_node
+      record
     });
   }
 }
 
-async function _delete(account, filePath) {
-  await syncer.deleteByPath({
-    account: account,
-    filePath: filePath
-  });
+// This function returns the count of elements present in an array
+function _countElements(needle, hacksack) {
+  return hacksack.reduce((counter, value) => {
+    return value === needle ? ++counter : counter;
+  }, 0);
 }

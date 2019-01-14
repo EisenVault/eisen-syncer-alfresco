@@ -110,8 +110,8 @@ export class ManageComponent implements OnInit {
     // Stop the loading icon by default. Start when before running the sync api
     // const position = this.showAccountLoaders.indexOf(account.id);
     // this.showAccountLoaders.splice(position, 1);
-    const currentTimestamp = Math.round(new Date().getTime() / 1000);
-    const timeDifference = Math.abs(currentTimestamp - account.last_synced_at);
+    const currentTimestamp = Math.round(new Date().getTime());
+    const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
@@ -136,7 +136,7 @@ export class ManageComponent implements OnInit {
 
     // Determine is the account is in loading status
     const isLoading = (index !== -1 &&
-      Math.round((new Date().getTime() - accountLastSync) / 1000) <= 15) ||
+      Math.round((new Date().getTime() - accountLastSync)) <= 15) ||
       (account.sync_in_progress === true || account.download_in_progress === true || account.upload_in_progress === true);
 
     if (this._electronService.isElectronApp) {
