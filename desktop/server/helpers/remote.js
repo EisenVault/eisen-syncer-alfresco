@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
-const emitter = require('../helpers/emitter').emitter;
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
@@ -40,24 +39,13 @@ exports.getNode = async params => {
     }
   };
 
-  request(options)
-    .then(response => {
-      emitter.emit('getNode' + record.node_id, {
-        account,
-        record,
-        statusCode: 200,
-        response: JSON.parse(String(response))
-      });
-    })
-    .catch(error => {
-      emitter.emit('getNode' + record.node_id, {
-        account,
-        record,
-        statusCode: error.statusCode,
-        response: {}
-      });
-      errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
-    });
+  try {
+    return await request(options);
+
+  } catch (error) {
+    console.log('error', error);
+  }
+  errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
 };
 
 /**
@@ -457,67 +445,66 @@ exports.upload = async params => {
       }
     };
 
-    request(options)
-      .then(async (response) => {
-        response = JSON.parse(response.body);
+    try {
+      let response = await request(options)
+      response = JSON.parse(response.body);
 
-        // Update the time meta properties of the downloaded file
-        const btime = _base.convertToUTC(response.entry.createdAt);
-        const mtime = _base.convertToUTC(response.entry.modifiedAt);
-        const atime = undefined;
+      // Update the time meta properties of the downloaded file
+      const btime = _base.convertToUTC(response.entry.createdAt);
+      const mtime = _base.convertToUTC(response.entry.modifiedAt);
+      const atime = undefined;
 
-        setTimeout(() => {
-          Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
-        }, 0); //end setTimeout
+      setTimeout(() => {
+        Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
+      }, 0); //end setTimeout
 
-        // Add a record in the db
-        await nodeModel.create({
+      // Add a record in the db
+      await nodeModel.create({
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: response.entry.id,
+        remote_folder_path: response.entry.path.name,
+        file_name: path.basename(filePath),
+        file_path: _path.toUnix(filePath),
+        local_folder_path: path.dirname(filePath),
+        file_update_at: _base.convertToUTC(response.entry.modifiedAt),
+        last_uploaded_at: _base.getCurrentTime(),
+        last_downloaded_at: 0,
+        is_folder: false,
+        is_file: true,
+        download_in_progress: 0,
+        upload_in_progress: 0,
+      });
+
+      console.log(`Uploaded File: ${filePath} to ${account.instance_url}`);
+
+      // Add an event log
+      await eventLogModel.create({
+        account_id: account.id,
+        type: eventType.UPLOAD_FILE,
+        description: `Uploaded File: ${filePath} to ${account.instance_url}`
+      });
+    } catch (error) {
+      // Ignore "duplicate" status codes
+      if (error.statusCode == 409) {
+        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
+        await nodeModel.update({
+          file_update_at: _base.getFileModifiedTime(filePath)
+        }, {
+            where: {
+              account_id: account.id,
+              file_path: filePath
+            }
+          });
+      }
+      // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
+      await nodeModel.destroy({
+        where: {
           account_id: account.id,
-          site_id: watcher.site_id,
-          node_id: response.entry.id,
-          remote_folder_path: response.entry.path.name,
-          file_name: path.basename(filePath),
-          file_path: _path.toUnix(filePath),
-          local_folder_path: path.dirname(filePath),
-          file_update_at: _base.convertToUTC(response.entry.modifiedAt),
-          last_uploaded_at: _base.getCurrentTime(),
-          last_downloaded_at: 0,
-          is_folder: false,
-          is_file: true,
-          download_in_progress: 0,
-          upload_in_progress: 0,
-        });
-
-        console.log(`Uploaded File: ${filePath} to ${account.instance_url}`);
-
-        // Add an event log
-        await eventLogModel.create({
-          account_id: account.id,
-          type: eventType.UPLOAD_FILE,
-          description: `Uploaded File: ${filePath} to ${account.instance_url}`
-        });
-      })
-      .catch(async (error) => {
-        // Ignore "duplicate" status codes
-        if (error.statusCode == 409) {
-          // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-          await nodeModel.update({
-            file_update_at: _base.getFileModifiedTime(filePath)
-          }, {
-              where: {
-                account_id: account.id,
-                file_path: filePath
-              }
-            });
+          file_path: filePath
         }
-        // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
-        await nodeModel.destroy({
-          where: {
-            account_id: account.id,
-            file_path: filePath
-          }
-        });
-      })
+      });
+    }
   }
 
   return;

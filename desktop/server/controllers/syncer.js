@@ -5,6 +5,7 @@ const { watcherModel } = require("../models/watcher");
 const fileWatcher = require("../helpers/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
+const _base = require('../helpers/syncers/_base');
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
@@ -114,6 +115,9 @@ exports.upload = async (request, response) => {
         rootFolder
       });
     }
+
+    // Run the worker
+    _base.runWorker();
 
     // Set the sync completed time and also set issync flag to off
     syncComplete({

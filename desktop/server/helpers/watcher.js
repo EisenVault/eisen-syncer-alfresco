@@ -99,6 +99,7 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, filePath) {
+  return;
   let nodeData = await nodeModel.findOne({
     where: {
       file_path: filePath
@@ -133,13 +134,14 @@ async function _upload(account, filePath) {
 }
 
 async function _delete(account, filePath) {
+  return;
   let nodeData = await nodeModel.findOne({
     where: {
       file_path: filePath
     }
   });
 
-  if (record) {
+  if (nodeData) {
     let { dataValues: record } = nodeData;
     await remote.deleteServerNode({
       account,
