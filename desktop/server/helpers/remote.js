@@ -41,11 +41,14 @@ exports.getNode = async params => {
 
   try {
     return await request(options);
-
   } catch (error) {
-    console.log('error', error);
+    errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
+    console.log('typeof', typeof error.error);
+    error = JSON.parse(error.error);
+    console.log('error statusCode', error.error.statusCode);
+
+    return error.error;
   }
-  errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
 };
 
 /**
@@ -82,7 +85,7 @@ exports.getChildren = async params => {
   try {
     let response = await request(options)
       .on('error', function (e) {
-        console.error(e);
+        console.error('######ON ERROR#####', e);
         return;
       });
     return JSON.parse(response);
@@ -484,6 +487,9 @@ exports.upload = async params => {
         type: eventType.UPLOAD_FILE,
         description: `Uploaded File: ${filePath} to ${account.instance_url}`
       });
+
+      return true;
+
     } catch (error) {
       // Ignore "duplicate" status codes
       if (error.statusCode == 409) {
@@ -497,13 +503,8 @@ exports.upload = async params => {
             }
           });
       }
-      // If the file could be uploaded for some reason, we will delete the record so that the uploader can reintiate the transfer later
-      await nodeModel.destroy({
-        where: {
-          account_id: account.id,
-          file_path: filePath
-        }
-      });
+
+      return false;
     }
   }
 

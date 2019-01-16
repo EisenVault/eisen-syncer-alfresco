@@ -25,7 +25,13 @@ const workerModel = db.connection.define('worker', {
             beforeCreate: (account) => {
                 account.created_at = new Date().getTime();
             }
-        }
+        },
+        indexes: [
+            {
+                unique: true,
+                fields: ['account_id', 'watcher_id', 'file_path', 'root_node_id']
+            }
+        ]
     });
 
 

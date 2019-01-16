@@ -30,7 +30,6 @@ const nodeModel = db.connection.define('node', {
             }
         },
         indexes: [
-            // Create a unique index on email
             {
                 unique: true,
                 fields: ['account_id', 'site_id', 'node_id', 'remote_folder_path', 'file_path']

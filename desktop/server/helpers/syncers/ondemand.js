@@ -10,7 +10,6 @@ const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
 const _path = require("../path");
-const rimraf = require('rimraf');
 
 // Logger
 const { logger } = require("../logger");
@@ -142,6 +141,7 @@ exports.recursiveDownload = async params => {
         record.is_file === true
       ) {
         logger.info("downloaded since new " + currentPath);
+        console.log("downloaded since new " + currentPath);
         await _createItemOnLocal({
           watcher,
           node,
@@ -221,114 +221,22 @@ exports.recursiveUpload = async params => {
 
   logger.info("upload step 2");
 
-  // Following cases are possible...
-  // Case A: File created or renamed on local, upload it
-  // Case B: File modified on local, upload it
-  // Case C: File deleted on server, delete on local
+
   glob.sync(rootFolder).forEach(async filePath => {
-    logger.info("upload step 3");
 
-    let localFileModifiedDate = _base.getFileModifiedTime(filePath);
-
-    // Get the DB record of the filePath
-    let nodeData = await nodeModel.findOne({
-      where: {
-        account_id: account.id,
-        file_path: filePath
-      }
-    });
-    const { dataValues: record } = { ...nodeData };
-    logger.info("upload step 4");
-
-    if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
-      logger.info("Bailed upload, download in progress. " + filePath);
-      return;
-    }
-
-    // Case A: File created or renamed on local, upload it
-    if (!record) {
-      // counter++;
-      logger.info("New file, uploading... > " + filePath);
+    try {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
         file_path: filePath,
         root_node_id: watcher.document_library_node
       });
-      // await remote.upload({
-      //   account,
-      //   watcher,
-      //   filePath,
-      //   rootNodeId: watcher.document_library_node
-      // });
+    } catch (error) {
+      // Log only if its not a unique constraint error.
+      if (error.parent.errno !== 19) {
+        console.log('error', error);
+      }
     }
-
-    logger.info("upload step 5");
-
-    // If the record exists in the DB (making sure upload is not in progress)
-    if (record) {
-      logger.info("upload step 6");
-
-      // counter++;
-      // Make a request to the server to get the node details
-      let remoteNodeResponse = await remote.getNode({
-        account,
-        record
-      });
-
-      // Case B: File modified on local, upload it
-      if (remoteNodeResponse.statusCode === 200 && remoteNodeResponse.record.is_file === true && localFileModifiedDate > _base.convertToUTC(remoteNodeResponse.response.entry.modifiedAt)) {
-        logger.info("File modified on local, uploading..." + filePath);
-        // Upload the local changes to the server.
-        await workerModel.create({
-          account_id: account.id,
-          watcher_id: watcher.id,
-          file_path: filePath,
-          root_node_id: watcher.document_library_node
-        });
-        // await remote.upload({
-        //   account,
-        //   watcher,
-        //   filePath,
-        //   rootNodeId: watcher.document_library_node
-        // });
-      }
-
-      // Case C: File deleted on server? delete on local
-      if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && remoteNodeResponse.record.download_in_progress == false && remoteNodeResponse.record.upload_in_progress == false) {
-        logger.info(
-          "Node not available on server, deleting on local: " + remoteNodeResponse.record.file_path + " - " + remoteNodeResponse.record.id
-        );
-        // If the node is not found on the server, delete the file on local
-        rimraf(remoteNodeResponse.record.file_path, async () => {
-          await nodeModel.destroy({
-            where: {
-              account_id: remoteNodeResponse.account.id,
-              node_id: remoteNodeResponse.record.node_id
-            }
-          });
-        });
-      }
-
-      // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
-      if (remoteNodeResponse.statusCode === 200 && remoteNodeResponse.response.entry && remoteNodeResponse.response.entry.path.name !== remoteNodeResponse.record.remote_folder_path) {
-        logger.info(
-          "Node was moved to some other location, deleting on local: " + remoteNodeResponse.record.file_path + " - " + remoteNodeResponse.record.id
-        );
-
-        rimraf(remoteNodeResponse.record.file_path, async () => {
-          await nodeModel.destroy({
-            where: {
-              account_id: remoteNodeResponse.account.id,
-              file_path: remoteNodeResponse.record.file_path
-            }
-          });
-        });
-      }
-      logger.info("upload step 7");
-    }
-
-    logger.info("upload step 8");
 
     if (fs.statSync(filePath).isDirectory()) {
       logger.info("upload step 9");
@@ -339,7 +247,6 @@ exports.recursiveUpload = async params => {
       });
     }
 
-    logger.info("upload step 10");
   }); // Filelist iteration end
 
   logger.info("upload step 11");
