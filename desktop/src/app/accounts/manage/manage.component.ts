@@ -28,7 +28,6 @@ export class ManageComponent implements OnInit {
   public accounts;
   public isAppLoading = true;
   public isSaved = false;
-  public showAccountLoaders: number[] = [];
   private enabledSyncAccounts: number[] = [];
   public errors: any = {};
   public miscError = '';
@@ -51,6 +50,10 @@ export class ManageComponent implements OnInit {
       if (params['cached'] === '1') {
         this._getAccounts();
         this.isAppLoading = false;
+        console.log('SECOND LAUNCH');
+      } else {
+        // First launch
+        console.log('FIRST LAUNCH');
       }
     });
 
@@ -63,9 +66,9 @@ export class ManageComponent implements OnInit {
         .subscribe((result: Setting) => {
           this.syncIntervalSetting = Number(result.value) * 60;
           // For every minute, we will run the timer for sync...
-          setInterval(() => {
-            this._runSyncEnabledAccounts();
-          }, 60000);
+          // setInterval(() => {
+          //   this._runSyncEnabledAccounts();
+          // }, 60000);
         });
 
       // Get the timezone
@@ -88,7 +91,7 @@ export class ManageComponent implements OnInit {
         });
 
       // When the app loads, lets try and sync the files from and to server.
-      this._runSyncEnabledAccounts();
+      // this._runSyncEnabledAccounts(); // Disable auto sync since realtime sync is enabled
     }, 5000);
   }
 
@@ -108,8 +111,6 @@ export class ManageComponent implements OnInit {
 
   _processSync(account, forceSync = false) {
     // Stop the loading icon by default. Start when before running the sync api
-    // const position = this.showAccountLoaders.indexOf(account.id);
-    // this.showAccountLoaders.splice(position, 1);
     const currentTimestamp = Math.round(new Date().getTime());
     const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
@@ -117,27 +118,23 @@ export class ManageComponent implements OnInit {
     if (
       forceSync === true || (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting)
     ) {
-
-      // This is for the spinning loader icon
-      // const index = this.showAccountLoaders.indexOf(account.id);
-      // if (index === -1) {
-      //   this.showAccountLoaders.push(account.id);
-      // }
+      this.enabledSyncAccounts.push(account.id);
       // Fire the syncer endpoint...
       this._syncerService.start(account.id);
     }
   }
 
   isLoading(account) {
-    const accountLastSync = account.last_synced_at
-      ? account.last_synced_at
-      : new Date().getTime();
+    // const accountLastSync = account.last_synced_at
+    //   ? account.last_synced_at
+    //   : new Date().getTime();
     const index = this.enabledSyncAccounts.indexOf(account.id);
 
-    // Determine is the account is in loading status
-    const isLoading = (index !== -1 &&
-      Math.round((new Date().getTime() - accountLastSync)) <= 15) ||
-      (account.sync_in_progress === true || account.download_in_progress === true || account.upload_in_progress === true);
+    // Determine if the account is in loading status
+    const isLoading = index !== -1 ||
+      account.sync_in_progress === true ||
+      account.download_in_progress === true ||
+      account.upload_in_progress === true;
 
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.send('isSyncing', isLoading);
@@ -154,7 +151,7 @@ export class ManageComponent implements OnInit {
         this.miscError = '';
         this.isAppLoading = false;
       },
-      error => {
+      () => {
         this.isAppLoading = false;
         this.miscError = 'Cannot connect to the backend service.';
       }

@@ -2,10 +2,10 @@ const watch = require("watch");
 const fs = require("fs");
 const { accountModel } = require("../models/account");
 const { nodeModel } = require("../models/node");
+const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
 const remote = require("./remote");
-const { getSiteNameFromPath } = require('../helpers/path');
-const _base = require("./syncers/_base");
+const worker = require('../helpers/syncers/worker');
 
 // Logger
 const { logger } = require('./logger');
@@ -99,42 +99,34 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, filePath) {
-  return;
-  let nodeData = await nodeModel.findOne({
+  const watchers = await watcherModel.findAll({
     where: {
-      file_path: filePath
+      account_id: account.id
     }
   });
 
-  if (nodeData) {
-    const { dataValues: node } = nodeData;
-    // No need to upload a file, that was already uploaded and doesn't have any changes
-    if (_base.getFileModifiedTime(filePath) <= node.last_uploaded_at) {
-      return;
+  for (const item of watchers) {
+    const { dataValues: watcher } = item;
+
+    try {
+      await workerModel.create({
+        account_id: account.id,
+        watcher_id: watcher.id,
+        file_path: filePath,
+        root_node_id: watcher.document_library_node
+      });
+    } catch (error) {
+      // Log only if its not a unique constraint error.
+      if (error.parent.errno !== 19) {
+        console.log('error', error);
+      }
     }
-  }
+  } // end for loop
 
-  let watcherData = await watcherModel.findOne({
-    where: {
-      site_name: getSiteNameFromPath(filePath)
-    }
-  });
-
-  if (!watcherData) {
-    return;
-  }
-
-  let { dataValues: watcher } = watcherData;
-  return remote.upload({
-    account,
-    watcher,
-    filePath,
-    rootNodeId: watcher.document_library_node
-  });
+  await worker.runUpload();
 }
 
 async function _delete(account, filePath) {
-  return;
   let nodeData = await nodeModel.findOne({
     where: {
       file_path: filePath

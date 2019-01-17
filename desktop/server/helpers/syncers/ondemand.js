@@ -6,10 +6,8 @@ const mkdirp = require("mkdirp");
 const glob = require("glob");
 const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
-const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
-const _path = require("../path");
 
 // Logger
 const { logger } = require("../logger");
@@ -142,7 +140,7 @@ exports.recursiveDownload = async params => {
       ) {
         logger.info("downloaded since new " + currentPath);
         console.log("downloaded since new " + currentPath);
-        await _createItemOnLocal({
+        await _base.createItemOnLocal({
           watcher,
           node,
           currentPath,
@@ -170,7 +168,7 @@ exports.recursiveDownload = async params => {
 
     // Case D: If not present on local or if the file is not present on local, download...
     if (!record && fileRenamed === false) {
-      await _createItemOnLocal({
+      await _base.createItemOnLocal({
         watcher,
         node,
         currentPath,
@@ -212,15 +210,10 @@ exports.recursiveUpload = async params => {
   const watcher = params.watcher;
   let rootFolder = params.rootFolder;
 
-  logger.info("upload step 1");
-
-  if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
+    if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("upload bailed");
     return;
   }
-
-  logger.info("upload step 2");
-
 
   glob.sync(rootFolder).forEach(async filePath => {
 
@@ -239,7 +232,6 @@ exports.recursiveUpload = async params => {
     }
 
     if (fs.statSync(filePath).isDirectory()) {
-      logger.info("upload step 9");
       exports.recursiveUpload({
         account,
         watcher,
@@ -249,63 +241,6 @@ exports.recursiveUpload = async params => {
 
   }); // Filelist iteration end
 
-  logger.info("upload step 11");
   return;
 }
 
-var _createItemOnLocal = async params => {
-  const account = params.account;
-  const watcher = params.watcher;
-  const node = params.node;
-  const currentPath = params.currentPath;
-  try {
-    if (node.isFolder === true) {
-      // If the child is a folder, create the folder first
-      if (!fs.existsSync(currentPath)) {
-        mkdirp.sync(currentPath);
-      }
-
-      // Delete if record already exists
-      await nodeModel.destroy({
-        where: {
-          account_id: account.id,
-          site_id: watcher.site_id,
-          node_id: node.id,
-          file_path: _path.toUnix(currentPath),
-        }
-      });
-
-      // Add reference to the nodes table
-      await nodeModel.create({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: node.id,
-        remote_folder_path: node.path.name,
-        file_name: path.basename(currentPath),
-        file_path: _path.toUnix(currentPath),
-        local_folder_path: path.dirname(currentPath),
-        file_update_at: _base.convertToUTC(node.modifiedAt),
-        last_uploaded_at: 0,
-        last_downloaded_at: _base.getCurrentTime(),
-        is_folder: true,
-        is_file: false,
-        download_in_progress: 0,
-        upload_in_progress: 0
-      });
-      return;
-    }
-
-    // If the child is a file, download the file...
-    if (node.isFile === true) {
-      await remote.download({
-        watcher,
-        account,
-        node,
-        destinationPath: currentPath,
-        remoteFolderPath: node.path.name
-      });
-    }
-  } catch (error) {
-    errorLogAdd(account.id, error, `${__filename}/_createItemOnLocal`);
-  }
-};

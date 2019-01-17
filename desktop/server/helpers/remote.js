@@ -32,6 +32,7 @@ exports.getNode = async params => {
 
   var options = {
     method: "GET",
+    resolveWithFullResponse: true,
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
     headers: {
       Connection: "keep-alive",
@@ -43,10 +44,7 @@ exports.getNode = async params => {
     return await request(options);
   } catch (error) {
     errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
-    console.log('typeof', typeof error.error);
     error = JSON.parse(error.error);
-    console.log('error statusCode', error.error.statusCode);
-
     return error.error;
   }
 };
@@ -267,29 +265,29 @@ exports.download = async params => {
           const atime = undefined;
 
           setTimeout(() => {
-            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => {
-
-              // set download progress to false
-              await nodeModel.update({
-                download_in_progress: 0,
-                file_update_at: mtime
-              }, {
-                  where: {
-                    account_id: account.id,
-                    file_path: _path.toUnix(destinationPath)
-                  }
-                });
-
-              console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-              // Add an event log
-              await eventLogModel.create({
-                account_id: account.id,
-                type: eventType.DOWNLOAD_FILE,
-                description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-              });
-            });
+            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => { });
           }, 0);
+
+          // set download progress to false
+          await nodeModel.update({
+            download_in_progress: 0,
+            file_update_at: mtime
+          }, {
+              where: {
+                account_id: account.id,
+                file_path: _path.toUnix(destinationPath)
+              }
+            });
+
+          console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+
+          // Add an event log
+          await eventLogModel.create({
+            account_id: account.id,
+            type: eventType.DOWNLOAD_FILE,
+            description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+          });
+
         }
       })
       .pipe(fs.createWriteStream(destinationPath));

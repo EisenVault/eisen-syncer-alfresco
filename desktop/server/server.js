@@ -3,11 +3,15 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const io = require("socket.io-client");
 const watcher = require("./helpers/watcher");
-const onevent = require("./helpers/syncers/onevent");
 const { accountModel } = require("./models/account");
-const { nodeModel } = require("./models/node");
+const { watcherModel } = require("./models/watcher");
 const { add: errorLogAdd } = require("./models/log-error");
+const _ = require('lodash');
 const env = require("./config/env");
+const _path = require('./helpers/path');
+const _base = require('./helpers/syncers/_base');
+const onevent = require('./helpers/syncers/onevent');
+
 // var bugsnag = require("bugsnag");
 // bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
@@ -71,68 +75,88 @@ watcher.watchAll();
 let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
-  return;
-  data = typeof data === "object" ? data : JSON.parse(data);
+  const socketData = typeof data === "object" ? data : JSON.parse(data);
+  console.log('Socket Step 1');
 
-  if (!data.path && !data.node_id) {
+  if (!socketData.path && !socketData.node_id) {
     // The response should have atleast the path or the node_id
     return;
   }
+  console.log('Socket Step 2');
+  const action = socketData.action.toUpperCase();
 
-  logger.info(JSON.stringify(data));
-
-  if (data.action.toUpperCase() == "DELETE") {
-    // Since we are not gettting the deleted path from the socket service, we will have to look up in the nodes table to get the remote paths, and their account ids
-    var nodeRemotePaths = [];
-    var accounts = [];
-    const deletionNodes = await nodeModel.getAllByNodeId(data.node_id);
-    for (const iterator of deletionNodes) {
-      nodeRemotePaths.push(iterator.remote_folder_path);
-      accounts.push(iterator.account_id);
+  // Get all accounts by instances
+  const accountData = await accountModel.findAll({
+    where: {
+      instance_url: _base.getInstanceUrl(socketData.instance_url)
     }
+  });
 
-    // Once we get the account ids, we will find all related accounts
-    getBroadcastedAccounts = await accountModel.findByInstanceAccounts(
-      data.instance_url,
-      accounts
-    );
-  } else {
-    let siteName = data.path.split("/")[3];
-    getBroadcastedAccounts = await accountModel.findByInstanceSiteName(
-      data.instance_url,
-      siteName
-    );
-  }
-
-  if (getBroadcastedAccounts.length === 0) {
+  if (_.isEmpty(accountData)) {
     return;
   }
+  console.log('Socket Step 3');
+  for (const accountItem of accountData) {
+    console.log('Socket Step 4');
+    const { dataValues: account } = { ...accountItem };
 
-  for (const account of getBroadcastedAccounts) {
-    if (data.action.toUpperCase() == "DELETE") {
-      // Perform checks so that the action may be taken only for the folders being watched...
-      for (const remotePath of nodeRemotePaths) {
-        // If the deleted path on the server is inside the watch_folder of the account, then we delete the local file only under that path...
-        if (remotePath.indexOf(account.watch_folder) !== -1) {
-          await onevent.delete(account, data);
-        }
+    // Since the delete action does not contain path, we will handle it in a diff way
+    if (action === 'DELETE') {
+      onevent.delete({
+        node_id: socketData.node_id
+      });
+      return;
+    }
+
+    console.log('Socket Step 5');
+    // Extract the node path till documentLibrary
+    const nodeDocLibraryPath = socketData.path.substring(0, socketData.path.indexOf('documentLibrary/')) + 'documentLibrary';
+    console.log('Socket Step 5.1');
+    // Convert the nodepath to a localpath
+    const localPath = _path.getLocalPathFromNodePath({
+      account,
+      nodePath: socketData.path
+    });
+    console.log('Socket Step 5.2');
+    // Get the sitename from the localpath
+    const siteName = _path.getSiteNameFromPath(localPath);
+    console.log('Socket Step 5.3');
+    // For each account, fetch the watcher so that the syncer would only consider syncing the files that are being watched
+    const watcherData = await watcherModel.findOne({
+      where: {
+        account_id: account.id,
+        site_name: siteName,
+        watch_folder: nodeDocLibraryPath
       }
+    });
+
+    console.log('Socket Step 6.1');
+
+    if (action === 'MOVE') {
+      onevent.move({
+        account,
+        watcherData,
+        socketData,
+        localPath
+      });
     }
 
-    if (data.action.toUpperCase() == "CREATE") {
-      // If the current path is not the watch folder of this account, then skip and go to next iteration.
-      if (data.path.indexOf(account.watch_folder) === -1) {
-        continue;
-      }
-      await onevent.create(account, data);
+    // Looks like the path is not being watched
+    if (_.isEmpty(watcherData)) {
+      continue;
     }
 
-    if (
-      data.action.toUpperCase() === "UPDATE" ||
-      data.action.toUpperCase() === "MOVE"
-    ) {
-      await onevent.update(account, data);
+    if (action === 'CREATE' || action === 'UPDATE') {
+      console.log('Socket Step 8.1');
+      onevent.create({
+        account,
+        watcherData,
+        socketData,
+        localPath
+      });
     }
+
+    console.log('Socket Step 9');
   }
 });
 
