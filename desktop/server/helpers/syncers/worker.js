@@ -9,13 +9,23 @@ const _base = require("./_base");
 // Logger
 const { logger } = require("../logger");
 
-exports.runUpload = async () => {
-    let workerData = await workerModel.findOne();
-    logger.info("upload step 1");
+exports.runUpload = async (isRecursive = true) => {
+
+    let orderIdBy = 'DESC';
+    if (isRecursive) {
+        orderIdBy = 'ASC';
+    }
+
+    let workerData = await workerModel.findOne({
+        order: [
+            ['priority', 'DESC'],
+            ['id', orderIdBy]
+        ]
+    });
+
     if (!workerData) {
         return;
     }
-    logger.info("upload step 2");
     const { dataValues: worker } = workerData;
 
     const accountData = await accountModel.findByPk(worker.account_id);
@@ -41,13 +51,12 @@ exports.runUpload = async () => {
         }
     });
     const { dataValues: record } = { ...nodeData };
-    logger.info("upload step 3");
 
     if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
         logger.info("Bailed upload, download in progress. " + filePath);
         return;
     }
-    logger.info("upload step 5");
+
     // Case A: File created or renamed on local, upload it
     if (!record) {
         logger.info("New file, uploading... > " + filePath);
@@ -65,21 +74,22 @@ exports.runUpload = async () => {
             }
         });
         // Process the next worker record
-        await exports.runUpload();
+        isRecursive && await exports.runUpload();
         return;
     }
-    logger.info("upload step 6");
 
     // If the record exists in the DB 
     if (record) {
-        logger.info("upload step 7 " + filePath);
         // Make a request to the server to get the node details
         const remoteNodeResponse = await remote.getNode({
             account,
             record
         });
 
-        logger.info("upload step 8 " + filePath);
+        if (remoteNodeResponse.statusCode !== 200) {
+            console.log('remoteNodeResponse', remoteNodeResponse);
+        }
+
         // Give a break if the server throws an internal server error
         if (remoteNodeResponse && remoteNodeResponse.statusCode === 500) {
             logger.log('BREAKING SINCE 500');
@@ -109,10 +119,9 @@ exports.runUpload = async () => {
                 }
             });
             // Process the next worker record
-            await exports.runUpload();
+            isRecursive && await exports.runUpload();
             return;
         }
-        logger.info("upload step 9 " + filePath);
 
         // Case C: File deleted on server? delete on local
         if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress == false && record.upload_in_progress == false) {
@@ -138,10 +147,10 @@ exports.runUpload = async () => {
             });
 
             // Process the next worker record
-            await exports.runUpload();
+            isRecursive && await exports.runUpload();
             return;
         }
-        logger.info("upload step 10 " + filePath);
+
         // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
         if (remoteNodeResponse && remoteNodeResponse.statusCode === 200 && remoteNodeResponseBody.entry && remoteNodeResponseBody.entry.path.name !== record.remote_folder_path) {
             logger.info(
@@ -165,7 +174,7 @@ exports.runUpload = async () => {
             });
 
             // Process the next worker record
-            await exports.runUpload();
+            isRecursive && await exports.runUpload();
             return;
         }
 
@@ -178,9 +187,7 @@ exports.runUpload = async () => {
         });
 
         // Process the next worker record
-        await exports.runUpload();
+        isRecursive && await exports.runUpload();
         return;
     }
-
-    logger.info("upload step 11 " + filePath);
 }

@@ -32,6 +32,7 @@ exports.getNode = async params => {
 
   var options = {
     method: "GET",
+    pool: { maxSockets: 1 },
     resolveWithFullResponse: true,
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
     headers: {
@@ -43,6 +44,7 @@ exports.getNode = async params => {
   try {
     return await request(options);
   } catch (error) {
+    console.log('error.message', error.message);
     errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
     error = JSON.parse(error.error);
     return error.error;
@@ -108,8 +110,9 @@ exports.deleteServerNode = async params => {
   }
 
   var options = {
-    resolveWithFullResponse: true,
     method: "DELETE",
+    pool: { maxSockets: 1 },
+    resolveWithFullResponse: true,
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
@@ -174,7 +177,7 @@ exports.deleteServerNode = async params => {
         }
       });
     } else {
-      errorLogAdd(account.id, error, `${__filename}/getServerNode`);
+      errorLogAdd(account.id, error, `${__filename}/deleteServerNode`);
     }
   }
 };
@@ -192,6 +195,7 @@ exports.download = async params => {
 
   var options = {
     method: "GET",
+    pool: { maxSockets: 1 },
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
@@ -426,6 +430,7 @@ exports.upload = async params => {
     let relativePath = path.dirname(filePath).split('documentLibrary')[1].replace(/^\/|\/$/g, '');
 
     options = {
+      pool: { maxSockets: 1 },
       resolveWithFullResponse: true,
       method: "POST",
       url: `${
@@ -477,7 +482,7 @@ exports.upload = async params => {
         upload_in_progress: 0,
       });
 
-      console.log(`Uploaded File: ${filePath} to ${account.instance_url}`);
+      console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
 
       // Add an event log
       await eventLogModel.create({

@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
@@ -5,8 +6,11 @@ const _base = require("./_base");
 const rimraf = require('rimraf');
 const _ = require('lodash');
 
-// CREATE and UPDATE will have the same functionality
 exports.create = async ({ account, watcherData, socketData, localPath }) => {
+  if (fs.existsSync(localPath)) {
+    return;
+  }
+
   const { dataValues: watcher } = { ...watcherData };
   await _base.createItemOnLocal({
     account,
@@ -23,6 +27,15 @@ exports.create = async ({ account, watcherData, socketData, localPath }) => {
     },
     currentPath: localPath
   });
+}
+
+exports.update = async params => {
+  if (fs.existsSync(params.localPath) &&
+    _base.convertToUTC(params.socketData.modifiedAt) < _base.getFileModifiedTime(params.localPath)) {
+    return;
+  }
+
+  exports.create(params);
 }
 
 exports.move = async params => {

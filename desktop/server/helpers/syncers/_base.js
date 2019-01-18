@@ -13,13 +13,13 @@ const { add: errorLogAdd } = require("../../models/log-error");
  * @return void
  */
 exports.sleep = (milliseconds = 1000) => {
-  // return new Promise(resolve => setTimeout(resolve, milliseconds));
-  let start = new Date().getTime();
-  for (let i = 0; i < 1e7; i++) {
-    if ((new Date().getTime() - start) > milliseconds) {
-      break;
-    }
-  }
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+  // let start = new Date().getTime();
+  // for (let i = 0; i < 1e7; i++) {
+  //   if ((new Date().getTime() - start) > milliseconds) {
+  //     break;
+  //   }
+  // }
 }
 
 /**
@@ -101,9 +101,9 @@ exports.createItemOnLocal = async params => {
         file_name: path.basename(currentPath),
         file_path: _path.toUnix(currentPath),
         local_folder_path: path.dirname(currentPath),
-        file_update_at: _base.convertToUTC(node.modifiedAt),
+        file_update_at: exports.convertToUTC(node.modifiedAt),
         last_uploaded_at: 0,
-        last_downloaded_at: _base.getCurrentTime(),
+        last_downloaded_at: exports.getCurrentTime(),
         is_folder: true,
         is_file: false,
         download_in_progress: 0,
@@ -123,6 +123,6 @@ exports.createItemOnLocal = async params => {
       });
     }
   } catch (error) {
-    errorLogAdd(account.id, error, `${__filename}/createItemOnLocal`);
+    errorLogAdd(account.id, error, `${__filename}/createItemLocal`);
   }
 };

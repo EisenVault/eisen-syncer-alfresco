@@ -76,13 +76,12 @@ let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
   const socketData = typeof data === "object" ? data : JSON.parse(data);
-  console.log('Socket Step 1');
 
   if (!socketData.path && !socketData.node_id) {
     // The response should have atleast the path or the node_id
     return;
   }
-  console.log('Socket Step 2');
+
   const action = socketData.action.toUpperCase();
 
   // Get all accounts by instances
@@ -95,9 +94,8 @@ socket.on("sync-notification", async data => {
   if (_.isEmpty(accountData)) {
     return;
   }
-  console.log('Socket Step 3');
+
   for (const accountItem of accountData) {
-    console.log('Socket Step 4');
     const { dataValues: account } = { ...accountItem };
 
     // Since the delete action does not contain path, we will handle it in a diff way
@@ -108,19 +106,16 @@ socket.on("sync-notification", async data => {
       return;
     }
 
-    console.log('Socket Step 5');
     // Extract the node path till documentLibrary
     const nodeDocLibraryPath = socketData.path.substring(0, socketData.path.indexOf('documentLibrary/')) + 'documentLibrary';
-    console.log('Socket Step 5.1');
     // Convert the nodepath to a localpath
     const localPath = _path.getLocalPathFromNodePath({
       account,
       nodePath: socketData.path
     });
-    console.log('Socket Step 5.2');
     // Get the sitename from the localpath
     const siteName = _path.getSiteNameFromPath(localPath);
-    console.log('Socket Step 5.3');
+
     // For each account, fetch the watcher so that the syncer would only consider syncing the files that are being watched
     const watcherData = await watcherModel.findOne({
       where: {
@@ -129,8 +124,6 @@ socket.on("sync-notification", async data => {
         watch_folder: nodeDocLibraryPath
       }
     });
-
-    console.log('Socket Step 6.1');
 
     if (action === 'MOVE') {
       onevent.move({
@@ -146,8 +139,7 @@ socket.on("sync-notification", async data => {
       continue;
     }
 
-    if (action === 'CREATE' || action === 'UPDATE') {
-      console.log('Socket Step 8.1');
+    if (action === 'CREATE') {
       onevent.create({
         account,
         watcherData,
@@ -156,7 +148,14 @@ socket.on("sync-notification", async data => {
       });
     }
 
-    console.log('Socket Step 9');
+    if (action === 'UPDATE') {
+      onevent.update({
+        account,
+        watcherData,
+        socketData,
+        localPath
+      });
+    }
   }
 });
 

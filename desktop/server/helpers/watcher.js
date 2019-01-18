@@ -1,6 +1,6 @@
 const watch = require("watch");
 const fs = require("fs");
-const { accountModel } = require("../models/account");
+const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { nodeModel } = require("../models/node");
 const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
@@ -76,10 +76,8 @@ exports.unwatchAll = async () => {
 };
 
 exports.watchAll = async () => {
-
   // Remove all watchers first
   await this.unwatchAll();
-
   logger.info("Watcher started");
 
   // Add new watchers
@@ -94,11 +92,17 @@ exports.watchAll = async () => {
       this.watch(account);
     }
   }
-
-
 };
 
 async function _upload(account, filePath) {
+  // Set Sync in progress
+  syncStart({
+    account: {
+      id: worker.account_id
+    },
+    uploadProgress: true
+  });
+
   const watchers = await watcherModel.findAll({
     where: {
       account_id: account.id
@@ -113,7 +117,8 @@ async function _upload(account, filePath) {
         account_id: account.id,
         watcher_id: watcher.id,
         file_path: filePath,
-        root_node_id: watcher.document_library_node
+        root_node_id: watcher.document_library_node,
+        priority: 1
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
@@ -121,9 +126,16 @@ async function _upload(account, filePath) {
         console.log('error', error);
       }
     }
+    await worker.runUpload(false);
   } // end for loop
 
-  await worker.runUpload();
+  // Stop Sync in progress
+  syncComplete({
+    account: {
+      id: worker.account_id
+    },
+    uploadProgress: false
+  });
 }
 
 async function _delete(account, filePath) {

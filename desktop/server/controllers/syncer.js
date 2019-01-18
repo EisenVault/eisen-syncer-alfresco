@@ -72,7 +72,7 @@ exports.download = async (request, response) => {
 exports.upload = async (request, response) => {
   logger.info("UPLOAD API START");
   // Stop watcher for a while
-  fileWatcher.unwatchAll();
+  //fileWatcher.unwatchAll();
 
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
@@ -81,7 +81,7 @@ exports.upload = async (request, response) => {
     logger.info("Upload Bailed");
     return response
       .status(404)
-      .json({ success: false, error: "Nothing to upload", error: error });
+      .json({ success: false, error: "Nothing to upload" });
   }
 
   const watchers = await watcherModel.findAll({
@@ -117,7 +117,7 @@ exports.upload = async (request, response) => {
     }
 
     // Run the worker
-    worker.runUpload();
+    await worker.runUpload();
 
     // Set the sync completed time and also set issync flag to off
     syncComplete({

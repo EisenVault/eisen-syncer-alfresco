@@ -50,10 +50,6 @@ export class ManageComponent implements OnInit {
       if (params['cached'] === '1') {
         this._getAccounts();
         this.isAppLoading = false;
-        console.log('SECOND LAUNCH');
-      } else {
-        // First launch
-        console.log('FIRST LAUNCH');
       }
     });
 
@@ -66,9 +62,9 @@ export class ManageComponent implements OnInit {
         .subscribe((result: Setting) => {
           this.syncIntervalSetting = Number(result.value) * 60;
           // For every minute, we will run the timer for sync...
-          // setInterval(() => {
-          //   this._runSyncEnabledAccounts();
-          // }, 60000);
+          setInterval(() => {
+            this._runSyncEnabledAccounts();
+          }, 60000);
         });
 
       // Get the timezone
@@ -91,7 +87,7 @@ export class ManageComponent implements OnInit {
         });
 
       // When the app loads, lets try and sync the files from and to server.
-      // this._runSyncEnabledAccounts(); // Disable auto sync since realtime sync is enabled
+      this._runSyncEnabledAccounts();
     }, 5000);
   }
 
@@ -114,12 +110,16 @@ export class ManageComponent implements OnInit {
     const currentTimestamp = Math.round(new Date().getTime());
     const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
+    console.log('bool', forceSync === true, (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting), timeDifference,  this.syncIntervalSetting);
+
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
       forceSync === true || (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting)
     ) {
       this.enabledSyncAccounts.push(account.id);
       // Fire the syncer endpoint...
+      console.log('started sync for account', account.id);
+
       this._syncerService.start(account.id);
     }
   }

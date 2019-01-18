@@ -41,7 +41,7 @@ exports.recursiveDownload = async params => {
   let children = await remote.getChildren({
     account,
     parentNodeId: sourceNodeId,
-    maxItems: 150000
+    maxItems: 200000
   });
   logger.info("download step 3");
 
@@ -210,7 +210,7 @@ exports.recursiveUpload = async params => {
   const watcher = params.watcher;
   let rootFolder = params.rootFolder;
 
-    if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
+  if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
     logger.info("upload bailed");
     return;
   }
@@ -222,7 +222,8 @@ exports.recursiveUpload = async params => {
         account_id: account.id,
         watcher_id: watcher.id,
         file_path: filePath,
-        root_node_id: watcher.document_library_node
+        root_node_id: watcher.document_library_node,
+        priority: 0
       });
     } catch (error) {
       // Log only if its not a unique constraint error.

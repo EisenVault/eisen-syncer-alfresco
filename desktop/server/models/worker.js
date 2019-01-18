@@ -18,6 +18,10 @@ const workerModel = db.connection.define('worker', {
         type: Sequelize.STRING,
         allowNull: false
     },
+    priority: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+    },
     created_at: Sequelize.INTEGER,
 }, {
         timestamps: false,
