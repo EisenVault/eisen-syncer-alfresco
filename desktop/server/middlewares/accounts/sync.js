@@ -19,7 +19,7 @@ module.exports = async (request, response, next) => {
       account_id: request.params.id
     }
   });
-  if (removeFolders.length === 0) {
+  if (removeFolders.length === 0 && request.body.sync_enabled === true) {
     errors.push({
       sync_enabled: ["Sync cannot be enabled for this account since no remote folder was selected."]
     });

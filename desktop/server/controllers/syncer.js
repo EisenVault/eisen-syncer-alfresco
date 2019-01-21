@@ -2,9 +2,10 @@
 const ondemand = require("../helpers/syncers/ondemand");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { watcherModel } = require("../models/watcher");
-const watcher = require("../helpers/watcher");
+const fileWatcher = require("../helpers/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
+const worker = require('../helpers/syncers/worker');
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
@@ -48,7 +49,7 @@ exports.download = async (request, response) => {
     });
 
     // Start watcher now
-    watcher.watchAll();
+    //fileWatcher.watchAll();
     logger.info("DOWNLOAD API END");
 
     return response.status(200).json({ success: true });
@@ -60,7 +61,7 @@ exports.download = async (request, response) => {
     });
 
     // Start watcher now
-    watcher.watchAll();
+    //fileWatcher.watchAll();
     return response
       .status(404)
       .json({ success: false, error: "Nothing to download" });
@@ -71,7 +72,7 @@ exports.download = async (request, response) => {
 exports.upload = async (request, response) => {
   logger.info("UPLOAD API START");
   // Stop watcher for a while
-  // watcher.unwatchAll();
+  //fileWatcher.unwatchAll();
 
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
@@ -80,7 +81,7 @@ exports.upload = async (request, response) => {
     logger.info("Upload Bailed");
     return response
       .status(404)
-      .json({ success: false, error: "Nothing to upload", error: error });
+      .json({ success: false, error: "Nothing to upload" });
   }
 
   const watchers = await watcherModel.findAll({
@@ -115,6 +116,9 @@ exports.upload = async (request, response) => {
       });
     }
 
+    // Run the worker
+    await worker.runUpload();
+
     // Set the sync completed time and also set issync flag to off
     syncComplete({
       account,
@@ -122,7 +126,7 @@ exports.upload = async (request, response) => {
     });
 
     // Start watcher now
-    watcher.watchAll();
+    //fileWatcher.watchAll();
     logger.info("UPLOAD API END");
 
     return response
@@ -137,7 +141,7 @@ exports.upload = async (request, response) => {
       uploadProgress: 0
     });
     // Start watcher now
-    watcher.watchAll();
+    //fileWatcher.watchAll();
     return response
       .status(404)
       .json({ success: false, error: "Nothing to upload", error: error });
