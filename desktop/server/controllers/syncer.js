@@ -49,7 +49,7 @@ exports.download = async (request, response) => {
     });
 
     // Start watcher now
-    fileWatcher.watchAll();
+    //fileWatcher.watchAll();
     logger.info("DOWNLOAD API END");
 
     return response.status(200).json({ success: true });
@@ -61,7 +61,7 @@ exports.download = async (request, response) => {
     });
 
     // Start watcher now
-    fileWatcher.watchAll();
+    //fileWatcher.watchAll();
     return response
       .status(404)
       .json({ success: false, error: "Nothing to download" });
@@ -126,7 +126,7 @@ exports.upload = async (request, response) => {
     });
 
     // Start watcher now
-    fileWatcher.watchAll();
+    //fileWatcher.watchAll();
     logger.info("UPLOAD API END");
 
     return response
@@ -141,7 +141,7 @@ exports.upload = async (request, response) => {
       uploadProgress: 0
     });
     // Start watcher now
-    fileWatcher.watchAll();
+    //fileWatcher.watchAll();
     return response
       .status(404)
       .json({ success: false, error: "Nothing to upload", error: error });
