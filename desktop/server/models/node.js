@@ -28,7 +28,13 @@ const nodeModel = db.connection.define('node', {
                 node.created_at = new Date().getTime();
                 node.updated_at = new Date().getTime();
             }
-        }
+        },
+        indexes: [
+            {
+                unique: true,
+                fields: ['account_id', 'site_id', 'node_id', 'remote_folder_path', 'file_path']
+            }
+        ]
     });
 
 

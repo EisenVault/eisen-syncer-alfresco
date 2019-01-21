@@ -8,8 +8,8 @@
   "license": "MIT",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --open",
-    "dev": "./node_modules/nodemon/bin/nodemon.js server/server.js",
+    "client": "ng serve --open",
+    "server": "./node_modules/nodemon/bin/nodemon.js server/server.js",
     "build": "ng build --prod --build-optimizer",
     "el": "npm run build && electron .",
     "rebuild": "npm install sqlite3 && electron-rebuild -f -w sqlite3",

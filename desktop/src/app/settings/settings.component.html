@@ -11,7 +11,7 @@
         <label class="form-check-label" for="startup_launch">Launch on startup?</label>
       </div>
     </div>
-    <div class="form-group mt-2">
+    <div class="form-group mt-2 hide">
       <label for="sync_interval">Sync Interval</label>
       <select name="sync_interval" class="form-control" id="sync_interval" [(ngModel)]="sync_interval">
         <option value="1">1 minute</option>
@@ -24,7 +24,7 @@
         <option value="480">8 hours</option>
       </select>
     </div>
-    <div class="form-group mt-2">
+    <div class="form-group mt-5">
       <label for="sync_interval">Select Timezone</label>
       <select name="timezone" class="form-control" id="timezone" [(ngModel)]="timezone">
         <option value="Etc/GMT+12">(GMT-12:00) International Date Line West</option>

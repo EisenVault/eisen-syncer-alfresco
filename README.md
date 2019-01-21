@@ -1,1 +1,1 @@
-Online Socket Monitor: https://jsbin.com/xemalobofi/edit?html,console,output
+Online Socket Monitor: https://jsbin.com/gokuwigode/edit?html,console,output
