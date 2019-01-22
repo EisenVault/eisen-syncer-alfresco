@@ -193,14 +193,23 @@ exports.download = async params => {
   const destinationPath = params.destinationPath;
   const remoteFolderPath = params.remoteFolderPath;
 
+  const customData = {
+    destinationPath,
+    account: {
+      id: account.id,
+      instance_url: account.instance_url
+    },
+    node: {
+      id: node.id,
+      createdAt: node.createdAt,
+      modifiedAt: node.modifiedAt,
+    }
+  };
+
   var options = {
     method: "GET",
     pool: { maxSockets: 1 },
-    url:
-      account.instance_url +
-      "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-      node.id +
-      "/content?attachment=true",
+    url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${node.id}/content?attachment=true&customData=${encodeURIComponent(JSON.stringify(customData))}`,
     headers: {
       Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
@@ -242,27 +251,12 @@ exports.download = async params => {
       upload_in_progress: 0,
     });
 
-    var totalBytes = 0;
-    var recievedSize = 0;
-    await request(options)
-      .on('error', async function (e) {
-        console.error('ON Error:...', e);
-        await nodeModel.destroy({
-          where: {
-            account_id: account.id,
-            site_id: watcher.site_id,
-            file_path: _path.toUnix(destinationPath),
-          }
-        });
-        return;
-      })
-      .on('response', async (data) => {
-        totalBytes = data.headers['content-length'];
-      })
-      .on('data', async (chunk) => {
-        recievedSize += chunk.length;
-        // Make sure the download is complete
-        if (recievedSize >= totalBytes) {
+    await request(options,
+      async function (error, response, body) {
+        if (response.statusCode === 200) {
+          const path = response.req.path.split('customData=')[1];
+          const { destinationPath, account, node } = JSON.parse(decodeURIComponent(path));
+
           // Update the time meta properties of the downloaded file
           const btime = _base.convertToUTC(node.createdAt);
           const mtime = _base.convertToUTC(node.modifiedAt);
@@ -291,8 +285,17 @@ exports.download = async params => {
             type: eventType.DOWNLOAD_FILE,
             description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
           });
-
         }
+      })
+      .on('error', async function (e) {
+        console.error('ON Error:...', e);
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            file_path: _path.toUnix(destinationPath),
+          }
+        });
+        return;
       })
       .pipe(fs.createWriteStream(destinationPath));
 

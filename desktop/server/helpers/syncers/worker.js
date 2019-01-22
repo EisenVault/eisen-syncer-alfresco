@@ -52,7 +52,7 @@ exports.runUpload = async (isRecursive = true) => {
     });
     const { dataValues: record } = { ...nodeData };
 
-    if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
+    if (record && record.download_in_progress === true) {
         logger.info("Bailed upload, download in progress. " + filePath);
         return;
     }
@@ -124,7 +124,7 @@ exports.runUpload = async (isRecursive = true) => {
         }
 
         // Case C: File deleted on server? delete on local
-        if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress == false && record.upload_in_progress == false) {
+        if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress === false && record.upload_in_progress == false) {
             logger.info(
                 "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
             );

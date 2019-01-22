@@ -31,7 +31,7 @@ exports.recursiveDownload = async params => {
   logger.info("download step 1");
 
   if (
-    account.sync_enabled == false || (recursive === false && account.download_in_progress == true)) {
+    account.sync_enabled == false) {
     logger.info("download bailed");
     return;
   }
@@ -78,8 +78,8 @@ exports.recursiveDownload = async params => {
     let { dataValues: record } = { ...recordData };
     logger.info("download step 6");
 
-    if (record && (record.download_in_progress === true || record.upload_in_progress === true)) {
-      logger.info("Bailed download, upload in progress");
+    if (record && record.download_in_progress === true) {
+      logger.info("Bailed download, already in progress");
       continue;
     }
 
@@ -210,7 +210,7 @@ exports.recursiveUpload = async params => {
   const watcher = params.watcher;
   let rootFolder = params.rootFolder;
 
-  if (account.sync_enabled == 0 || account.upload_in_progress == 1) {
+  if (account.sync_enabled === false) {
     logger.info("upload bailed");
     return;
   }
