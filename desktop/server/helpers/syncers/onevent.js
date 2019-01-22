@@ -1,3 +1,4 @@
+const Sequelize = require('sequelize');
 const fs = require("fs");
 const path = require("path");
 const { nodeModel } = require("../../models/node");
@@ -22,8 +23,8 @@ exports.create = async ({ account, watcherData, socketData, localPath }) => {
       path: {
         name: path.dirname(socketData.path)
       },
-      createdAt: _base.convertToUTC(new Date().getTime()),
-      modifiedAt: _base.convertToUTC(new Date().getTime())
+      createdAt: socketData.createdAt,
+      modifiedAt: socketData.modifiedAt
     },
     currentPath: localPath
   });
@@ -96,8 +97,8 @@ exports.move = async params => {
         path: {
           name: path.dirname(socketData.path)
         },
-        createdAt: _base.convertToUTC(new Date().getTime()),
-        modifiedAt: _base.convertToUTC(new Date().getTime())
+        createdAt: socketData.createdAt,
+        modifiedAt: socketData.modifiedAt
       },
       currentPath: localPath
     });

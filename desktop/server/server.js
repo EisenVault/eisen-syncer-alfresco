@@ -100,10 +100,10 @@ socket.on("sync-notification", async data => {
 
     // Since the delete action does not contain path, we will handle it in a diff way
     if (action === 'DELETE') {
-      onevent.delete({
+      await onevent.delete({
         node_id: socketData.node_id
       });
-      return;
+      continue;
     }
 
     // Extract the node path till documentLibrary
@@ -126,7 +126,7 @@ socket.on("sync-notification", async data => {
     });
 
     if (action === 'MOVE') {
-      onevent.move({
+      await onevent.move({
         account,
         watcherData,
         socketData,
@@ -140,7 +140,7 @@ socket.on("sync-notification", async data => {
     }
 
     if (action === 'CREATE') {
-      onevent.create({
+      await onevent.create({
         account,
         watcherData,
         socketData,
@@ -149,7 +149,7 @@ socket.on("sync-notification", async data => {
     }
 
     if (action === 'UPDATE') {
-      onevent.update({
+      await onevent.update({
         account,
         watcherData,
         socketData,

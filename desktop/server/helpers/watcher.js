@@ -6,6 +6,8 @@ const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
 const remote = require("./remote");
 const worker = require('../helpers/syncers/worker');
+const _path = require('./path');
+const _ = require('lodash');
 
 // Logger
 const { logger } = require('./logger');
@@ -18,7 +20,7 @@ exports.watch = account => {
     return watchlist;
   }
 
-  watch.watchTree(account.sync_path, { ignoreDotFiles: true }, function (
+  watch.watchTree(account.sync_path, { ignoreDotFiles: true }, async function (
     f,
     curr,
     prev
@@ -34,7 +36,7 @@ exports.watch = account => {
         if (fs.lstatSync(f).isDirectory()) {
           type = "directory";
         }
-        _upload(account, f);
+        await _upload(account, f);
         logger.info(`${f} is a new ${type}`);
       }
 
@@ -43,7 +45,7 @@ exports.watch = account => {
       watchlist.push(f);
       // f was removed
       if (_countElements(f, watchlist) <= 1) {
-        _delete(account, f);
+        await _delete(account, f);
         logger.info(`${f} was removed`);
       }
 
@@ -51,7 +53,7 @@ exports.watch = account => {
       // f was changed
       watchlist.push(f);
       if (_countElements(f, watchlist) <= 1) {
-        _upload(account, f);
+        await _upload(account, f);
         logger.info(`${f} was changed...`);
       }
     }
@@ -112,6 +114,12 @@ async function _upload(account, filePath) {
   for (const item of watchers) {
     const { dataValues: watcher } = item;
 
+    const siteName = _path.getSiteNameFromPath(filePath);
+
+    if (watcher.site_name !== siteName) {
+      continue;
+    }
+
     try {
       await workerModel.create({
         account_id: account.id,
@@ -147,6 +155,20 @@ async function _delete(account, filePath) {
 
   if (nodeData) {
     let { dataValues: record } = nodeData;
+
+    const siteName = _path.getSiteNameFromPath(record.file_path);
+
+    const watcherData = await watcherModel.findOne({
+      where: {
+        account_id: account.id,
+        site_name: siteName
+      }
+    });
+
+    if (_.isEmpty(watcherData)) {
+      return;
+    }
+
     await remote.deleteServerNode({
       account,
       record

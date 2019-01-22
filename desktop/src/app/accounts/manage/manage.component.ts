@@ -110,7 +110,7 @@ export class ManageComponent implements OnInit {
     const currentTimestamp = Math.round(new Date().getTime());
     const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
-    console.log('bool', forceSync === true, (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting), timeDifference,  this.syncIntervalSetting);
+    console.log('bool', (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting), timeDifference,  this.syncIntervalSetting);
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (
