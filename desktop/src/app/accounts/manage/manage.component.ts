@@ -32,7 +32,7 @@ export class ManageComponent implements OnInit {
   public errors: any = {};
   public miscError = '';
   readonly INTERVAL = 7000;
-  private syncIntervalSetting = 10;
+  private syncIntervalSetting = 5;
   public timezone = 'Asia/Calcutta';
 
   constructor(
@@ -110,16 +110,21 @@ export class ManageComponent implements OnInit {
     const currentTimestamp = Math.round(new Date().getTime());
     const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
-    console.log('bool', (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting), timeDifference,  this.syncIntervalSetting);
+    console.log('AccountID:', account.id,
+      'shouldSync:', timeDifference >= this.syncIntervalSetting,
+      'TimeDifference:', timeDifference,
+      'interval:', this.syncIntervalSetting);
+
+    // Remove the account id from the enabledSyncAccount list by default
+    const index = this.enabledSyncAccounts.indexOf(account.id);
+    this.enabledSyncAccounts.slice(index, 1);
 
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
-    if (
-      forceSync === true || (account.sync_in_progress === false && timeDifference >= this.syncIntervalSetting)
-    ) {
+    if (forceSync === true || timeDifference >= this.syncIntervalSetting) {
+      // Add the account to the loader variable
       this.enabledSyncAccounts.push(account.id);
       // Fire the syncer endpoint...
       console.log('started sync for account', account.id);
-
       this._syncerService.start(account.id);
     }
   }

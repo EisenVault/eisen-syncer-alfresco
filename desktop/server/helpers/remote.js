@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
+const downloader = require("request");
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
@@ -193,14 +194,23 @@ exports.download = async params => {
   const destinationPath = params.destinationPath;
   const remoteFolderPath = params.remoteFolderPath;
 
+  const customData = {
+    destinationPath,
+    account: {
+      id: account.id,
+      instance_url: account.instance_url
+    },
+    node: {
+      id: node.id,
+      createdAt: node.createdAt,
+      modifiedAt: node.modifiedAt,
+    }
+  };
+
   var options = {
     method: "GET",
     pool: { maxSockets: 1 },
-    url:
-      account.instance_url +
-      "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
-      node.id +
-      "/content?attachment=true",
+    url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${node.id}/content?attachment=true&customData=${encodeURIComponent(JSON.stringify(customData))}`,
     headers: {
       Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
@@ -242,57 +252,57 @@ exports.download = async params => {
       upload_in_progress: 0,
     });
 
-    var totalBytes = 0;
-    var recievedSize = 0;
-    await request(options)
-      .on('error', async function (e) {
-        console.error('ON Error:...', e);
-        await nodeModel.destroy({
-          where: {
-            account_id: account.id,
-            site_id: watcher.site_id,
-            file_path: _path.toUnix(destinationPath),
-          }
-        });
-        return;
-      })
-      .on('response', async (data) => {
-        totalBytes = data.headers['content-length'];
-      })
-      .on('data', async (chunk) => {
-        recievedSize += chunk.length;
-        // Make sure the download is complete
-        if (recievedSize >= totalBytes) {
-          // Update the time meta properties of the downloaded file
-          const btime = _base.convertToUTC(node.createdAt);
-          const mtime = _base.convertToUTC(node.modifiedAt);
-          const atime = undefined;
+    let totalBytes = 0;
+    let recievedSize = 0;
+    await downloader(options)
+      .on('response', function (response) {
+        totalBytes = response.headers['content-length'];
+        response.on('data', async function (data) {
+          // compressed data as it is received
+          recievedSize += data.length;
 
-          setTimeout(() => {
-            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => { });
-          }, 0);
+          if (recievedSize >= totalBytes) {
+            if (response.statusCode === 200) {
+              const path = response.req.path.split('customData=')[1];
+              const { destinationPath, account, node } = JSON.parse(decodeURIComponent(path));
 
-          // set download progress to false
-          await nodeModel.update({
-            download_in_progress: 0,
-            file_update_at: mtime
-          }, {
-              where: {
+              // Update the time meta properties of the downloaded file
+              const btime = _base.convertToUTC(node.createdAt);
+              const mtime = _base.convertToUTC(node.modifiedAt);
+              const atime = undefined;
+
+              setTimeout(() => {
+                Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async (error) => {
+                  if (error) {
+                    errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
+                  }
+                });
+              }, 0);
+
+              // set download progress to false
+              await nodeModel.update({
+                download_in_progress: 0,
+                last_downloaded_at: _base.getCurrentTime(),
+                file_update_at: mtime
+              }, {
+                  where: {
+                    account_id: account.id,
+                    file_path: _path.toUnix(destinationPath)
+                  }
+                });
+
+              console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+
+              // Add an event log
+              await eventLogModel.create({
                 account_id: account.id,
-                file_path: _path.toUnix(destinationPath)
-              }
-            });
+                type: eventType.DOWNLOAD_FILE,
+                description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+              });
+            }
 
-          console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-          // Add an event log
-          await eventLogModel.create({
-            account_id: account.id,
-            type: eventType.DOWNLOAD_FILE,
-            description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-          });
-
-        }
+          }
+        })
       })
       .pipe(fs.createWriteStream(destinationPath));
 
