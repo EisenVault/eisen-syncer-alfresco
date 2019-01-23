@@ -251,52 +251,7 @@ exports.download = async params => {
       upload_in_progress: 0,
     });
 
-    await request(options,
-      async function (error, response, body) {
-        if (response.statusCode === 200) {
-          const path = response.req.path.split('customData=')[1];
-          const { destinationPath, account, node } = JSON.parse(decodeURIComponent(path));
-
-          // Update the time meta properties of the downloaded file
-          const btime = _base.convertToUTC(node.createdAt);
-          const mtime = _base.convertToUTC(node.modifiedAt);
-          const atime = undefined;
-
-          setTimeout(() => {
-            Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => { });
-          }, 0);
-
-          // set download progress to false
-          await nodeModel.update({
-            download_in_progress: 0,
-            file_update_at: mtime
-          }, {
-              where: {
-                account_id: account.id,
-                file_path: _path.toUnix(destinationPath)
-              }
-            });
-
-          console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-          // Add an event log
-          await eventLogModel.create({
-            account_id: account.id,
-            type: eventType.DOWNLOAD_FILE,
-            description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-          });
-        }
-      })
-      .on('error', async function (e) {
-        console.error('ON Error:...', e);
-        await nodeModel.destroy({
-          where: {
-            account_id: account.id,
-            file_path: _path.toUnix(destinationPath),
-          }
-        });
-        return;
-      })
+    await request(options)
       .pipe(fs.createWriteStream(destinationPath));
 
     return params;
