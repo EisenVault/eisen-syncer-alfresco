@@ -79,17 +79,8 @@ exports.recursiveDownload = async params => {
     logger.info("download step 6");
 
     if (record && record.download_in_progress === true) {
-      const now = new Date().getTime();
-      // If the file is downloading more then 5 minutes, then delete the record as it looks like a dead record or download stalled
-      if (((now - record.last_downloaded_at) / 60000) > 5) {
-        await nodeModel.update({
-          download_in_progress: false
-        }, {
-            where: {
-              id: record.id
-            }
-          });
-      }
+      // If the file stalled
+      await _base.isStalledDownload(record);
 
       logger.info("Bailed download, already in progress");
       continue;
@@ -151,7 +142,6 @@ exports.recursiveDownload = async params => {
         record.is_file === true
       ) {
         logger.info("downloaded since new " + currentPath);
-        console.log("downloaded since new " + currentPath);
         await _base.createItemOnLocal({
           watcher,
           node,
