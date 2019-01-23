@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
+const downloader = require("request");
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
@@ -251,7 +252,53 @@ exports.download = async params => {
       upload_in_progress: 0,
     });
 
-    await request(options)
+    let totalBytes = 0;
+    let recievedSize = 0;
+    await downloader(options)
+      .on('response', function (response) {
+        totalBytes = response.headers['content-length'];
+        response.on('data', async function (data) {
+          // compressed data as it is received
+          recievedSize += data.length;
+
+          if (recievedSize >= totalBytes) {
+            if (response.statusCode === 200) {
+              const path = response.req.path.split('customData=')[1];
+              const { destinationPath, account, node } = JSON.parse(decodeURIComponent(path));
+
+              // Update the time meta properties of the downloaded file
+              const btime = _base.convertToUTC(node.createdAt);
+              const mtime = _base.convertToUTC(node.modifiedAt);
+              const atime = undefined;
+
+              setTimeout(() => {
+                Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async () => { });
+              }, 0);
+
+              // set download progress to false
+              await nodeModel.update({
+                download_in_progress: 0,
+                file_update_at: mtime
+              }, {
+                  where: {
+                    account_id: account.id,
+                    file_path: _path.toUnix(destinationPath)
+                  }
+                });
+
+              console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+
+              // Add an event log
+              await eventLogModel.create({
+                account_id: account.id,
+                type: eventType.DOWNLOAD_FILE,
+                description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+              });
+            }
+
+          }
+        })
+      })
       .pipe(fs.createWriteStream(destinationPath));
 
     return params;
