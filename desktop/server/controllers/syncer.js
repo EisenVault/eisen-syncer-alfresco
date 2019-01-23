@@ -13,7 +13,7 @@ exports.download = async (request, response) => {
 
   const { dataValues: account } = await accountModel.findByPk(request.params.accountId);
 
-  if (!account || account.sync_enabled == 0 || account.download_in_progress == 1) {
+  if (!account || account.sync_enabled === false) {
     logger.info("Download Bailed");
     return response
       .status(404)
@@ -77,7 +77,7 @@ exports.upload = async (request, response) => {
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
 
-  if (!account || account.sync_enabled == 0 || account.upload_in_progress == 1) {
+  if (!account || account.sync_enabled == 0) {
     logger.info("Upload Bailed");
     return response
       .status(404)

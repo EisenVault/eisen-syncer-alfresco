@@ -5,11 +5,14 @@ const { workerModel } = require("../../models/worker");
 const remote = require('../remote');
 const rimraf = require('rimraf');
 const _base = require("./_base");
+const _ = require('lodash');
 
 // Logger
 const { logger } = require("../logger");
 
 exports.runUpload = async (isRecursive = true) => {
+
+    logger.info('Worker Initialized');
 
     let orderIdBy = 'DESC';
     if (isRecursive) {
@@ -23,9 +26,11 @@ exports.runUpload = async (isRecursive = true) => {
         ]
     });
 
-    if (!workerData) {
+    if (_.isEmpty(workerData)) {
         return;
     }
+    logger.info('Worker Started');
+
     const { dataValues: worker } = workerData;
 
     const accountData = await accountModel.findByPk(worker.account_id);
@@ -52,7 +57,7 @@ exports.runUpload = async (isRecursive = true) => {
     });
     const { dataValues: record } = { ...nodeData };
 
-    if (record && (record.download_in_progress == 1 || record.upload_in_progress == 1)) {
+    if (record && record.download_in_progress === true) {
         logger.info("Bailed upload, download in progress. " + filePath);
         return;
     }
@@ -124,7 +129,7 @@ exports.runUpload = async (isRecursive = true) => {
         }
 
         // Case C: File deleted on server? delete on local
-        if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress == false && record.upload_in_progress == false) {
+        if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress === false && record.upload_in_progress == false) {
             logger.info(
                 "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
             );
