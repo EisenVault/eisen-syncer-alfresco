@@ -70,6 +70,23 @@ exports.getInstanceUrl = instance_url => {
   return instance_url.replace(/\/+$/, ""); // Replace any trailing slashes
 };
 
+exports.isStalledDownload = async record => {
+  const now = exports.getCurrentTime();
+  // If the file is downloading more then 5 minutes, then delete the record as it looks like a dead record or download stalled
+  if (((now - record.last_downloaded_at) / 60000) > 5) {
+    await nodeModel.update({
+      download_in_progress: false
+    }, {
+        where: {
+          id: record.id
+        }
+      });
+    return true;
+  }
+
+  return false;
+}
+
 exports.createItemOnLocal = async params => {
   const account = params.account;
   const watcher = params.watcher;

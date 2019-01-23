@@ -58,6 +58,16 @@ exports.runUpload = async (isRecursive = true) => {
     const { dataValues: record } = { ...nodeData };
 
     if (record && record.download_in_progress === true) {
+        // If the file stalled
+        if (await _base.isStalledDownload(record)) {
+            await workerModel.destroy({
+                where: {
+                    id: worker.id
+                }
+            });
+            // Process the next worker record
+            isRecursive && await exports.runUpload();
+        }
         logger.info("Bailed upload, download in progress. " + filePath);
         return;
     }
