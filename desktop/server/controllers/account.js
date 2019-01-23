@@ -6,6 +6,7 @@ const watcher = require("../helpers/watcher");
 const rimraf = require('rimraf');
 const crypt = require("../config/crypt");
 const _path = require('../helpers/path');
+const fileWatcher = require("../helpers/watcher");
 
 exports.getAll = async (request, response) => {
   const syncEnabled = request.query.sync_enabled;
@@ -165,6 +166,8 @@ exports.updateSync = async (request, response) => {
       }
     })
     .then(() => {
+      // Start watcher now
+      fileWatcher.watchAll();
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
