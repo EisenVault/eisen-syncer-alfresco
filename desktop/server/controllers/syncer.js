@@ -2,7 +2,6 @@
 const ondemand = require("../helpers/syncers/ondemand");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { watcherModel } = require("../models/watcher");
-const fileWatcher = require("../helpers/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
 const worker = require('../helpers/syncers/worker');
