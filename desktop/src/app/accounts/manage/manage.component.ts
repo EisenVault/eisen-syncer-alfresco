@@ -32,7 +32,7 @@ export class ManageComponent implements OnInit {
   public errors: any = {};
   public miscError = '';
   readonly INTERVAL = 7000;
-  private syncIntervalSetting = 10;
+  private syncIntervalSetting = 5;
   public timezone = 'Asia/Calcutta';
 
   constructor(
@@ -110,7 +110,10 @@ export class ManageComponent implements OnInit {
     const currentTimestamp = Math.round(new Date().getTime());
     const timeDifference = Math.abs((currentTimestamp - account.last_synced_at) / 1000); // in seconds
 
-    console.log('bool', account.id, timeDifference >= this.syncIntervalSetting, timeDifference, this.syncIntervalSetting);
+    console.log('AccountID:', account.id,
+      'shouldSync:', timeDifference >= this.syncIntervalSetting,
+      'TimeDifference:', timeDifference,
+      'interval:', this.syncIntervalSetting);
 
     // Remove the account id from the enabledSyncAccount list by default
     const index = this.enabledSyncAccounts.indexOf(account.id);

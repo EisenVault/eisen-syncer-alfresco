@@ -5,11 +5,14 @@ const { workerModel } = require("../../models/worker");
 const remote = require('../remote');
 const rimraf = require('rimraf');
 const _base = require("./_base");
+const _ = require('lodash');
 
 // Logger
 const { logger } = require("../logger");
 
 exports.runUpload = async (isRecursive = true) => {
+
+    logger.info('Worker Initialized');
 
     let orderIdBy = 'DESC';
     if (isRecursive) {
@@ -23,9 +26,11 @@ exports.runUpload = async (isRecursive = true) => {
         ]
     });
 
-    if (!workerData) {
+    if (_.isEmpty(workerData)) {
         return;
     }
+    logger.info('Worker Started');
+
     const { dataValues: worker } = workerData;
 
     const accountData = await accountModel.findByPk(worker.account_id);
