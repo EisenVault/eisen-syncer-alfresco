@@ -14,18 +14,18 @@
     <tbody>
       <tr *ngFor="let log of logs">
         <td>{{ log.created_at | date:'medium':timezone }}</td>
-        <td>{{ log.account.instance_url }}</td>
-        <td>{{ log.account.username }}</td>
+        <td>{{ log.account?.instance_url || 'N/A'}}</td>
+        <td>{{ log.account?.username || 'N/A'}}</td>
         <td>{{ log.description | cleanString }}</td>
       </tr>
       <tr>
-          <td colspan="5">
-            <span *ngIf="isLoading === true">
-              <h2>Loading...</h2>
-            </span>
-            <span *ngIf="logs.length === 0">No Logs Found</span>
-          </td>
-        </tr>
+        <td colspan="5">
+          <span *ngIf="isLoading === true">
+            <h2>Loading...</h2>
+          </span>
+          <span *ngIf="logs.length === 0">No Logs Found</span>
+        </td>
+      </tr>
     </tbody>
   </table>
 </div>
