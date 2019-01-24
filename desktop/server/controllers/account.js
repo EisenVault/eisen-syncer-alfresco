@@ -5,8 +5,10 @@ const { add: errorLogAdd } = require("../models/log-error");
 const watcher = require("../helpers/watcher");
 const rimraf = require('rimraf');
 const crypt = require("../config/crypt");
+const fs = require('fs');
 const _path = require('../helpers/path');
 const fileWatcher = require("../helpers/watcher");
+const mkdirp = require("mkdirp");
 
 exports.getAll = async (request, response) => {
   const syncEnabled = request.query.sync_enabled;
@@ -123,10 +125,27 @@ exports.addWatchNodes = async (request, response) => {
       account_id: request.params.id
     }
   })
-    .then(() => {
+    .then(async () => {
       let insertedRecords = [];
       for (const iterator of request.body) {
         if (insertedRecords.indexOf(iterator.watchPath) === -1) {
+
+          const account = await accountModel.findOne({
+            where: {
+              id: request.params.id
+            }
+          });
+
+          // Create the local path
+          const localPath = _path.getLocalPathFromNodePath({
+            account,
+            nodePath: iterator.watchPath
+          });
+
+          if (!fs.existsSync(localPath)) {
+            mkdirp(localPath);
+          }
+
           watcherModel.create({
             account_id: request.params.id,
             site_name: iterator.siteName,
