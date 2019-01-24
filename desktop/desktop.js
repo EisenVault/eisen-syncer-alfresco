@@ -161,6 +161,20 @@ app.on("ready", () => {
       }
     },
     {
+      label: "View Event Logs",
+      click() {
+        mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname + "/dist/index.html"),
+            protocol: "file:",
+            slashes: true,
+            hash: "/logs/event"
+          })
+        );
+        mainWindow.show();
+      }
+    },
+    {
       label: "About EisenVaultSync",
       click() {
         mainWindow.loadURL(
@@ -174,6 +188,7 @@ app.on("ready", () => {
         mainWindow.show();
       }
     },
+    { type: "separator" },
     {
       label: "Exit",
       click() {

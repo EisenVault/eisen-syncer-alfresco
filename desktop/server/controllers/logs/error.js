@@ -9,7 +9,8 @@ exports.getAll = async (request, response) => {
     }],
     order: [
       ['id', 'DESC']
-    ]
+    ],
+    limit: 1000
   });
   return response.status(200).json(errors);
 };

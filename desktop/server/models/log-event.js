@@ -1,5 +1,6 @@
 const Sequelize = require('sequelize');
 const db = require('../config/db');
+const { accountModel } = require('./account');
 
 const eventLogModel = db.connection.define('log_event', {
     account_id: {
@@ -23,6 +24,8 @@ const eventLogModel = db.connection.define('log_event', {
             }
         }
     });
+
+eventLogModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
 exports.connection = db.connection.sync({
     force: db.flush,
