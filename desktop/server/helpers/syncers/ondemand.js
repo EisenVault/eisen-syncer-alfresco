@@ -234,7 +234,7 @@ exports.recursiveUpload = async params => {
       }
     }
 
-    if (fs.statSync(filePath).isDirectory()) {
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
       exports.recursiveUpload({
         account,
         watcher,
