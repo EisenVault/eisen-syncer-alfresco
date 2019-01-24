@@ -87,7 +87,8 @@ socket.on("sync-notification", async data => {
   // Get all accounts by instances
   const accountData = await accountModel.findAll({
     where: {
-      instance_url: _base.getInstanceUrl(socketData.instance_url)
+      instance_url: _base.getInstanceUrl(socketData.instance_url),
+      sync_enabled: true
     }
   });
 
