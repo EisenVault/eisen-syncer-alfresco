@@ -1,5 +1,6 @@
 const watch = require("watch");
 const fs = require("fs");
+const path = require("path");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { nodeModel } = require("../models/node");
 const { workerModel } = require("../models/worker");
@@ -116,7 +117,7 @@ async function _upload(account, filePath) {
 
     const siteName = _path.getSiteNameFromPath(filePath);
 
-    if (watcher.site_name !== siteName) {
+    if (watcher.site_name !== siteName || path.basename(filePath) == 'documentLibrary') {
       continue;
     }
 
