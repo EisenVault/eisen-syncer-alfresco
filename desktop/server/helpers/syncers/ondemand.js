@@ -219,6 +219,10 @@ exports.recursiveUpload = async params => {
 
   glob.sync(rootFolder).forEach(async filePath => {
 
+    if (path.basename(filePath) == 'documentLibrary') {
+      return;
+    }
+
     try {
       await workerModel.create({
         account_id: account.id,
