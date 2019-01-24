@@ -22,6 +22,7 @@ const { logger } = require("../logger");
  * }
  */
 exports.recursiveDownload = async params => {
+  return;
   const account = params.account;
   const watcher = params.watcher;
   const sourceNodeId = params.sourceNodeId; // the nodeid to download
@@ -218,6 +219,10 @@ exports.recursiveUpload = async params => {
   }
 
   glob.sync(rootFolder).forEach(async filePath => {
+
+    if (path.basename(filePath) == 'documentLibrary') {
+      return;
+    }
 
     try {
       await workerModel.create({

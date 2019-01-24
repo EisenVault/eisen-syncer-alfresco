@@ -336,9 +336,13 @@ exports.upload = async params => {
   // If its a directory, send a request to create the directory.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     let directoryName = path.basename(params.filePath);
-    let relativePath = path.dirname(filePath)
-      .split('documentLibrary')[1]
-      .replace(/^\/|\/$/g, '');
+    let relativePath = path.dirname(filePath).split('documentLibrary')[1];
+
+    if (!relativePath) {
+      return;
+    }
+
+    relativePath = relativePath.replace(/^\/|\/$/g, '');
 
     options = {
       resolveWithFullResponse: true,
