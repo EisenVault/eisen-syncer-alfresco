@@ -272,12 +272,12 @@ exports.download = async params => {
               const atime = undefined;
 
               setTimeout(() => {
-                Utimes.utimes(`${destinationPath}`, btime, mtime, atime, async (error) => {
+                Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
                   if (error) {
                     errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
                   }
                 });
-              }, 0);
+              }, 1000);
 
               // set download progress to false
               await nodeModel.update({
