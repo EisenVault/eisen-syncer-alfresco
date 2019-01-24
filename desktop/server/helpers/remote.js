@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
-const downloader = require("request");
+const requestNative = require("request");
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
@@ -254,7 +254,7 @@ exports.download = async params => {
 
     let totalBytes = 0;
     let recievedSize = 0;
-    await downloader(options)
+    await requestNative(options)
       .on('response', function (response) {
         totalBytes = response.headers['content-length'];
         response.on('data', async function (data) {
@@ -462,7 +462,7 @@ exports.upload = async params => {
     };
 
     try {
-      let response = await request(options)
+      let response = await requestNative(options)
       response = JSON.parse(response.body);
 
       // Update the time meta properties of the downloaded file
