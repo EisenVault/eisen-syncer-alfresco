@@ -22,7 +22,6 @@ const { logger } = require("../logger");
  * }
  */
 exports.recursiveDownload = async params => {
-  return;
   const account = params.account;
   const watcher = params.watcher;
   const sourceNodeId = params.sourceNodeId; // the nodeid to download
