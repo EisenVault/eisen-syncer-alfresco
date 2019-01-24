@@ -14,15 +14,23 @@
 
     <tbody>
       <tr *ngFor="let log of logs">
-        <td>{{ log.created_at | date:'full' }}</td>
-        <td>{{ log.instance_url }}</td>
-        <td>{{ log.username }}</td>
+        <td>{{ log.created_at | date:'medium':timezone }}</td>
+        <td>{{ log.account.instance_url }}</td>
+        <td>{{ log.account.username }}</td>
         <td>
           <a href="javascript:void(0)" [class]="getBadgeClass(log.type)">
             {{ log.type }}
           </a>
         </td>
         <td>{{ log.description }}</td>
+      </tr>
+      <tr>
+        <td colspan="5">
+          <span *ngIf="isLoading === true">
+            <h2>Loading...</h2>
+          </span>
+          <span *ngIf="logs.length === 0">No Logs Found</span>
+        </td>
       </tr>
     </tbody>
 
