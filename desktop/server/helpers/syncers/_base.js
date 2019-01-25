@@ -5,6 +5,7 @@ const mkdirp = require("mkdirp");
 const { nodeModel } = require("../../models/node");
 const remote = require("../remote");
 const { add: errorLogAdd } = require("../../models/log-error");
+const Utimes = require('@ronomon/utimes');
 
 /**
  * Puts the process to sleep for the mentioned number of milliseconds
@@ -97,6 +98,15 @@ exports.createItemOnLocal = async params => {
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
+
+        // Update the time meta properties of the downloaded file
+        const btime = exports.convertToUTC(node.createdAt);
+        const mtime = exports.convertToUTC(node.modifiedAt);
+        const atime = undefined;
+
+        setTimeout(() => {
+          Utimes.utimes(currentPath, btime, mtime, atime, async () => { });
+        }, 1000);
       }
 
       // Delete if record already exists
