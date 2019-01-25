@@ -27,9 +27,9 @@ exports.download = async (request, response) => {
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    syncStart({
+    await syncStart({
       account,
-      downloadProgress: 1
+      downloadProgress: true
     });
 
     for (const { dataValues: watcher } of watchFolders) {
@@ -42,9 +42,9 @@ exports.download = async (request, response) => {
     }
 
     // Set the sync completed time and also set issync flag to off
-    syncComplete({
+    await syncComplete({
       account,
-      downloadProgress: 0
+      downloadProgress: false
     });
 
     // Start watcher now

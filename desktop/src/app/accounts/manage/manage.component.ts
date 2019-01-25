@@ -92,6 +92,8 @@ export class ManageComponent implements OnInit {
   }
 
   _runSyncEnabledAccounts() {
+    // Remove all accounts from loader...
+    this.enabledSyncAccounts = [];
     this._accountService.getAccounts('sync_enabled=1').subscribe(
       (accounts: IAccounts[]) => {
         for (const account of accounts) {
@@ -115,10 +117,6 @@ export class ManageComponent implements OnInit {
       'TimeDifference:', timeDifference,
       'interval:', this.syncIntervalSetting);
 
-    // Remove the account id from the enabledSyncAccount list by default
-    const index = this.enabledSyncAccounts.indexOf(account.id);
-    this.enabledSyncAccounts.slice(index, 1);
-
     // Proceed with sync only if its not currently in progress and if the last sync time is greater-equal than the time assigned in settings
     if (forceSync === true || timeDifference >= this.syncIntervalSetting) {
       // Add the account to the loader variable
@@ -130,9 +128,6 @@ export class ManageComponent implements OnInit {
   }
 
   isLoading(account) {
-    // const accountLastSync = account.last_synced_at
-    //   ? account.last_synced_at
-    //   : new Date().getTime();
     const index = this.enabledSyncAccounts.indexOf(account.id);
 
     // Determine if the account is in loading status
