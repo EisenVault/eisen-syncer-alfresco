@@ -274,31 +274,34 @@ exports.download = async params => {
               setTimeout(() => {
                 Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
                   if (error) {
+                    console.log('Cannot change file modified date', error);
                     errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
                   }
-                });
-              }, 1000);
 
-              // set download progress to false
-              await nodeModel.update({
-                download_in_progress: 0,
-                last_downloaded_at: _base.getCurrentTime(),
-                file_update_at: mtime
-              }, {
-                  where: {
+                  // set download progress to false
+                  await nodeModel.update({
+                    download_in_progress: 0,
+                    last_downloaded_at: _base.getCurrentTime(),
+                    file_update_at: mtime
+                  }, {
+                      where: {
+                        account_id: account.id,
+                        file_path: _path.toUnix(destinationPath)
+                      }
+                    });
+
+                  console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+
+                  // Add an event log
+                  await eventLogModel.create({
                     account_id: account.id,
-                    file_path: _path.toUnix(destinationPath)
-                  }
+                    type: eventType.DOWNLOAD_FILE,
+                    description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+                  });
+
                 });
+              }, 500);
 
-              console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-              // Add an event log
-              await eventLogModel.create({
-                account_id: account.id,
-                type: eventType.DOWNLOAD_FILE,
-                description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-              });
             }
 
           }
