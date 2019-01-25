@@ -22,7 +22,7 @@
     "postinstall": "electron-builder install-app-deps",
     "i-linux": "node prerun && npm run build && build --linux",
     "i-mac": "node prerun && npm run build && build -m",
-    "i-win": "node prerun && npm run build && build -w",
+    "i-win": "npm run make-win-cert && node prerun && npm run build && build -w",
     "make-win-cert": "electron-builder create-self-signed-cert -p eisenvault"
   },
   "build": {
