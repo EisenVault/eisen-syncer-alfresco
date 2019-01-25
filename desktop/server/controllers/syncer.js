@@ -91,9 +91,9 @@ exports.upload = async (request, response) => {
 
   try {
     // Set the issyncing flag to on so that the client can know if the syncing progress is still going
-    syncStart({
+    await syncStart({
       account,
-      uploadProgress: 1
+      uploadProgress: true
     });
 
     for (const item of watchers) {
@@ -119,9 +119,9 @@ exports.upload = async (request, response) => {
     await worker.runUpload();
 
     // Set the sync completed time and also set issync flag to off
-    syncComplete({
+    await syncComplete({
       account,
-      uploadProgress: 0
+      uploadProgress: false
     });
 
     // Start watcher now

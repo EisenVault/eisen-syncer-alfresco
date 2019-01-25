@@ -50,7 +50,7 @@ exports.syncStart = async (params) => {
     const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
 
     await accountModel.update({
-        sync_in_progress: 1,
+        sync_in_progress: true,
         download_in_progress: downloadProgress,
         upload_in_progress: uploadProgress
     }, {
