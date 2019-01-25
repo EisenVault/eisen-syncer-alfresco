@@ -99,7 +99,7 @@ exports.watchAll = async () => {
 
 async function _upload(account, filePath) {
   // Set Sync in progress
-  syncStart({
+  await syncStart({
     account: {
       id: worker.account_id
     },

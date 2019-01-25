@@ -44,13 +44,13 @@ exports.connection = db.connection.sync({
 
 exports.accountModel = accountModel;
 
-exports.syncStart = params => {
+exports.syncStart = async (params) => {
     const account = params.account;
     const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
     const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
 
-    accountModel.update({
-        sync_in_progress: 1,
+    await accountModel.update({
+        sync_in_progress: true,
         download_in_progress: downloadProgress,
         upload_in_progress: uploadProgress
     }, {
@@ -62,12 +62,12 @@ exports.syncStart = params => {
         .catch(error => console.log(error));
 };
 
-exports.syncComplete = params => {
+exports.syncComplete = async (params) => {
     const account = params.account;
     const downloadProgress = ('downloadProgress' in params) ? params.downloadProgress : account.download_in_progress;
     const uploadProgress = ('uploadProgress' in params) ? params.uploadProgress : account.upload_in_progress;
 
-    accountModel.update({
+    await accountModel.update({
         sync_in_progress: 0,
         download_in_progress: downloadProgress,
         upload_in_progress: uploadProgress,
