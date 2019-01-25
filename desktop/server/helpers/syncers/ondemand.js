@@ -8,6 +8,7 @@ const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
 const remote = require("../remote");
 const _base = require("./_base");
+var async = require("async");
 
 // Logger
 const { logger } = require("../logger");
@@ -56,7 +57,7 @@ exports.recursiveDownload = async params => {
 
   logger.info("download step 4");
 
-  for (const iterator of children.list.entries) {
+  async.forEachOf(children.list.entries, async (iterator, key, callback) => {
     const node = iterator.entry;
     let relevantPath = node.path.name.substring(
       node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
@@ -83,7 +84,7 @@ exports.recursiveDownload = async params => {
       await _base.isStalledDownload(record);
 
       logger.info("Bailed download, already in progress");
-      continue;
+      return;
     }
 
     logger.info("download step 6-1");
@@ -189,11 +190,14 @@ exports.recursiveDownload = async params => {
     }
 
     logger.info("download step 7");
-  }
+
+
+  }, err => {
+    if (err) console.error(err.message);
+  });
 
   if (children.list.pagination.hasMoreItems === false && recursive === false) {
     logger.info("FINISH DOWNLOADING...");
-    // await accountModel.syncComplete(account.id);
     return;
   }
 };

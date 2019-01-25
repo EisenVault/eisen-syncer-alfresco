@@ -1,6 +1,6 @@
 {
   "name": "eisenvaultsync",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": "Argali Knowledge Services Pvt. Ltd. <engineering@eisenvault.com>",
   "description": "A two-way file sync desktop application for EisenVault DMS",
   "homepage": "https://www.eisenvault.com",
@@ -105,6 +105,7 @@
     "@angular/platform-browser-dynamic": "^6.0.0",
     "@angular/router": "^6.0.0",
     "@ronomon/utimes": "^2.3.1",
+    "async": "^2.6.1",
     "auto-launch": "^5.0.5",
     "body-parser": "^1.18.2",
     "btoa": "^1.2.1",
