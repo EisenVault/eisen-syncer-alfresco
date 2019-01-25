@@ -8,22 +8,6 @@ const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
 
 /**
- * Puts the process to sleep for the mentioned number of milliseconds
- *
- * @param integer milliseconds
- * @return void
- */
-exports.sleep = (milliseconds = 1000) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
-  // let start = new Date().getTime();
-  // for (let i = 0; i < 1e7; i++) {
-  //   if ((new Date().getTime() - start) > milliseconds) {
-  //     break;
-  //   }
-  // }
-}
-
-/**
  * Returns the latest modified date between the physical file vs its record in db.
  *
  * @param object record
