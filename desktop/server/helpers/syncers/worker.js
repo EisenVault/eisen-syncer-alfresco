@@ -117,7 +117,11 @@ exports.runUpload = async (isRecursive = true) => {
         }
 
         // Case B: File modified on local, upload it
-        if (remoteNodeResponse && remoteNodeResponse.statusCode === 200 && record.is_file === true && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
+        if (remoteNodeResponse
+            && remoteNodeResponse.statusCode === 200
+            && record.is_file === true
+            && record.download_in_progress === false
+            && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
             logger.info("File modified on local, uploading..." + filePath);
             // Upload the local changes to the server.
             await remote.upload({
