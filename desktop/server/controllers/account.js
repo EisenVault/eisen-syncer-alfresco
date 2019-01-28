@@ -154,21 +154,20 @@ exports.addWatchNodes = async (request, response) => {
             watch_node: iterator.watchNodeId,
             watch_folder: iterator.watchPath,
           })
-            .then(() => {
-              return response.status(200).json({ account_id: request.params.id });
-            })
+            .then(() => { })
             .catch(error => {
               errorLogAdd(request.params.id, error);
-              return response.status(500).json(error);
             });
           insertedRecords.push(iterator.watchPath);
         }
       }
 
+      return response.status(200).json({ account_id: request.params.id });
+
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json(error);
+      return response.status(500).json("Bad Request");
     });
 };
 
@@ -191,7 +190,7 @@ exports.updateSync = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json(error);
+      return response.status(500).json("Bad Request");
     });
 };
 
