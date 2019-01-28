@@ -12,16 +12,16 @@ const _path = require('./helpers/path');
 const _base = require('./helpers/syncers/_base');
 const onevent = require('./helpers/syncers/onevent');
 
-// var bugsnag = require("bugsnag");
-// bugsnag.register(env.BUGSNAG_KEY);
+var bugsnag = require("bugsnag");
+bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
 
 // Logger
 const { logger } = require("./helpers/logger");
 
 // Middlewares
-// app.use(bugsnag.errorHandler);
-// app.use(bugsnag.requestHandler);
+app.use(bugsnag.errorHandler);
+app.use(bugsnag.requestHandler);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
