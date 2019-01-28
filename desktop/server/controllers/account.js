@@ -167,7 +167,7 @@ exports.addWatchNodes = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json("Bad Request");
+      return response.status(500).json(error);
     });
 };
 
@@ -190,7 +190,7 @@ exports.updateSync = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json("Bad Request");
+      return response.status(500).json(error);
     });
 };
 
