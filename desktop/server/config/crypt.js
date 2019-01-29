@@ -7,5 +7,10 @@ exports.encrypt = data => {
 };
 
 exports.decrypt = data => {
-  return cryptr.decrypt(data);
+  try {
+    return cryptr.decrypt(data);
+  } catch (error) {
+    console.log('error', error);
+    return '';
+  }
 };
