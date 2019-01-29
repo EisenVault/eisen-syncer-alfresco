@@ -17,7 +17,7 @@ module.exports = async (request, response, next) => {
     errors.push({ accountId: "Account ID is invalid" });
   }
 
-  if (errors.length > 0) {
+  if (errors && errors.length > 0) {
     return response.status(400).json({ errors: errors });
   }
 

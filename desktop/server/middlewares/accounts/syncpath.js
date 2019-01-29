@@ -36,7 +36,7 @@ module.exports = async (request, response, next) => {
   }
 
   // Check if the error array has any data in it
-  if (errors.length > 0) {
+  if (errors && errors.length > 0) {
     return response.status(400).json({
       errors: errors
     });

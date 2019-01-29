@@ -9,7 +9,7 @@ module.exports = (request, response, next) => {
     });
   }
 
-  if (errors.length > 0) {
+  if (errors && errors.length > 0) {
     return response.status(400).json({ errors: errors });
   }
 
