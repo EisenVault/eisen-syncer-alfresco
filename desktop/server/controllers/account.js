@@ -200,7 +200,11 @@ exports.deleteAccount = async (request, response) => {
 
   accountModel.findByPk(accountId)
     .then(account => {
-      watcherModel.findAll({ account_id: accountId })
+      watcherModel.findAll({
+        where: {
+          account_id: accountId
+        }
+      })
         .then(watchers => {
           // Permanantly delete account, files and all node data from the db
           if (forceDelete === 'true') {

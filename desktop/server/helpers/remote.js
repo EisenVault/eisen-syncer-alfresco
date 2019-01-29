@@ -199,6 +199,7 @@ exports.download = async params => {
 
   const customData = {
     destinationPath,
+    remoteFolderPath,
     account: {
       id: account.id,
       instance_url: account.instance_url
@@ -207,6 +208,9 @@ exports.download = async params => {
       id: node.id,
       createdAt: node.createdAt,
       modifiedAt: node.modifiedAt,
+    },
+    watcher: {
+      site_id: watcher.site_id
     }
   };
 
@@ -272,8 +276,8 @@ exports.download = async params => {
 
           if (recievedSize >= totalBytes) {
             if (response.statusCode === 200) {
-              const path = response.req.path.split('customData=')[1];
-              const { destinationPath, account, node } = JSON.parse(decodeURIComponent(path));
+              const uri = response.req.path.split('customData=')[1];
+              const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
 
               // Update the time meta properties of the downloaded file
               const btime = _base.convertToUTC(node.createdAt);
@@ -288,15 +292,27 @@ exports.download = async params => {
                   }
 
                   // set download progress to false
-                  await nodeModel.update({
-                    download_in_progress: false,
+                  await nodeModel.upsert({
+                    account_id: account.id,
+                    site_id: watcher.site_id,
+                    node_id: node.id,
+                    remote_folder_path: remoteFolderPath,
+                    file_name: path.basename(destinationPath),
+                    file_path: _path.toUnix(destinationPath),
+                    local_folder_path: path.dirname(destinationPath),
+                    file_update_at: mtime,
+                    last_uploaded_at: 0,
                     last_downloaded_at: _base.getCurrentTime(),
-                    file_update_at: mtime
-                  }, {
-                      where: {
-                        account_id: account.id,
-                        file_path: _path.toUnix(destinationPath)
-                      }
+                    is_folder: false,
+                    is_file: true,
+                    download_in_progress: false,
+                    upload_in_progress: false
+                  },
+                    {
+                      account_id: account.id,
+                      site_id: watcher.site_id,
+                      node_id: node.id,
+                      file_path: _path.toUnix(destinationPath),
                     });
 
                   console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
