@@ -47,22 +47,17 @@ exports.download = async (request, response) => {
       downloadProgress: false
     });
 
-    // Start watcher now
-    //fileWatcher.watchAll();
     logger.info("DOWNLOAD API END");
 
     return response.status(200).json({ success: true });
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
-    syncComplete({
+    await syncComplete({
       account,
       downloadProgress: 0
     });
 
-    // Start watcher now
-    //fileWatcher.watchAll();
     return response
-      .status(404)
       .json({ success: false, error: "Nothing to download" });
   }
 };
@@ -70,8 +65,6 @@ exports.download = async (request, response) => {
 // Upload a file to an instance
 exports.upload = async (request, response) => {
   logger.info("UPLOAD API START");
-  // Stop watcher for a while
-  //fileWatcher.unwatchAll();
 
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
@@ -124,8 +117,6 @@ exports.upload = async (request, response) => {
       uploadProgress: false
     });
 
-    // Start watcher now
-    //fileWatcher.watchAll();
     logger.info("UPLOAD API END");
 
     return response
@@ -139,10 +130,8 @@ exports.upload = async (request, response) => {
       account,
       uploadProgress: 0
     });
-    // Start watcher now
-    //fileWatcher.watchAll();
+
     return response
-      .status(404)
       .json({ success: false, error: "Nothing to upload", error: error });
   }
 };
