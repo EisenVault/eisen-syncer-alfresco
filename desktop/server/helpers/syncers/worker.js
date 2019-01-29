@@ -12,8 +12,6 @@ const { logger } = require("../logger");
 
 exports.runUpload = async (isRecursive = true) => {
 
-    logger.info('Worker Initialized');
-
     let orderIdBy = 'DESC';
     if (isRecursive) {
         orderIdBy = 'ASC';
@@ -74,8 +72,9 @@ exports.runUpload = async (isRecursive = true) => {
     }
 
     // Case A: File created or renamed on local, upload it
-    if (!record) {
+    if (!record && localFileSize > 0) {
         logger.info("New file, uploading... > " + filePath);
+        return;
         await remote.upload({
             account,
             watcher,
@@ -125,6 +124,7 @@ exports.runUpload = async (isRecursive = true) => {
             && localFileSize > 0
             && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
             logger.info("File modified on local, uploading..." + filePath);
+            return;
             // Upload the local changes to the server.
             await remote.upload({
                 account,
