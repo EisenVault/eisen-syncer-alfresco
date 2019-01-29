@@ -300,7 +300,7 @@ exports.download = async params => {
                   });
 
                 });
-              }, 500);
+              }, 2000);
 
             }
 

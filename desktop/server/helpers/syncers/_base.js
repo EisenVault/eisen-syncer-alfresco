@@ -28,17 +28,18 @@ exports.getFileLatestTime = record => {
   return record.file_update_at;
 };
 
-/**
- *
- * @param object filePath
- * {
- *  filePath: <String>
- * }
- */
 exports.getFileModifiedTime = filePath => {
   if (fs.existsSync(filePath)) {
     let fileStat = fs.statSync(filePath);
     return exports.convertToUTC(fileStat.mtime.toUTCString());
+  }
+  return 0;
+};
+
+exports.getFileSize = filePath => {
+  if (fs.existsSync(filePath)) {
+    let fileStat = fs.statSync(filePath);
+    return fileStat.size; // Size in bytes
   }
   return 0;
 };
