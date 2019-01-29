@@ -2,6 +2,7 @@ const Sequelize = require('sequelize');
 const db = require('../config/db');
 const { logger } = require("../helpers/logger");
 const { accountModel } = require('./account');
+const CircularJSON = require('circular-json');
 const MIN_THRESHOLD = 200;
 
 const errorLogModel = db.connection.define('log_error', {
@@ -42,7 +43,7 @@ exports.add = (accountId, description, originatedFrom = '') => {
     logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
     errorLogModel.create({
         account_id: accountId,
-        description: description ? JSON.stringify(description).replace(/"/g, '') : '',
+        description: description ? CircularJSON.stringify(description).replace(/"/g, '') : '',
         created_at: new Date().getTime()
     })
         .then(({ dataValues: logData }) => {

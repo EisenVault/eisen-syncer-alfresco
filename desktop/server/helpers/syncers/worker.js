@@ -46,7 +46,8 @@ exports.runUpload = async (isRecursive = true) => {
     // Case D: If the record is a folder, delete the worker record and proceed next
     // Case E: If the worker record does not need an upload, no point in keeping it in the DB, delete it
     const filePath = worker.file_path;
-    let localFileModifiedDate = _base.getFileModifiedTime(filePath);
+    const localFileModifiedDate = _base.getFileModifiedTime(filePath);
+    const localFileSize = _base.getFileSize(filePath);
 
     // Get the DB record of the filePath
     let nodeData = await nodeModel.findOne({
@@ -121,6 +122,7 @@ exports.runUpload = async (isRecursive = true) => {
             && remoteNodeResponse.statusCode === 200
             && record.is_file === true
             && record.download_in_progress === false
+            && localFileSize > 0
             && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
             logger.info("File modified on local, uploading..." + filePath);
             // Upload the local changes to the server.
