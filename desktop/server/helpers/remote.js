@@ -45,10 +45,13 @@ exports.getNode = async params => {
   try {
     return await request(options);
   } catch (error) {
-    console.log('error.message', error.message);
     errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
-    error = JSON.parse(error.error);
-    return error.error;
+    try {
+      error = JSON.parse(error.error);
+      return error.error;
+    } catch (error) {
+      return {}
+    }
   }
 };
 
@@ -225,17 +228,17 @@ exports.download = async params => {
     }
 
     // Delete if record already exists
-    await nodeModel.destroy({
-      where: {
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: node.id,
-        file_path: _path.toUnix(destinationPath),
-      }
-    });
+    // await nodeModel.destroy({
+    //   where: {
+    //     account_id: account.id,
+    //     site_id: watcher.site_id,
+    //     node_id: node.id,
+    //     file_path: _path.toUnix(destinationPath),
+    //   }
+    // });
 
     // Add reference to the nodes table
-    await nodeModel.create({
+    await nodeModel.upsert({
       account_id: account.id,
       site_id: watcher.site_id,
       node_id: node.id,
@@ -248,9 +251,15 @@ exports.download = async params => {
       last_downloaded_at: _base.getCurrentTime(),
       is_folder: false,
       is_file: true,
-      download_in_progress: 1,
-      upload_in_progress: 0,
-    });
+      download_in_progress: true,
+      upload_in_progress: false
+    },
+      {
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: node.id,
+        file_path: _path.toUnix(destinationPath),
+      });
 
     let totalBytes = 0;
     let recievedSize = 0;
@@ -280,7 +289,7 @@ exports.download = async params => {
 
                   // set download progress to false
                   await nodeModel.update({
-                    download_in_progress: 0,
+                    download_in_progress: false,
                     last_downloaded_at: _base.getCurrentTime(),
                     file_update_at: mtime
                   }, {
