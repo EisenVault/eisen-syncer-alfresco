@@ -231,16 +231,6 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    // Delete if record already exists
-    // await nodeModel.destroy({
-    //   where: {
-    //     account_id: account.id,
-    //     site_id: watcher.site_id,
-    //     node_id: node.id,
-    //     file_path: _path.toUnix(destinationPath),
-    //   }
-    // });
-
     // Add reference to the nodes table
     await nodeModel.upsert({
       account_id: account.id,
@@ -274,61 +264,10 @@ exports.download = async params => {
           // compressed data as it is received
           recievedSize += data.length;
 
-          if (recievedSize >= totalBytes) {
-            if (response.statusCode === 200) {
-              const uri = response.req.path.split('customData=')[1];
-              const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
-
-              // Update the time meta properties of the downloaded file
-              const btime = _base.convertToUTC(node.createdAt);
-              const mtime = _base.convertToUTC(node.modifiedAt);
-              const atime = undefined;
-
-              setTimeout(() => {
-                Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
-                  if (error) {
-                    console.log('Cannot change file modified date', error);
-                    errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
-                  }
-
-                  // set download progress to false
-                  await nodeModel.upsert({
-                    account_id: account.id,
-                    site_id: watcher.site_id,
-                    node_id: node.id,
-                    remote_folder_path: remoteFolderPath,
-                    file_name: path.basename(destinationPath),
-                    file_path: _path.toUnix(destinationPath),
-                    local_folder_path: path.dirname(destinationPath),
-                    file_update_at: mtime,
-                    last_uploaded_at: 0,
-                    last_downloaded_at: _base.getCurrentTime(),
-                    is_folder: false,
-                    is_file: true,
-                    download_in_progress: false,
-                    upload_in_progress: false
-                  },
-                    {
-                      account_id: account.id,
-                      site_id: watcher.site_id,
-                      node_id: node.id,
-                      file_path: _path.toUnix(destinationPath),
-                    });
-
-                  console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-                  // Add an event log
-                  await eventLogModel.create({
-                    account_id: account.id,
-                    type: eventType.DOWNLOAD_FILE,
-                    description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-                  });
-
-                });
-              }, 2000);
-
-            }
-
+          if (response.statusCode === 200 && recievedSize >= totalBytes) {
+            const uri = response.req.path.split('customData=')[1];
+            await _base.deferFileUpdate(uri);
+            return;
           }
         })
       })
