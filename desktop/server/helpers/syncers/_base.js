@@ -55,7 +55,7 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
           file_path: _path.toUnix(destinationPath),
         });
 
-      //console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+      console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
 
       // Add an event log
       await eventLogModel.create({
