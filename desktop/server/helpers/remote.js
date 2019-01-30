@@ -260,7 +260,7 @@ exports.download = async params => {
     await requestNative(options)
       .on('response', function (response) {
         totalBytes = response.headers['content-length'];
-        response.on('data', async function (data) {         
+        response.on('data', async function (data) {
           // compressed data as it is received
           recievedSize += data.length;
 
@@ -408,7 +408,14 @@ exports.upload = async params => {
 
   // If its a file, send a request to upload the file.
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    let relativePath = path.dirname(filePath).split('documentLibrary')[1].replace(/^\/|\/$/g, '');
+    const split = path.dirname(filePath).split('documentLibrary');
+
+    if (typeof split[1] === 'undefined') {
+      return;
+    }
+
+    // Get the path after documentLibrary
+    let relativePath = split[1].replace(/^\/|\/$/g, '');
 
     options = {
       pool: { maxSockets: 1 },

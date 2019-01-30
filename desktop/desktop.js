@@ -1,6 +1,6 @@
 const electron = require("electron");
 const { session } = require("electron");
-
+const { crashReporter } = require('electron');
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const url = require("url");
 const path = require("path");
@@ -12,6 +12,14 @@ process.env.NODE_ENV = "dev";
 
 let mainWindow, tray;
 let forceQuit = false;
+
+crashReporter.start({
+  productName: "offlinesync",
+  companyName: "eisenvault",
+  submitURL: "https://submit.backtrace.io/eisenvault/c2f64c4228b7e589991a2eee69b66df206021538497c23f46d123fc82a9ff0b4/minidump",
+  uploadToServer: true,
+  crashesDirectory: path.join(__dirname, "/server/logs")
+});
 
 ipcMain.on("autolaunch", (event, arg) => {
   const autoLauncher = new AutoLaunch({
