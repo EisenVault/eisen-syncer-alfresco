@@ -260,7 +260,7 @@ exports.download = async params => {
     await requestNative(options)
       .on('response', function (response) {
         totalBytes = response.headers['content-length'];
-        response.on('data', async function (data) {
+        response.on('data', async function (data) {         
           // compressed data as it is received
           recievedSize += data.length;
 

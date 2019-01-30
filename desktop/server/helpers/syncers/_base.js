@@ -63,12 +63,8 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
         type: eventType.DOWNLOAD_FILE,
         description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
       });
-
     });
-
   }, delay);
-
-
 }
 
 
@@ -123,8 +119,8 @@ exports.getInstanceUrl = instance_url => {
 
 exports.isStalledDownload = async record => {
   const now = exports.getCurrentTime();
-  // If the file is downloading more then 5 minutes, then delete the record as it looks like a dead record or download stalled
-  if (((now - record.last_downloaded_at) / 60000) > 5) {
+  // If the file is downloading more then 20 minutes, then delete the record as it looks like a dead record or download stalled
+  if (((now - record.last_downloaded_at) / 60000) > 20) {
     await nodeModel.update({
       download_in_progress: false
     }, {
