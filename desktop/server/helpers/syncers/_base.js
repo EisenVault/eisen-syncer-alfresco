@@ -6,6 +6,71 @@ const { nodeModel } = require("../../models/node");
 const remote = require("../remote");
 const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
+const { eventLogModel, types: eventType } = require("../../models/log-event");
+
+exports.deferFileUpdate = async (uri, delay = 3000) => {
+
+  setTimeout(async () => {
+    const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
+
+    // Update the time meta properties of the downloaded file
+    const btime = exports.convertToUTC(node.createdAt);
+    const mtime = exports.convertToUTC(node.modifiedAt);
+    const atime = undefined;
+
+    Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
+      if (error) {
+        console.log('Unable to change modified date', error);
+        errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
+        return;
+      }
+
+      if (mtime != exports.getFileModifiedTime(destinationPath)) {
+        console.log('Couldnt change modified time', destinationPath, mtime, exports.getFileModifiedTime(destinationPath));
+        exports.deferFileUpdate(uri, delay * 2);
+        return;
+      }
+
+      // set download progress to false
+      await nodeModel.upsert({
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: node.id,
+        remote_folder_path: remoteFolderPath,
+        file_name: path.basename(destinationPath),
+        file_path: _path.toUnix(destinationPath),
+        local_folder_path: path.dirname(destinationPath),
+        file_update_at: mtime,
+        last_uploaded_at: 0,
+        last_downloaded_at: exports.getCurrentTime(),
+        is_folder: false,
+        is_file: true,
+        download_in_progress: false,
+        upload_in_progress: false
+      },
+        {
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: node.id,
+          file_path: _path.toUnix(destinationPath),
+        });
+
+      //console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+
+      // Add an event log
+      await eventLogModel.create({
+        account_id: account.id,
+        type: eventType.DOWNLOAD_FILE,
+        description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
+      });
+
+    });
+
+  }, delay);
+
+
+}
+
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.
