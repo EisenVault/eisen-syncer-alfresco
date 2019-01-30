@@ -9,6 +9,7 @@ const { workerModel } = require("../../models/worker");
 const remote = require("../remote");
 const _base = require("./_base");
 var async = require("async");
+const Utimes = require('@ronomon/utimes');
 
 // Logger
 const { logger } = require("../logger");
@@ -80,8 +81,16 @@ exports.recursiveDownload = async params => {
     logger.info("download step 6");
 
     if (record && record.download_in_progress === true) {
-      // If the file stalled
-      await _base.isStalledDownload(record);
+      // If the file stalled, we will change its modified date to a backdated date
+      if (await _base.isStalledDownload(record) === true) {
+        console.log('Stalled, reinitiating', destinationPath);
+        setTimeout(() => {
+          const btime = 447775200000; // 1984-03-10T14:00:00.000Z
+          const mtime = btime;
+          const atime = btime;
+          Utimes.utimes(destinationPath, btime, mtime, atime, async () => { })
+        }, 2000);
+      }
 
       logger.info("Bailed download, already in progress");
       return;
