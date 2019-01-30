@@ -290,7 +290,6 @@ exports.download = async params => {
  * }
  */
 exports.upload = async params => {
-  return;
   let account = params.account;
   let watcher = params.watcher;
   let filePath = params.filePath;
