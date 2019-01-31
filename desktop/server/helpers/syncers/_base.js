@@ -9,7 +9,6 @@ const Utimes = require('@ronomon/utimes');
 const { eventLogModel, types: eventType } = require("../../models/log-event");
 
 exports.deferFileUpdate = async (uri, delay = 3000) => {
-
   setTimeout(async () => {
     const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
 
@@ -20,13 +19,11 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
 
     Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
       if (error) {
-        console.log('Unable to change modified date', error);
         errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
         return;
       }
 
       if (mtime != exports.getFileModifiedTime(destinationPath)) {
-        console.log('Couldnt change modified time', destinationPath, mtime, exports.getFileModifiedTime(destinationPath));
         exports.deferFileUpdate(uri, delay * 2);
         return;
       }
@@ -67,6 +64,18 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
   }, delay);
 }
 
+exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
+  const { filePath, btime, mtime, atime } = params;
+  setTimeout(() => {
+    Utimes.utimes(filePath, btime, mtime, atime, async () => {
+      if (mtime != exports.getFileModifiedTime(filePath)) {
+        exports.deferFileModifiedDate(params, delay * 2);
+        return;
+      }
+      callback(true);
+    })
+  }, delay);
+}
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.
@@ -119,18 +128,10 @@ exports.getInstanceUrl = instance_url => {
 
 exports.isStalledDownload = async record => {
   const now = exports.getCurrentTime();
-  // If the file is downloading more then 20 minutes, then delete the record as it looks like a dead record or download stalled
+  // Check if a file is stalled for more than 20 minutes
   if (((now - record.last_downloaded_at) / 60000) > 20) {
-    await nodeModel.update({
-      download_in_progress: false
-    }, {
-        where: {
-          id: record.id
-        }
-      });
     return true;
   }
-
   return false;
 }
 

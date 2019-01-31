@@ -57,7 +57,7 @@
     <a class="btn btn-info float-right" title="Edit Sync Departments" href="#" (click)="onEdit($event, '/account-remote-folder/' + accountId)">Edit</a>
 
     <!-- Department Table -->
-    <table class="table table-bordered table-sm" *ngIf="departments.length > 0; else nodepartment">
+    <table class="table table-bordered table-sm" *ngIf="departments && departments.length > 0; else nodepartment">
       <thead>
         <tr>
           <th scope="col">Department Name</th>

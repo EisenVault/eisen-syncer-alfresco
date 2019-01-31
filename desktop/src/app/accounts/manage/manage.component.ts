@@ -68,11 +68,17 @@ export class ManageComponent implements OnInit {
         });
 
       // Get the timezone
-      this._settingService
-        .getSetting('TIMEZONE')
-        .subscribe((result: Setting) => {
-          this.timezone = moment(new Date()).tz(result.value).format('Z');
-        });
+      const timezone = localStorage.getItem('timezone');
+      if (!timezone) {
+        this._settingService
+          .getSetting('TIMEZONE')
+          .subscribe((result: Setting) => {
+            this.timezone = moment(new Date()).tz(result.value).format('Z');
+            localStorage.setItem('timezone', this.timezone);
+          });
+      } else {
+        this.timezone = timezone;
+      }
 
       // Get the launch status
       this._settingService

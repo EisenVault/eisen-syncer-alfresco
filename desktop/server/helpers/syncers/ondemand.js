@@ -81,15 +81,28 @@ exports.recursiveDownload = async params => {
     logger.info("download step 6");
 
     if (record && record.download_in_progress === true) {
-      // If the file stalled, we will change its modified date to a backdated date
+      // If the file is stalled, we will change its modified date to a backdated date
       if (await _base.isStalledDownload(record) === true) {
-        console.log('Stalled, reinitiating', destinationPath);
-        setTimeout(() => {
-          const btime = 447775200000; // 1984-03-10T14:00:00.000Z
-          const mtime = btime;
-          const atime = btime;
-          Utimes.utimes(destinationPath, btime, mtime, atime, async () => { })
-        }, 2000);
+        const btime = 447775200000; // 1984-03-10T14:00:00.000Z
+        const mtime = btime;
+        const atime = btime;
+        _base.deferFileModifiedDate({
+          filePath: record.file_path,
+          btime,
+          mtime,
+          atime
+        }, 2000,
+          async (done) => {
+            if (done === true) {
+              await nodeModel.update({
+                download_in_progress: false
+              }, {
+                  where: {
+                    id: record.id
+                  }
+                });
+            }
+          });
       }
 
       logger.info("Bailed download, already in progress");

@@ -23,7 +23,7 @@
           <span *ngIf="isLoading === true">
             <h2>Loading...</h2>
           </span>
-          <span *ngIf="logs.length === 0">No Logs Found</span>
+          <span *ngIf="logs && logs.length === 0">No Logs Found</span>
         </td>
       </tr>
     </tbody>
