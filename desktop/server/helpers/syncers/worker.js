@@ -102,7 +102,7 @@ exports.runUpload = async (isRecursive = true) => {
 
         // Give a break if the server throws an internal server error
         if (remoteNodeResponse.statusCode !== 200) {
-            logger.log('BREAKING SINCE 500');
+            logger.info('BREAKING SINCE 500');
             return;
         }
 
