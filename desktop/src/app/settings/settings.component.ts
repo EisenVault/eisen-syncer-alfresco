@@ -42,7 +42,9 @@ export class SettingsComponent implements OnInit {
   saveSettings() {
     const value = this.startup_launch === true ? 1 : 0;
     this._settingService.updateSetting('LAUNCH_AT_STARTUP', value).subscribe(() => { });
-    this._settingService.updateSetting('TIMEZONE', this.timezone).subscribe(() => { });
+    this._settingService.updateSetting('TIMEZONE', this.timezone).subscribe(() => {
+      localStorage.removeItem('timezone');
+    });
     this._settingService.updateSetting('SYNC_INTERVAL', this.sync_interval).subscribe(() => { });
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.sendSync(
