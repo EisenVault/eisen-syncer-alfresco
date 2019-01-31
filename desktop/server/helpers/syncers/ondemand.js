@@ -83,7 +83,6 @@ exports.recursiveDownload = async params => {
     if (record && record.download_in_progress === true) {
       // If the file is stalled, we will change its modified date to a backdated date
       if (await _base.isStalledDownload(record) === true) {
-        console.log('Stalled, reinitiating', record.file_path);
         const btime = 447775200000; // 1984-03-10T14:00:00.000Z
         const mtime = btime;
         const atime = btime;
@@ -95,7 +94,6 @@ exports.recursiveDownload = async params => {
         }, 2000,
           async (done) => {
             if (done === true) {
-              console.log('updated downloadProgress to false');
               await nodeModel.update({
                 download_in_progress: false
               }, {
