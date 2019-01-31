@@ -51,7 +51,7 @@ export class RemoteFolderComponent implements OnInit {
       }
 
       this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
-        if (this.sites.length === result.length) {
+        if (result && this.sites.length === result.length) {
           this.isSelectAllChecked = true;
         }
 
