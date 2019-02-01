@@ -92,11 +92,13 @@ socket.on("sync-notification", async data => {
     }
   });
 
+
   if (_.isEmpty(accountData)) {
     return;
   }
 
   for (const accountItem of accountData) {
+
     const { dataValues: account } = { ...accountItem };
 
     // Since the delete action does not contain path, we will handle it in a diff way
@@ -163,7 +165,6 @@ socket.on("sync-notification", async data => {
 process.on("uncaughtException", async (error) => {
   await errorLogAdd(0, error);
   logger.error(`An uncaughtException has occurred : ${error}`);
-  //process.exit(1);
 });
 
 app.listen(7113, () => {
