@@ -200,3 +200,7 @@ exports.createItemOnLocal = async params => {
     errorLogAdd(account.id, error, `${__filename}/createItemLocal`);
   }
 };
+
+
+
+exports.sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

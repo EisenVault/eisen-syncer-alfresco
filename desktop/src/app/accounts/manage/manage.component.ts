@@ -137,10 +137,10 @@ export class ManageComponent implements OnInit {
     const index = this.enabledSyncAccounts.indexOf(account.id);
 
     // Determine if the account is in loading status
-    const isLoading = index !== -1 ||
+    const isLoading = account.sync_enabled === true && (index !== -1 ||
       account.sync_in_progress === true ||
       account.download_in_progress === true ||
-      account.upload_in_progress === true;
+      account.upload_in_progress === true);
 
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.send('isSyncing', isLoading);
