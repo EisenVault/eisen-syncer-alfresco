@@ -8,7 +8,6 @@ const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
 const remote = require("../remote");
 const _base = require("./_base");
-// var async = require("async");
 
 // Logger
 const { logger } = require("../logger");
@@ -22,9 +21,7 @@ exports.recursiveDownload = async params => {
   let skipCount = params.skipCount || 0;
 
   // Sleep for sometime
-  console.log('sleeping');
   await _base.sleep(5000);
-  console.log('awake');
 
   let children = await remote.getChildren({
     account,
