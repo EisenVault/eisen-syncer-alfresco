@@ -17,6 +17,7 @@ exports.watchAll = async () => {
   let watcher = chokidar.watch('__test', {
     ignored: /(^|[\/\\])\../,
     ignoreInitial: true,
+    ignorePermissionErrors: true,
     awaitWriteFinish: {
       stabilityThreshold: 2000,
     }
