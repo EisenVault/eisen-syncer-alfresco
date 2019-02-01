@@ -1,4 +1,3 @@
-const watch = require("watch");
 const fs = require("fs");
 const path = require("path");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
@@ -9,78 +8,21 @@ const remote = require("./remote");
 const worker = require('../helpers/syncers/worker');
 const _path = require('./path');
 const _ = require('lodash');
+const chokidar = require('chokidar');
 
 // Logger
 const { logger } = require('./logger');
 
-// Add a new watcher
-exports.watch = account => {
-  let watchlist = [];
-
-  if (!fs.existsSync(account.sync_path)) {
-    return watchlist;
-  }
-
-  watch.watchTree(account.sync_path, { ignoreDotFiles: true }, async function (
-    f,
-    curr,
-    prev
-  ) {
-
-    if (typeof f === "object" && prev === null && curr === null) {
-      // Finished walking the tree
-    } else if (prev === null) {
-      // f is a new file/folder
-      watchlist.push(f);
-      if (_countElements(f, watchlist) <= 1) {
-        let type = "file";
-        if (fs.lstatSync(f).isDirectory()) {
-          type = "directory";
-        }
-        await _upload(account, f);
-        logger.info(`${f} is a new ${type}`);
-      }
-
-
-    } else if (curr.nlink === 0) {
-      watchlist.push(f);
-      // f was removed
-      if (_countElements(f, watchlist) <= 1) {
-        await _delete(account, f);
-        logger.info(`${f} was removed`);
-      }
-
-    } else {
-      // f was changed
-      watchlist.push(f);
-      if (_countElements(f, watchlist) <= 1) {
-        await _upload(account, f);
-        logger.info(`${f} was changed...`);
-      }
+exports.watchAll = async () => {
+  let watcher = chokidar.watch('__test', {
+    ignored: /(^|[\/\\])\../,
+    ignoreInitial: true,
+    awaitWriteFinish: {
+      stabilityThreshold: 2000,
     }
   });
-
-  setInterval(() => {
-    watchlist = [];
-  }, 1500);
-};
-
-// remove a watchlist
-exports.unwatchAll = async () => {
-  accounts = await accountModel.findAll();
-  logger.info("Watcher paused");
-
-  // Remove all watchers
-  if (accounts) {
-    for (let { dataValues: account } of accounts) {
-      watch.unwatchTree(account.sync_path);
-    }
-  }
-};
-
-exports.watchAll = async () => {
   // Remove all watchers first
-  await this.unwatchAll();
+  watcher.close();
   logger.info("Watcher started");
 
   // Add new watchers
@@ -92,7 +34,29 @@ exports.watchAll = async () => {
 
   if (accounts) {
     for (let { dataValues: account } of accounts) {
-      this.watch(account);
+
+      if (!fs.existsSync(account.sync_path)) {
+        return;
+      }
+
+      watcher
+        .add(account.sync_path)
+        .on('all', async (event, path) => {
+          switch (event) {
+            case 'add':
+              logger.info(`${event} - ${path}`);
+              await _upload(account, path);
+              break;
+            case 'change':
+              logger.info(`${event} - ${path}`);
+              await _upload(account, path);
+              break;
+            case 'unlink':
+              logger.info(`${event} - ${path}`);
+              await _delete(account, path);
+              break;
+          }
+        });
     }
   }
 };
@@ -135,8 +99,9 @@ async function _upload(account, filePath) {
         console.log('error', error);
       }
     }
-    await worker.runUpload(false);
   } // end for loop
+
+  await worker.runUpload(true);
 
   // Stop Sync in progress
   syncComplete({
@@ -175,11 +140,4 @@ async function _delete(account, filePath) {
       record
     });
   }
-}
-
-// This function returns the count of elements present in an array
-function _countElements(needle, hacksack) {
-  return hacksack.reduce((counter, value) => {
-    return value === needle ? ++counter : counter;
-  }, 0);
 }

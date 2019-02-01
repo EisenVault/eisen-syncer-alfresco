@@ -11,7 +11,6 @@ const _ = require('lodash');
 const { logger } = require("../logger");
 
 exports.runUpload = async (isRecursive = true) => {
-
     let orderIdBy = 'DESC';
     if (isRecursive) {
         orderIdBy = 'ASC';
@@ -74,11 +73,14 @@ exports.runUpload = async (isRecursive = true) => {
     // Case A: File created or renamed on local, upload it
     if (!record && localFileSize > 0) {
         logger.info("New file, uploading... > " + filePath);
-        await remote.upload({
+        remote.upload({
             account,
             watcher,
             filePath,
             rootNodeId: watcher.document_library_node
+        }, async (uploadCompleted) => {
+            // Process the next worker record
+            uploadCompleted && isRecursive && await exports.runUpload();
         });
 
         // Remove the worker record irrespective of the file being uploaded
@@ -87,8 +89,6 @@ exports.runUpload = async (isRecursive = true) => {
                 id: worker.id
             }
         });
-        // Process the next worker record
-        isRecursive && await exports.runUpload();
         return;
     }
 
@@ -125,6 +125,9 @@ exports.runUpload = async (isRecursive = true) => {
                 watcher,
                 filePath,
                 rootNodeId: watcher.document_library_node
+            }, async (uploadCompleted) => {
+                // Process the next worker record
+                uploadCompleted && isRecursive && await exports.runUpload();
             });
 
             // Remove the worker record irrespective of file being uploaded
@@ -133,8 +136,6 @@ exports.runUpload = async (isRecursive = true) => {
                     id: worker.id
                 }
             });
-            // Process the next worker record
-            isRecursive && await exports.runUpload();
             return;
         }
 

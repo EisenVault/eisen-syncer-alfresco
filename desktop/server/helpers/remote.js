@@ -66,7 +66,8 @@ exports.getNode = async params => {
 exports.getChildren = async params => {
   let account = params.account;
   let parentNodeId = params.parentNodeId;
-  let maxItems = params.maxItems || 100;
+  let maxItems = params.maxItems || 1;
+  let skipCount = params.skipCount || 0;
 
   if (!account) {
     throw new Error("Account not found");
@@ -78,7 +79,7 @@ exports.getChildren = async params => {
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       parentNodeId +
-      "/children?include=path&maxItems=" +
+      "/children?include=path&skipCount=" + skipCount + "&maxItems=" +
       maxItems,
     headers: {
       Connection: "keep-alive",
@@ -289,7 +290,7 @@ exports.download = async params => {
  *  uploadDirectory: <String>,
  * }
  */
-exports.upload = async params => {
+exports.upload = async (params, callback) => {
   let account = params.account;
   let watcher = params.watcher;
   let filePath = params.filePath;
@@ -439,65 +440,62 @@ exports.upload = async params => {
       }
     };
 
-    try {
-      let response = await requestNative(options)
-      response = JSON.parse(response.body);
+    requestNative(options, async (error, response, body) => {
 
-      // Update the time meta properties of the downloaded file
-      const btime = _base.convertToUTC(response.entry.createdAt);
-      const mtime = _base.convertToUTC(response.entry.modifiedAt);
-      const atime = undefined;
-
-      setTimeout(() => {
-        Utimes.utimes(`${filePath}`, btime, mtime, atime, async () => { });
-      }, 0); //end setTimeout
-
-      // Add a record in the db
-      await nodeModel.create({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: response.entry.id,
-        remote_folder_path: response.entry.path.name,
-        file_name: path.basename(filePath),
-        file_path: _path.toUnix(filePath),
-        local_folder_path: path.dirname(filePath),
-        file_update_at: _base.convertToUTC(response.entry.modifiedAt),
-        last_uploaded_at: _base.getCurrentTime(),
-        last_downloaded_at: 0,
-        is_folder: false,
-        is_file: true,
-        download_in_progress: 0,
-        upload_in_progress: 0,
-      });
-
-      console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
-
-      // Add an event log
-      await eventLogModel.create({
-        account_id: account.id,
-        type: eventType.UPLOAD_FILE,
-        description: `Uploaded File: ${filePath} to ${account.instance_url}`
-      });
-
-      return true;
-
-    } catch (error) {
-      // Ignore "duplicate" status codes
-      if (error.statusCode == 409) {
-        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-        await nodeModel.update({
-          file_update_at: _base.getFileModifiedTime(filePath)
-        }, {
-            where: {
-              account_id: account.id,
-              file_path: filePath
-            }
-          });
+      if (error) {
+        console.log('remote.upload', error);
       }
 
-      return false;
-    }
-  }
+      if (!error && response.statusCode == 201) {
+        var node = JSON.parse(body);
 
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(node.entry.createdAt);
+        const mtime = _base.convertToUTC(node.entry.modifiedAt);
+        const atime = undefined;
+
+        _base.deferFileModifiedDate({
+          filePath, btime, mtime, atime
+        }, 2000, () => { });
+
+        // Add a record in the db
+        try {
+          await nodeModel.create({
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: node.entry.id,
+            remote_folder_path: node.entry.path.name,
+            file_name: path.basename(filePath),
+            file_path: _path.toUnix(filePath),
+            local_folder_path: path.dirname(filePath),
+            file_update_at: _base.convertToUTC(node.entry.modifiedAt),
+            last_uploaded_at: _base.getCurrentTime(),
+            last_downloaded_at: 0,
+            is_folder: false,
+            is_file: true,
+            download_in_progress: 0,
+            upload_in_progress: 0,
+          });
+        } catch (error) { }
+
+        console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
+
+        try {
+          // Add an event log
+          await eventLogModel.create({
+            account_id: account.id,
+            type: eventType.UPLOAD_FILE,
+            description: `Uploaded File: ${filePath} to ${account.instance_url}`
+          });
+        } catch (error) { }
+
+        // Completed upload, run the callback
+        setTimeout(() => {
+          callback(true);
+        }, 5000);
+
+      }
+    });
+  }
   return;
 };

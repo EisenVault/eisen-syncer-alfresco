@@ -113,6 +113,7 @@
     "bugsnag": "^2.4.3",
     "bugsnag-angular": "^2.0.1",
     "bugsnag-js": "^4.7.3",
+    "chokidar": "^2.0.4",
     "circular-json": "^0.5.9",
     "core-js": "^2.5.4",
     "cors": "^2.8.4",
@@ -134,7 +135,6 @@
     "socket.io-client": "^2.1.1",
     "sqlite3": "^4.0.4",
     "validator": "^10.1.0",
-    "watch": "^1.0.2",
     "zone.js": "^0.8.26"
   },
   "devDependencies": {
