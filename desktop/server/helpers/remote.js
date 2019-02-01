@@ -443,7 +443,7 @@ exports.upload = async (params, callback) => {
     requestNative(options, async (error, response, body) => {
 
       if (error) {
-        console.log('remote.upload', error, error.statusCode);
+        console.log('remote.upload', error);
       }
 
       if (!error && response.statusCode == 201) {
