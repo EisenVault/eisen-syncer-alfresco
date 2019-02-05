@@ -12,6 +12,7 @@ process.env.NODE_ENV = "dev";
 let mainWindow, tray;
 let forceQuit = false;
 
+// Set the max memory size of the app
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
 ipcMain.on("autolaunch", (event, arg) => {
@@ -175,6 +176,7 @@ app.on("ready", () => {
         mainWindow.show();
       }
     },
+    { type: "separator" },
     {
       label: "About EisenVaultSync",
       click() {
@@ -188,6 +190,18 @@ app.on("ready", () => {
         );
         mainWindow.show();
       }
+    },
+    {
+      label: "Developer",
+      submenu: [
+        {
+          label: "Show Developer Tools",
+          accelerator: process.platform == "darwin" ? "Command+I" : "Ctrl+I",
+          click() {
+            mainWindow.webContents.openDevTools();
+          }
+        }
+      ]
     },
     { type: "separator" },
     {
@@ -240,20 +254,4 @@ const mainMenuTemplate = [];
 // For mac, add empty object to menu
 if (process.platform == "darwin") {
   mainMenuTemplate.unshift({});
-}
-
-// Add dev-tools if not in production
-if (process.env.NODE_ENV !== "production") {
-  mainMenuTemplate.push({
-    label: "Developer",
-    submenu: [
-      {
-        label: "Show Dev Tools",
-        accelerator: process.platform == "darwin" ? "Command+I" : "Ctrl+I",
-        click(item, focusedWindow) {
-          focusedWindow.toggleDevTools();
-        }
-      }
-    ]
-  });
 }

@@ -36,6 +36,7 @@ exports.runUpload = async (isRecursive = true) => {
     const watcherData = await watcherModel.findByPk(worker.watcher_id);
     const { dataValues: watcher } = { ...watcherData };
 
+    logger.info('Worker Step 1');
     // Following cases are possible...
     // Case A: File created or renamed on local, upload it
     // Case B: File modified on local, upload it
@@ -45,7 +46,7 @@ exports.runUpload = async (isRecursive = true) => {
     const filePath = worker.file_path;
     const localFileModifiedDate = _base.getFileModifiedTime(filePath);
     const localFileSize = _base.getFileSize(filePath);
-
+    logger.info('Worker Step 2');
     // Get the DB record of the filePath
     let nodeData = await nodeModel.findOne({
         where: {
@@ -54,7 +55,7 @@ exports.runUpload = async (isRecursive = true) => {
         }
     });
     const { dataValues: record } = { ...nodeData };
-
+    logger.info('Worker Step 3');
     if (record && record.download_in_progress === true) {
         // If the file stalled
         if (await _base.isStalledDownload(record)) {
@@ -69,7 +70,7 @@ exports.runUpload = async (isRecursive = true) => {
         logger.info("Bailed upload, download in progress. " + filePath);
         return;
     }
-
+    logger.info('Worker Step 4.');
     // Case A: File created or renamed on local, upload it
     if (!record && localFileSize > 0) {
         logger.info("New file, uploading... > " + filePath);
@@ -92,6 +93,7 @@ exports.runUpload = async (isRecursive = true) => {
         return;
     }
 
+    logger.info('Worker Step 5');
     // If the record exists in the DB 
     if (record) {
         // Make a request to the server to get the node details
@@ -206,4 +208,12 @@ exports.runUpload = async (isRecursive = true) => {
         isRecursive && await exports.runUpload();
         return;
     }
+
+    // If none of the above criteria met, delete the worker record
+    await workerModel.destroy({
+        where: {
+            id: worker.id
+        }
+    });
+    logger.info('Worker Step 6');
 }
