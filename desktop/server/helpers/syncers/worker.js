@@ -31,6 +31,11 @@ exports.runUpload = async (isRecursive = true) => {
     const { dataValues: worker } = workerData;
 
     const accountData = await accountModel.findByPk(worker.account_id);
+
+    if (_.isEmpty(accountData)) {
+        return;
+    }
+
     const { dataValues: account } = { ...accountData };
 
     const watcherData = await watcherModel.findByPk(worker.watcher_id);
