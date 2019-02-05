@@ -44,14 +44,14 @@ export class RemoteFolderComponent implements OnInit {
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
 
-      if (this.sites.length === 0) {
+      if (this.sites && this.sites.length === 0) {
         this.soSiteData = true;
         this.disableFinish = true;
         return;
       }
 
       this._siteService.getWatchers(this.accountId).subscribe((result: WatchData[]) => {
-        if (result && this.sites.length === result.length) {
+        if (result && this.sites && this.sites.length === result.length) {
           this.isSelectAllChecked = true;
         }
 
@@ -72,7 +72,7 @@ export class RemoteFolderComponent implements OnInit {
             });
           }
 
-          if (this.selectedList.length > 0) {
+          if (this.selectedList && this.selectedList.length > 0) {
             this.disableFinish = false;
           }
 
@@ -174,7 +174,7 @@ export class RemoteFolderComponent implements OnInit {
       this.disableFinish = false;
     }
 
-    if (this.selectedList.length === 0) {
+    if (this.selectedList && this.selectedList.length === 0) {
       this.disableFinish = true;
     }
   }
