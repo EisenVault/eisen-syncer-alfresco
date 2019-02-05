@@ -8,6 +8,7 @@ const requestNative = require("request");
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
+const { settingModel } = require("../models/setting");
 const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
@@ -489,11 +490,16 @@ exports.upload = async (params, callback) => {
           });
         } catch (error) { }
 
+        const setting = await settingModel.findOne({
+          where: {
+            name: 'SYNC_PAUSE_SECONDS'
+          }
+        });
+
         // Completed upload, run the callback
         setTimeout(() => {
           callback(true);
-        }, 5000);
-
+        }, Number(setting.value) * 1000);
       }
     });
   }

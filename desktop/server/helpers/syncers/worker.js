@@ -39,6 +39,11 @@ exports.runUpload = async (isRecursive = true) => {
     const { dataValues: account } = { ...accountData };
 
     const watcherData = await watcherModel.findByPk(worker.watcher_id);
+
+    if (_.isEmpty(watcherData)) {
+        return;
+    }
+
     const { dataValues: watcher } = { ...watcherData };
 
     logger.info('Worker Step 1');
@@ -109,7 +114,7 @@ exports.runUpload = async (isRecursive = true) => {
 
         // Give a break if the server throws an internal server error
         if (remoteNodeResponse.statusCode !== 200) {
-            logger.info('BREAKING SINCE 500');
+            logger.info('BREAKING SINCE ' + remoteNodeResponse.statusCode);
             return;
         }
 
