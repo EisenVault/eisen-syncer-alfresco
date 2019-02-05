@@ -33,6 +33,11 @@ exports.runUpload = async (isRecursive = true) => {
     const accountData = await accountModel.findByPk(worker.account_id);
 
     if (_.isEmpty(accountData)) {
+        await workerModel.destroy({
+            where: {
+                id: worker.id
+            }
+        });
         return;
     }
 
@@ -41,6 +46,11 @@ exports.runUpload = async (isRecursive = true) => {
     const watcherData = await watcherModel.findByPk(worker.watcher_id);
 
     if (_.isEmpty(watcherData)) {
+        await workerModel.destroy({
+            where: {
+                id: worker.id
+            }
+        });
         return;
     }
 
