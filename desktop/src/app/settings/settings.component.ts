@@ -15,7 +15,8 @@ interface Setting {
 })
 export class SettingsComponent implements OnInit {
   public startup_launch;
-  public sync_interval = 10;
+  public sync_interval = 10; // minutes
+  public api_interval = 5; // seconds
   public timezone = 'Asia/Calcutta';
   public isSaved = false;
 
@@ -37,14 +38,27 @@ export class SettingsComponent implements OnInit {
     this._settingService.getSetting('TIMEZONE').subscribe((result: Setting) => {
       this.timezone = result.value;
     });
+
+    this._settingService.getSetting('SYNC_PAUSE_SECONDS').subscribe((result: Setting) => {
+      this.api_interval = Number(result.value);
+    });
   }
 
   saveSettings() {
     const value = this.startup_launch === true ? 1 : 0;
+
+    // Launch at startup
     this._settingService.updateSetting('LAUNCH_AT_STARTUP', value).subscribe(() => { });
+
+    // Timezone
     this._settingService.updateSetting('TIMEZONE', this.timezone).subscribe(() => {
       localStorage.removeItem('timezone');
     });
+
+    // API Interval
+    this._settingService.updateSetting('SYNC_PAUSE_SECONDS', this.api_interval).subscribe(() => { });
+
+    // Sync Interval
     this._settingService.updateSetting('SYNC_INTERVAL', this.sync_interval).subscribe(() => { });
     if (this._electronService.isElectronApp) {
       this._electronService.ipcRenderer.sendSync(

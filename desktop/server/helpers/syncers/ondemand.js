@@ -6,6 +6,7 @@ const mkdirp = require("mkdirp");
 const glob = require("glob");
 const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
+const { settingModel } = require("../../models/setting");
 const remote = require("../remote");
 const _base = require("./_base");
 
@@ -20,8 +21,14 @@ exports.recursiveDownload = async params => {
   const destinationPath = params.destinationPath; // where on local to download
   let skipCount = params.skipCount || 0;
 
+  const setting = await settingModel.findOne({
+    where: {
+      name: 'SYNC_PAUSE_SECONDS'
+    }
+  });
+
   // Sleep for sometime
-  await _base.sleep(5000);
+  await _base.sleep(Number(setting.value) * 1000);
 
   let children = await remote.getChildren({
     account,

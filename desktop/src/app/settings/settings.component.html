@@ -111,6 +111,12 @@
         <option value="Pacific/Tongatapu">(GMT+13:00) Nuku'alofa</option>
       </select>
     </div>
+    <div class="form-group mt-5">
+      <label for="api_interval">Sync Pause Interval (seconds)</label>
+      <input type="number" id="api_interval" name="api_interval" class="form-control" min="0" step="1" [(ngModel)]="api_interval" />
+      <small id="api_interval" class="form-text text-muted">Number of seconds to pause between each request. Applies to
+        both Upload/Download</small>
+    </div>
     <button type="button" class="btn btn-success mt-5" (click)="saveSettings()">
       <i class="fas fa-save"></i>
       Save
