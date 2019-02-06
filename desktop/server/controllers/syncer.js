@@ -14,9 +14,7 @@ exports.download = async (request, response) => {
 
   if (!account || account.sync_enabled === false) {
     logger.info("Download Bailed");
-    return response
-      .status(404)
-      .json({ success: false, error: "Nothing to download" });
+    return false;
   }
 
   const watchFolders = await watcherModel.findAll({
@@ -57,8 +55,7 @@ exports.download = async (request, response) => {
       downloadProgress: 0
     });
 
-    return response
-      .json({ success: false, error: "Nothing to download" });
+    return false;
   }
 };
 
@@ -71,9 +68,7 @@ exports.upload = async (request, response) => {
 
   if (!account || account.sync_enabled == 0) {
     logger.info("Upload Bailed");
-    return response
-      .status(404)
-      .json({ success: false, error: "Nothing to upload" });
+    return false;
   }
 
   const watchers = await watcherModel.findAll({
@@ -131,8 +126,7 @@ exports.upload = async (request, response) => {
       uploadProgress: 0
     });
 
-    return response
-      .json({ success: false, error: "Nothing to upload", error: error });
+    return false;
   }
 };
 

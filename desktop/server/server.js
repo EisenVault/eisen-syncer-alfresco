@@ -167,6 +167,6 @@ process.on("uncaughtException", async (error) => {
   logger.error(`An uncaughtException has occurred : ${error}`);
 });
 
-app.listen(7113, () => {
+app.listen(env.SERVER_PORT, () => {
   logger.info(`server running on: ${env.SERVER_PORT}`);
 });
