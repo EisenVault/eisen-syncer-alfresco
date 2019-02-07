@@ -44,7 +44,12 @@ exports.runUpload = async (isRecursive = false) => {
             }
         });
 
-        const accountData = await accountModel.findByPk(worker.account_id);
+        const accountData = await accountModel.findOne({
+            where: {
+                id: worker.account_id,
+                sync_enabled: true
+            }
+        });
 
         if (_.isEmpty(accountData)) {
             continue;
