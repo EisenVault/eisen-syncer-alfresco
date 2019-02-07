@@ -8,7 +8,6 @@ const requestNative = require("request");
 const { add: errorLogAdd } = require("../models/log-error");
 const { eventLogModel, types: eventType } = require("../models/log-event");
 const { nodeModel } = require("../models/node");
-const { settingModel } = require("../models/setting");
 const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
@@ -307,10 +306,6 @@ exports.upload = async (params, callback) => {
     let directoryName = path.basename(params.filePath);
     let relativePath = path.dirname(filePath).split('documentLibrary')[1];
 
-    if (!relativePath) {
-      return;
-    }
-
     relativePath = relativePath.replace(/^\/|\/$/g, '');
 
     options = {
@@ -352,14 +347,14 @@ exports.upload = async (params, callback) => {
         }, 0);
 
         // Delete if record already exists
-        await nodeModel.destroy({
-          where: {
-            account_id: account.id,
-            site_id: watcher.site_id,
-            node_id: response.entry.id,
-            file_path: _path.toUnix(filePath),
-          }
-        });
+        // await nodeModel.destroy({
+        //   where: {
+        //     account_id: account.id,
+        //     site_id: watcher.site_id,
+        //     node_id: response.entry.id,
+        //     file_path: _path.toUnix(filePath),
+        //   }
+        // });
 
         await nodeModel.create({
           account_id: account.id,
@@ -490,16 +485,8 @@ exports.upload = async (params, callback) => {
           });
         } catch (error) { }
 
-        const setting = await settingModel.findOne({
-          where: {
-            name: 'SYNC_PAUSE_SECONDS'
-          }
-        });
-
         // Completed upload, run the callback
-        setTimeout(() => {
-          callback(true);
-        }, Number(setting.value) * 1000);
+        callback(true);
       }
     });
   }

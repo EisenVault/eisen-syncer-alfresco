@@ -94,7 +94,7 @@ async function _upload(account, filePath) {
         watcher_id: watcher.id,
         file_path: filePath,
         root_node_id: watcher.document_library_node,
-        priority: 1
+        priority: fs.statSync(filePath).isDirectory() ? 2 : 1
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
@@ -104,7 +104,7 @@ async function _upload(account, filePath) {
     }
   } // end for loop
 
-  await worker.runUpload(true);
+  //await worker.runUpload(true);
 
   // Stop Sync in progress
   syncComplete({
@@ -124,7 +124,6 @@ async function _delete(account, filePath) {
 
   if (nodeData) {
     let { dataValues: record } = nodeData;
-
     const siteName = _path.getSiteNameFromPath(record.file_path);
 
     const watcherData = await watcherModel.findOne({

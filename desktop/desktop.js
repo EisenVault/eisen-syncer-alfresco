@@ -20,12 +20,23 @@ ipcMain.on("autolaunch", (event, arg) => {
     name: app.getName()
   });
 
-  if (arg == 1) {
-    autoLauncher.enable();
-  } else {
-    autoLauncher.disable();
-  }
-  event.returnValue = arg;
+  autoLauncher.isEnabled()
+    .then(function (isEnabled) {
+      if (isEnabled) {
+        event.returnValue = arg;
+        return;
+      }
+
+      if (arg == 1) {
+        autoLauncher.enable();
+      } else {
+        autoLauncher.disable();
+      }
+      event.returnValue = arg;
+    })
+    .catch(function (error) {
+      console.log('autolaunch_error', error);
+    });
 });
 
 // Listen for app to be ready
