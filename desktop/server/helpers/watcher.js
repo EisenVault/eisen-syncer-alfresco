@@ -45,6 +45,7 @@ exports.watchAll = async () => {
         .on('all', async (event, path) => {
           switch (event) {
             case 'add':
+            case 'addDir':
               logger.info(`${event} - ${path}`);
               await _upload(account, path);
               break;
@@ -53,6 +54,7 @@ exports.watchAll = async () => {
               await _upload(account, path);
               break;
             case 'unlink':
+            case 'unlinkDir':
               logger.info(`${event} - ${path}`);
               await _delete(account, path);
               break;
