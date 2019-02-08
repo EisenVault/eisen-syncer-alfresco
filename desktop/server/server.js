@@ -119,6 +119,7 @@ socket.on("sync-notification", async data => {
       account,
       nodePath: socketData.path
     });
+
     // Get the sitename from the localpath
     const siteName = _path.getSiteNameFromPath(localPath);
 

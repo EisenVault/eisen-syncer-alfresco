@@ -56,12 +56,15 @@ exports.recursiveDownload = async params => {
         skipCount
       });
     }
+    return;
+
   }
 
   const node = children.list.entries[0].entry;
 
   // If iteration of all children is complete, go to its parent folder
   if (children.list.pagination.hasMoreItems === false) {
+
     if (nodeMap.has(node.parentId)) {
       const getMapData = nodeMap.get(node.parentId);
       const parentId = getMapData.parentId;

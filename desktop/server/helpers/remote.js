@@ -346,32 +346,24 @@ exports.upload = async (params, callback) => {
           Utimes.utimes(`${filePath}`, btime, mtime, atime, () => { });
         }, 0);
 
-        // Delete if record already exists
-        // await nodeModel.destroy({
-        //   where: {
-        //     account_id: account.id,
-        //     site_id: watcher.site_id,
-        //     node_id: response.entry.id,
-        //     file_path: _path.toUnix(filePath),
-        //   }
-        // });
-
-        await nodeModel.create({
-          account_id: account.id,
-          site_id: watcher.site_id,
-          node_id: response.entry.id,
-          remote_folder_path: response.entry.path.name,
-          file_name: path.basename(filePath),
-          file_path: _path.toUnix(filePath),
-          local_folder_path: path.dirname(filePath),
-          file_update_at: mtime,
-          last_uploaded_at: _base.getCurrentTime(),
-          last_downloaded_at: 0,
-          is_folder: true,
-          is_file: false,
-          download_in_progress: 0,
-          upload_in_progress: 0,
-        });
+        try {
+          await nodeModel.create({
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: response.entry.id,
+            remote_folder_path: response.entry.path.name,
+            file_name: path.basename(filePath),
+            file_path: _path.toUnix(filePath),
+            local_folder_path: path.dirname(filePath),
+            file_update_at: mtime,
+            last_uploaded_at: _base.getCurrentTime(),
+            last_downloaded_at: 0,
+            is_folder: true,
+            is_file: false,
+            download_in_progress: 0,
+            upload_in_progress: 0,
+          });
+        } catch (error) { }
 
         // Add an event log
         await eventLogModel.create({

@@ -65,7 +65,6 @@ exports.runUpload = async (isRecursive = false) => {
 
         const { dataValues: watcher } = { ...watcherData };
 
-        logger.info('Worker Step 1');
         // Following cases are possible...
         // Case A: File created or renamed on local, upload it
         // Case B: File modified on local, upload it
@@ -75,7 +74,7 @@ exports.runUpload = async (isRecursive = false) => {
         const filePath = worker.file_path;
         const localFileModifiedDate = _base.getFileModifiedTime(filePath);
         const localFileSize = _base.getFileSize(filePath);
-        logger.info('Worker Step 2');
+
         // Get the DB record of the filePath
         let nodeData = await nodeModel.findOne({
             where: {
@@ -84,7 +83,7 @@ exports.runUpload = async (isRecursive = false) => {
             }
         });
         const { dataValues: record } = { ...nodeData };
-        logger.info('Worker Step 3');
+
         if (record && record.download_in_progress === true) {
             // If the file stalled
             if (await _base.isStalledDownload(record)) {
@@ -94,7 +93,7 @@ exports.runUpload = async (isRecursive = false) => {
             logger.info("Bailed upload, download in progress. " + filePath);
             continue;
         }
-        logger.info('Worker Step 4.');
+
         // Case A: File created or renamed on local, upload it
         if (!record && localFileSize > 0) {
             logger.info("New file, uploading... > " + filePath);
@@ -110,7 +109,6 @@ exports.runUpload = async (isRecursive = false) => {
             continue;
         }
 
-        logger.info('Worker Step 5');
         // If the record exists in the DB 
         if (record) {
             // Make a request to the server to get the node details
@@ -121,7 +119,8 @@ exports.runUpload = async (isRecursive = false) => {
 
             // Give a break if the server throws an internal server error
             if (remoteNodeResponse.statusCode !== 200) {
-                logger.info('BREAKING SINCE ' + remoteNodeResponse.statusCode);
+                logger.info('Pausing since server load seems high. Status code' + remoteNodeResponse.statusCode);
+                await _base.sleep(30000);
                 continue;
             }
 
@@ -196,8 +195,6 @@ exports.runUpload = async (isRecursive = false) => {
             isRecursive && await exports.runUpload();
             continue;
         }
-
-        logger.info('Worker Step 6');
     }
 
 }
