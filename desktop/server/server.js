@@ -11,7 +11,7 @@ const env = require("./config/env");
 const _path = require('./helpers/path');
 const _base = require('./helpers/syncers/_base');
 const onevent = require('./helpers/syncers/onevent');
-
+const worker = require('./helpers/syncers/worker');
 var bugsnag = require("bugsnag");
 bugsnag.register(env.BUGSNAG_KEY);
 const app = express();
@@ -70,6 +70,9 @@ process.env.TZ = 'Etc/Greenwich';
 
 // Start watching all the sync_paths
 watcher.watchAll();
+
+// Run the worker
+worker.runUpload(false);
 
 // Listen to event notifications from the socket service
 let socket = io.connect(env.SERVICE_URL);
