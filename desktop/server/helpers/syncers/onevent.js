@@ -1,14 +1,16 @@
 const Sequelize = require('sequelize');
 const fs = require("fs");
 const path = require("path");
+const _path = require("../path");
 const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
 const _base = require("./_base");
 const rimraf = require('rimraf');
 const _ = require('lodash');
+const ondemand = require('./ondemand');
 
 exports.create = async ({ account, watcherData, socketData, localPath }) => {
-  if (fs.existsSync(localPath)) {
+  if (socketData.is_file === true && fs.existsSync(localPath)) {
     return;
   }
 
@@ -54,53 +56,118 @@ exports.move = async params => {
 
   const { dataValues: node } = { ...nodeData };
 
-  // Perhaps the file was RENAMED on server. Delete from local
-  rimraf(node.file_path, async () => {
-    // Delete the record from the DB
-    if (node.is_file === true) {
-      await nodeModel.destroy({
-        where: {
-          account_id: account.id,
-          node_id: node.node_id
-        }
-      });
-    } else if (node.is_folder === true) {
-      // Delete all records that are relavant to the file/folder path
-      await nodeModel.destroy({
-        where: {
-          account_id: account.id,
-          [Sequelize.Op.or]: [
-            {
-              file_path: {
-                [Sequelize.Op.like]: node.file_path + "%"
-              }
-            },
-            {
-              local_folder_path: node.file_path
-            }
-          ]
-        }
-      });
-    }
-  });
-
-  // Download the renamed file if the parent folder is being watched.
-  if (!_.isEmpty(watcherData)) {
+  // If moved within the same site, just rename the node
+  if (watcherData) {
     const { dataValues: watcher } = { ...watcherData };
-    await _base.createItemOnLocal({
+    // Get the sitename from the localpath
+    const localDirectoryPath = _path.getLocalPathFromNodePath({
       account,
-      watcher,
-      node: {
-        id: socketData.node_id,
-        isFolder: socketData.is_folder,
-        isFile: socketData.is_file,
-        path: {
-          name: path.dirname(socketData.path)
-        },
-        createdAt: socketData.createdAt,
-        modifiedAt: socketData.modifiedAt
-      },
-      currentPath: localPath
+      nodePath: socketData.path
+    });
+
+    rimraf(node.file_path, async () => {
+      // Delete the record from the DB
+      if (node.is_file === true) {
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            node_id: node.node_id
+          }
+        });
+
+        // Download the single file
+        await _base.createItemOnLocal({
+          account,
+          watcher,
+          node: {
+            id: socketData.node_id,
+            isFolder: socketData.is_folder,
+            isFile: socketData.is_file,
+            path: {
+              name: path.dirname(socketData.path)
+            },
+            createdAt: socketData.createdAt,
+            modifiedAt: socketData.modifiedAt
+          },
+          currentPath: localPath
+        }); // end createItem
+
+      } else if (node.is_folder === true) {
+        // Delete all records that are relavant to the file/folder path
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            [Sequelize.Op.or]: [
+              {
+                file_path: {
+                  [Sequelize.Op.like]: node.file_path + "%"
+                }
+              },
+              {
+                local_folder_path: node.file_path
+              }
+            ]
+          }
+        });
+
+        // Download the folders recursively
+        _base.createItemOnLocal({
+          account,
+          watcher,
+          node: {
+            id: socketData.node_id,
+            isFolder: socketData.is_folder,
+            isFile: socketData.is_file,
+            path: {
+              name: path.dirname(socketData.path)
+            },
+            createdAt: socketData.createdAt,
+            modifiedAt: socketData.modifiedAt
+          },
+          currentPath: localDirectoryPath
+        });
+
+        // Download all files inside folder
+        await ondemand.recursiveDownload({
+          account,
+          watcher,
+          sourceNodeId: socketData.node_id,
+          destinationPath: account.sync_path
+        });
+      }
+    });
+
+  }
+
+  // If moved to a different site that isnt watched, just delete the node
+  if (watcherData === null) {
+    rimraf(node.file_path, async () => {
+      // Delete the record from the DB
+      if (node.is_file === true) {
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            node_id: node.node_id
+          }
+        });
+      } else if (node.is_folder === true) {
+        // Delete all records that are relavant to the file/folder path
+        await nodeModel.destroy({
+          where: {
+            account_id: account.id,
+            [Sequelize.Op.or]: [
+              {
+                file_path: {
+                  [Sequelize.Op.like]: node.file_path + "%"
+                }
+              },
+              {
+                local_folder_path: node.file_path
+              }
+            ]
+          }
+        });
+      }
     });
   }
 }
