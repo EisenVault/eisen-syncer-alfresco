@@ -104,7 +104,7 @@ exports.upload = async (request, response) => {
     }
 
     // Run the worker
-    await worker.runUpload();
+    //await worker.runUpload();
 
     // Set the sync completed time and also set issync flag to off
     await syncComplete({
