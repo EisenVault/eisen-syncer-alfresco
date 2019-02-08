@@ -8,7 +8,6 @@ const _base = require("./_base");
 const rimraf = require('rimraf');
 const _ = require('lodash');
 const ondemand = require('./ondemand');
-const fileWatcher = require('../watcher');
 
 exports.create = async ({ account, watcherData, socketData, localPath }) => {
   if (socketData.is_file === true && fs.existsSync(localPath)) {
