@@ -16,7 +16,7 @@ interface Setting {
 export class SettingsComponent implements OnInit {
   public startup_launch;
   public sync_interval = 10; // minutes
-  public api_interval = 5; // seconds
+  public api_interval = 1; // seconds
   public timezone = 'Asia/Calcutta';
   public isSaved = false;
 
