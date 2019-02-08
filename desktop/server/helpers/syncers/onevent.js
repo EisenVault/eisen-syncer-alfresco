@@ -141,7 +141,6 @@ exports.move = async params => {
 
   // If moved to a different site that isnt watched, just delete the node
   if (watcherData === null) {
-    // Perhaps the file was RENAMED on server. Delete from local
     rimraf(node.file_path, async () => {
       // Delete the record from the DB
       if (node.is_file === true) {
