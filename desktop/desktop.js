@@ -17,17 +17,13 @@ app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
 ipcMain.on("autolaunch", (event, arg) => {
   const autoLauncher = new AutoLaunch({
-    name: app.getName()
+    name: app.getName(),
+    mac: { useLaunchAgent: true }
   });
 
   autoLauncher.isEnabled()
     .then(function (isEnabled) {
-      if (isEnabled) {
-        event.returnValue = arg;
-        return;
-      }
-
-      if (arg == 1) {
+      if (!isEnabled && arg == 1) {
         autoLauncher.enable();
       } else {
         autoLauncher.disable();
