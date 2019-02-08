@@ -140,8 +140,10 @@ exports.createItemOnLocal = async params => {
   const watcher = params.watcher;
   const node = params.node;
   const currentPath = params.currentPath;
+
   try {
     if (node.isFolder === true) {
+
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
@@ -156,33 +158,26 @@ exports.createItemOnLocal = async params => {
         }, 1000);
       }
 
-      // Delete if record already exists
-      await nodeModel.destroy({
-        where: {
+      // Add reference to the nodes table
+      try {
+        await nodeModel.create({
           account_id: account.id,
           site_id: watcher.site_id,
           node_id: node.id,
+          remote_folder_path: node.path.name,
+          file_name: path.basename(currentPath),
           file_path: _path.toUnix(currentPath),
-        }
-      });
+          local_folder_path: path.dirname(currentPath),
+          file_update_at: exports.convertToUTC(node.modifiedAt),
+          last_uploaded_at: 0,
+          last_downloaded_at: exports.getCurrentTime(),
+          is_folder: true,
+          is_file: false,
+          download_in_progress: 0,
+          upload_in_progress: 0
+        });
+      } catch (error) { }
 
-      // Add reference to the nodes table
-      await nodeModel.create({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: node.id,
-        remote_folder_path: node.path.name,
-        file_name: path.basename(currentPath),
-        file_path: _path.toUnix(currentPath),
-        local_folder_path: path.dirname(currentPath),
-        file_update_at: exports.convertToUTC(node.modifiedAt),
-        last_uploaded_at: 0,
-        last_downloaded_at: exports.getCurrentTime(),
-        is_folder: true,
-        is_file: false,
-        download_in_progress: 0,
-        upload_in_progress: 0
-      });
       return;
     }
 
