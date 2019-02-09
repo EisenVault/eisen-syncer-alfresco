@@ -72,7 +72,9 @@ exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
         exports.deferFileModifiedDate(params, delay * 2);
         return;
       }
-      callback(true);
+      if (callback) {
+        callback(true);
+      }
     })
   }, delay);
 }

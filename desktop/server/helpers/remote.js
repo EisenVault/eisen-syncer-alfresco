@@ -444,7 +444,7 @@ exports.upload = async (params, callback) => {
 
         _base.deferFileModifiedDate({
           filePath, btime, mtime, atime
-        }, 2000, () => { });
+        }, 2000);
 
         // Add a record in the db
         try {
