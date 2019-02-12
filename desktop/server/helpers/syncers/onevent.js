@@ -32,13 +32,34 @@ exports.create = async ({ account, watcherData, socketData, localPath }) => {
   });
 }
 
-exports.update = async params => {
-  if (fs.existsSync(params.localPath) &&
-    _base.convertToUTC(params.socketData.modifiedAt) < _base.getFileModifiedTime(params.localPath)) {
+exports.update = async ({
+  account,
+  watcherData,
+  socketData,
+  localPath
+}) => {
+
+  if (fs.existsSync(localPath) &&
+    _base.convertToUTC(socketData.modifiedAt) < _base.getFileModifiedTime(localPath)) {
     return;
   }
 
-  exports.create(params);
+  const { dataValues: watcher } = { ...watcherData };
+  await _base.createItemOnLocal({
+    account,
+    watcher,
+    node: {
+      id: socketData.node_id,
+      isFolder: socketData.is_folder,
+      isFile: socketData.is_file,
+      path: {
+        name: path.dirname(socketData.path)
+      },
+      createdAt: socketData.createdAt,
+      modifiedAt: socketData.modifiedAt
+    },
+    currentPath: localPath
+  });
 }
 
 exports.move = async params => {
