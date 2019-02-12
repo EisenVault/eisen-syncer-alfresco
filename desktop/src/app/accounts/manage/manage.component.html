@@ -22,7 +22,7 @@
         <th scope="col">Instance URL</th>
         <th scope="col">Username</th>
         <th scope="col">Sync Path</th>
-        <th scope="col">Auto Sync</th>
+        <th scope="col">Enable Sync</th>
         <th scope="col">Last Synced</th>
         <th scope="col">Manage</th>
       </tr>
@@ -42,8 +42,7 @@
             <img src="./assets/imgs/spinner.gif" alt="">
           </div>
           <ng-template #synccomplete>
-            <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{
-              account.last_synced_at | date:'shortTime':timezone }}</span>
+            <span class="badge badge-success" *ngIf="account.last_synced_at; else nosynctime" [title]="account.last_synced_at | date:'fullDate'">{{ account.last_synced_at | date:'shortTime':timezone }}</span>
             <ng-template #nosynctime>
               <span class="badge badge-danger">Unsynced</span>
             </ng-template>
@@ -61,7 +60,9 @@
       <tr *ngIf="accounts && accounts.length < 1">
         <td colspan="6" align="center">
           <p class="mt-4">You have not yet added any accounts.</p>
-          <p class="mt-4"><a class="btn btn-info" routerLink="/account-new">Add New Account</a></p>
+          <p class="mt-4">
+            <a class="btn btn-info" routerLink="/account-new">Add New Account</a>
+          </p>
         </td>
       </tr>
     </tbody>
