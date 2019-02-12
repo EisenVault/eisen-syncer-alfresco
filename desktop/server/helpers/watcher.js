@@ -7,6 +7,7 @@ const { watcherModel } = require("../models/watcher");
 const remote = require("./remote");
 const worker = require('../helpers/syncers/worker');
 const _path = require('./path');
+const _base = require('./syncers/_base');
 const _ = require('lodash');
 const chokidar = require('chokidar');
 
@@ -86,6 +87,22 @@ async function _upload(account, filePath) {
 
     if (watcher.site_name !== siteName || path.basename(filePath) == 'documentLibrary') {
       continue;
+    }
+
+    // If the node's file_update_at is same as file's updated timestamp 
+    // OR if download_in_progress is true, bail out (since the file was just downloaded or is still downloading)
+    const nodeRecord = await nodeModel.findOne({
+      where: {
+        account_id: account.id,
+        file_path: filePath
+      }
+    });
+
+    if (nodeRecord) {
+      const { dataValues: node } = { ...nodeRecord };
+      if (node.download_in_progress === true || node.file_update_at === _base.getFileModifiedTime(filePath)) {
+        continue;
+      }
     }
 
     try {
