@@ -106,6 +106,20 @@ async function _upload(account, filePath) {
     }
 
     try {
+      // Delete any old existing record, so that we can add a priority record to simulate realtime update/add of file
+      await workerModel.destroy({
+        where: {
+          account_id: account.id,
+          watcher_id: watcher.id,
+          file_path: filePath
+        }
+      });
+    } catch (error) {
+      console.log('watcher._upload', error);
+      logger.info("Unable to delete worker record");
+    }
+
+    try {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
@@ -115,7 +129,7 @@ async function _upload(account, filePath) {
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
-      if (error.parent.errno !== 19) {
+      if (_.has(error, 'parent.errno') && error.parent.errno !== 19) {
         console.log('error', error);
       }
     }
