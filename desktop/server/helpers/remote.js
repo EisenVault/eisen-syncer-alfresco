@@ -301,8 +301,15 @@ exports.upload = async (params, callback) => {
     throw new Error("Account not found");
   }
 
+  try {
+    const statSync = fs.statSync(filePath);
+  } catch (error) {
+    errorLogAdd(account.id, error, `${__filename}/upload_statSync`);
+    return;
+  }
+
   // If its a directory, send a request to create the directory.
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+  if (fs.existsSync(filePath) && statSync.isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = path.dirname(filePath).split('documentLibrary')[1];
 
@@ -329,6 +336,25 @@ exports.upload = async (params, callback) => {
     };
 
     try {
+      await nodeModel.insert({
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: '',
+        remote_folder_path: '',
+        file_name: path.basename(filePath),
+        file_path: _path.toUnix(filePath),
+        local_folder_path: path.dirname(filePath),
+        file_update_at: 0,
+        last_uploaded_at: 0,
+        last_downloaded_at: 0,
+        is_folder: true,
+        is_file: false,
+        download_in_progress: false,
+        upload_in_progress: true,
+      });
+    } catch (error) { }
+
+    try {
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
@@ -347,7 +373,8 @@ exports.upload = async (params, callback) => {
         }, 0);
 
         try {
-          await nodeModel.create({
+          // Update the record in the db
+          await nodeModel.upsert({
             account_id: account.id,
             site_id: watcher.site_id,
             node_id: response.entry.id,
@@ -360,9 +387,14 @@ exports.upload = async (params, callback) => {
             last_downloaded_at: 0,
             is_folder: true,
             is_file: false,
-            download_in_progress: 0,
-            upload_in_progress: 0,
-          });
+            download_in_progress: false,
+            upload_in_progress: false,
+          }, {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              node_id: response.entry.id,
+              file_path: _path.toUnix(filePath),
+            });
         } catch (error) { }
 
         // Add an event log
@@ -396,7 +428,7 @@ exports.upload = async (params, callback) => {
   }
 
   // If its a file, send a request to upload the file.
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+  if (fs.existsSync(filePath) && statSync.isFile()) {
     const split = path.dirname(filePath).split('documentLibrary');
 
     if (typeof split[1] === 'undefined') {
@@ -428,59 +460,89 @@ exports.upload = async (params, callback) => {
       }
     };
 
-    requestNative(options, async (error, response, body) => {
+    // Add the record in the db
+    try {
+      await nodeModel.insert({
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: '',
+        remote_folder_path: '',
+        file_name: path.basename(filePath),
+        file_path: _path.toUnix(filePath),
+        local_folder_path: path.dirname(filePath),
+        file_update_at: 0,
+        last_uploaded_at: 0,
+        last_downloaded_at: 0,
+        is_folder: false,
+        is_file: true,
+        download_in_progress: false,
+        upload_in_progress: true,
+      });
+    } catch (error) { }
 
-      if (error) {
-        console.log('remote.upload', error);
-      }
+    try {
+      requestNative(options, async (error, response, body) => {
 
-      if (!error && response.statusCode == 201) {
-        var node = JSON.parse(body);
+        if (error) {
+          console.log('remote.upload', error);
+        }
 
-        // Update the time meta properties of the downloaded file
-        const btime = _base.convertToUTC(node.entry.createdAt);
-        const mtime = _base.convertToUTC(node.entry.modifiedAt);
-        const atime = undefined;
+        if (!error && response.statusCode == 201) {
+          var node = JSON.parse(body);
 
-        _base.deferFileModifiedDate({
-          filePath, btime, mtime, atime
-        }, 2000);
+          // Update the time meta properties of the downloaded file
+          const btime = _base.convertToUTC(node.entry.createdAt);
+          const mtime = _base.convertToUTC(node.entry.modifiedAt);
+          const atime = undefined;
 
-        // Add a record in the db
-        try {
-          await nodeModel.create({
-            account_id: account.id,
-            site_id: watcher.site_id,
-            node_id: node.entry.id,
-            remote_folder_path: node.entry.path.name,
-            file_name: path.basename(filePath),
-            file_path: _path.toUnix(filePath),
-            local_folder_path: path.dirname(filePath),
-            file_update_at: _base.convertToUTC(node.entry.modifiedAt),
-            last_uploaded_at: _base.getCurrentTime(),
-            last_downloaded_at: 0,
-            is_folder: false,
-            is_file: true,
-            download_in_progress: 0,
-            upload_in_progress: 0,
-          });
-        } catch (error) { }
+          _base.deferFileModifiedDate({
+            filePath, btime, mtime, atime
+          }, 2000);
 
-        console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
+          // Update the record in the db
+          try {
+            await nodeModel.upsert({
+              account_id: account.id,
+              site_id: watcher.site_id,
+              node_id: node.entry.id,
+              remote_folder_path: node.entry.path.name,
+              file_name: path.basename(filePath),
+              file_path: _path.toUnix(filePath),
+              local_folder_path: path.dirname(filePath),
+              file_update_at: _base.convertToUTC(node.entry.modifiedAt),
+              last_uploaded_at: _base.getCurrentTime(),
+              last_downloaded_at: 0,
+              is_folder: false,
+              is_file: true,
+              download_in_progress: false,
+              upload_in_progress: false,
+            }, {
+                account_id: account.id,
+                site_id: watcher.site_id,
+                node_id: node.entry.id,
+                file_path: _path.toUnix(filePath),
+              });
+          } catch (error) { }
 
-        try {
-          // Add an event log
-          await eventLogModel.create({
-            account_id: account.id,
-            type: eventType.UPLOAD_FILE,
-            description: `Uploaded File: ${filePath} to ${account.instance_url}`
-          });
-        } catch (error) { }
+          console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
 
-        // Completed upload, run the callback
-        callback(true);
-      }
-    });
+          try {
+            // Add an event log
+            await eventLogModel.create({
+              account_id: account.id,
+              type: eventType.UPLOAD_FILE,
+              description: `Uploaded File: ${filePath} to ${account.instance_url}`
+            });
+          } catch (error) { }
+
+          // Completed upload, run the callback
+          callback(true);
+        }
+      });
+    } catch (error) {
+      // Add an error log
+      errorLogAdd(account.id, error, `${__filename}/upload file`);
+    }
   }
   return;
 };

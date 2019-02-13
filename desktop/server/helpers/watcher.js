@@ -4,6 +4,7 @@ const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { nodeModel } = require("../models/node");
 const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
+const { add: errorLogAdd } = require("../models/log-error");
 const remote = require("./remote");
 const worker = require('../helpers/syncers/worker');
 const _path = require('./path');
@@ -120,12 +121,19 @@ async function _upload(account, filePath) {
     }
 
     try {
+      const statSync = fs.statSync(filePath);
+    } catch (error) {
+      errorLogAdd(account.id, error, `${__filename}/_upload`);
+      return;
+    }
+
+    try {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
         file_path: filePath,
         root_node_id: watcher.document_library_node,
-        priority: fs.statSync(filePath).isDirectory() ? 2 : 1
+        priority: statSync.isDirectory() ? 2 : 1
       });
     } catch (error) {
       // Log only if its not a unique constraint error.

@@ -134,6 +134,7 @@ exports.runUpload = async (isRecursive = false) => {
                 && remoteNodeResponse.statusCode === 200
                 && record.is_file === true
                 && record.download_in_progress === false
+                && record.upload_in_progress === false
                 && localFileSize > 0
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
                 logger.info("File modified on local, uploading..." + filePath);

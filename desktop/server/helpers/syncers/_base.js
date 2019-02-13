@@ -88,30 +88,42 @@ exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
  * }
  */
 exports.getFileLatestTime = record => {
-  if (fs.existsSync(record.file_path)) {
-    let fileStat = fs.statSync(record.file_path);
-    let fileModifiedTime = exports.convertToUTC(fileStat.mtime.toUTCString());
+  try {
+    if (fs.existsSync(record.file_path)) {
+      let fileStat = fs.statSync(record.file_path);
+      let fileModifiedTime = exports.convertToUTC(fileStat.mtime.toUTCString());
 
-    if (fileModifiedTime > record.file_update_at) {
-      return fileModifiedTime;
+      if (fileModifiedTime > record.file_update_at) {
+        return fileModifiedTime;
+      }
     }
+  } catch (error) {
+    errorLogAdd(0, error, `${__filename}/getFileLatestTime`);
   }
 
   return record.file_update_at;
 };
 
 exports.getFileModifiedTime = filePath => {
-  if (fs.existsSync(filePath)) {
-    let fileStat = fs.statSync(filePath);
-    return exports.convertToUTC(fileStat.mtime.toUTCString());
+  try {
+    if (fs.existsSync(filePath)) {
+      let fileStat = fs.statSync(filePath);
+      return exports.convertToUTC(fileStat.mtime.toUTCString());
+    }
+  } catch (error) {
+    errorLogAdd(0, error, `${__filename}/getFileModifiedTime`);
   }
   return 0;
 };
 
 exports.getFileSize = filePath => {
-  if (fs.existsSync(filePath)) {
-    let fileStat = fs.statSync(filePath);
-    return fileStat.size; // Size in bytes
+  try {
+    if (fs.existsSync(filePath)) {
+      let fileStat = fs.statSync(filePath);
+      return fileStat.size; // Size in bytes
+    }
+  } catch (error) {
+    errorLogAdd(0, error, `${__filename}/getFileSize`);
   }
   return 0;
 };
@@ -175,8 +187,8 @@ exports.createItemOnLocal = async params => {
           last_downloaded_at: exports.getCurrentTime(),
           is_folder: true,
           is_file: false,
-          download_in_progress: 0,
-          upload_in_progress: 0
+          download_in_progress: false,
+          upload_in_progress: false
         });
       } catch (error) { }
 

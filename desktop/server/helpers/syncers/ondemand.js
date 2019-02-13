@@ -7,6 +7,7 @@ const glob = require("glob");
 const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
 const { settingModel } = require("../../models/setting");
+const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
 
@@ -157,15 +158,10 @@ exports._processDownload = async params => {
     return;
   }
 
-  logger.info("download step 2");
-
   // If the current folder does not exists, we will create it.
   if (!fs.existsSync(`${destinationPath}/${watcher.site_name}/documentLibrary`)) {
-    logger.info("download step 3");
     mkdirp(`${destinationPath}/${watcher.site_name}/documentLibrary`);
   }
-
-  logger.info("download step 4");
 
   let relevantPath = node.path.name.substring(
     node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
@@ -173,8 +169,6 @@ exports._processDownload = async params => {
 
   let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
   const currentPath = path.join(destinationPath, relevantPath, node.name);
-
-  logger.info("download step 5");
 
   // Check if the node is present in the database
   let recordData = await nodeModel.findOne({
@@ -185,7 +179,6 @@ exports._processDownload = async params => {
   });
 
   let { dataValues: record } = { ...recordData };
-  logger.info("download step 6");
 
   if (record && record.download_in_progress === true) {
     // If the file is stalled, we will change its modified date to a backdated date
@@ -215,8 +208,6 @@ exports._processDownload = async params => {
     logger.info("Bailed download, already in progress");
     return;
   }
-
-  logger.info("download step 6-1");
 
   // Possible cases...
   // Case A: Perhaps the file was RENAMED on server. Delete from local
@@ -308,7 +299,6 @@ exports._processDownload = async params => {
     });
   }
 
-  logger.info("download step 7");
 };
 
 /**
@@ -351,7 +341,14 @@ exports.recursiveUpload = async params => {
       }
     }
 
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    try {
+      const statSync = fs.statSync(filePath);
+    } catch (error) {
+      errorLogAdd(account.id, error, `${__filename}/recursiveUpload`);
+      return;
+    }
+
+    if (fs.existsSync(filePath) && statSync.isDirectory()) {
       exports.recursiveUpload({
         account,
         watcher,
