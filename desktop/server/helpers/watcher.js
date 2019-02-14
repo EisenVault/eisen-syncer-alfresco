@@ -15,14 +15,20 @@ const chokidar = require('chokidar');
 // Logger
 const { logger } = require('./logger');
 
-let watcher = chokidar.watch('__test', {
-  ignored: /(^|[\/\\])\../,
-  ignoreInitial: true,
-  ignorePermissionErrors: true,
-  awaitWriteFinish: {
-    stabilityThreshold: 2000,
-  }
-});
+let watcher = null;
+
+try {
+  watcher = chokidar.watch('__test', {
+    ignored: /(^|[\/\\])\../,
+    ignoreInitial: true,
+    ignorePermissionErrors: true,
+    awaitWriteFinish: {
+      stabilityThreshold: 2000,
+    }
+  });
+} catch (error) {
+  return;
+}
 
 exports.closeAll = async () => {
   logger.info("Watcher Closed");
