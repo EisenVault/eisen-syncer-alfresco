@@ -120,14 +120,14 @@ exports.runUpload = async (isRecursive = false) => {
             });
 
             // Give a break if the server throws an internal server error
-            if (remoteNodeResponse && remoteNodeResponse.statusCode !== 200) {
+            if (remoteNodeResponse && (remoteNodeResponse.statusCode === 503 || remoteNodeResponse.statusCode === 500)) {
                 logger.info('Pausing since server load seems high. Status code' + remoteNodeResponse.statusCode);
                 await _base.sleep(30000);
                 continue;
             }
 
             let remoteNodeResponseBody = {};
-            if ('body' in remoteNodeResponse) {
+            if (remoteNodeResponse && 'body' in remoteNodeResponse) {
                 remoteNodeResponseBody = JSON.parse(remoteNodeResponse.body);
             }
 

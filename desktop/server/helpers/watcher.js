@@ -26,12 +26,14 @@ let watcher = chokidar.watch('__test', {
 
 exports.closeAll = async () => {
   logger.info("Watcher Closed");
-  watcher.close();
+  try {
+    watcher.close();
+  } catch (error) { }
 }
 
 exports.watchAll = async () => {
   // Remove all watchers first
-  watcher.close();
+  exports.closeAll();
   logger.info("Watcher started");
 
   // Add new watchers
@@ -48,26 +50,30 @@ exports.watchAll = async () => {
         return;
       }
 
-      watcher
-        .add(account.sync_path)
-        .on('all', async (event, path) => {
-          switch (event) {
-            case 'add':
-            case 'addDir':
-              logger.info(`${event} - ${path}`);
-              await _upload(account, path);
-              break;
-            case 'change':
-              logger.info(`${event} - ${path}`);
-              await _upload(account, path);
-              break;
-            case 'unlink':
-            case 'unlinkDir':
-              logger.info(`${event} - ${path}`);
-              await _delete(account, path);
-              break;
-          }
-        });
+      try {
+        watcher
+          .add(account.sync_path)
+          .on('all', async (event, path) => {
+            switch (event) {
+              case 'add':
+              case 'addDir':
+                logger.info(`${event} - ${path}`);
+                await _upload(account, path);
+                break;
+              case 'change':
+                logger.info(`${event} - ${path}`);
+                await _upload(account, path);
+                break;
+              case 'unlink':
+              case 'unlinkDir':
+                logger.info(`${event} - ${path}`);
+                await _delete(account, path);
+                break;
+            }
+          });
+      } catch (error) {
+        return;
+      }
     }
   }
 };
