@@ -15,15 +15,21 @@ const chokidar = require('chokidar');
 // Logger
 const { logger } = require('./logger');
 
+let watcher = chokidar.watch('__test', {
+  ignored: /(^|[\/\\])\../,
+  ignoreInitial: true,
+  ignorePermissionErrors: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 2000,
+  }
+});
+
+exports.closeAll = async () => {
+  logger.info("Watcher Closed");
+  watcher.close();
+}
+
 exports.watchAll = async () => {
-  let watcher = chokidar.watch('__test', {
-    ignored: /(^|[\/\\])\../,
-    ignoreInitial: true,
-    ignorePermissionErrors: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 2000,
-    }
-  });
   // Remove all watchers first
   watcher.close();
   logger.info("Watcher started");
@@ -120,8 +126,9 @@ async function _upload(account, filePath) {
       logger.info("Unable to delete worker record");
     }
 
+    let statSync = null;
     try {
-      const statSync = fs.statSync(filePath);
+      statSync = fs.statSync(filePath);
     } catch (error) {
       errorLogAdd(account.id, error, `${__filename}/_upload`);
       return;

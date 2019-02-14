@@ -29,7 +29,7 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
       }
 
       // set download progress to false
-      await nodeModel.upsert({
+      await nodeModel.update({
         account_id: account.id,
         site_id: watcher.site_id,
         node_id: node.id,
@@ -44,12 +44,12 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
         is_file: true,
         download_in_progress: false,
         upload_in_progress: false
-      },
-        {
-          account_id: account.id,
-          site_id: watcher.site_id,
-          node_id: node.id,
-          file_path: _path.toUnix(destinationPath),
+      }, {
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            file_path: _path.toUnix(destinationPath),
+          }
         });
 
       console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);

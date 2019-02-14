@@ -96,12 +96,14 @@ exports.runUpload = async (isRecursive = false) => {
 
         // Case A: File created or renamed on local, upload it
         if (!record && localFileSize > 0) {
-            logger.info("New file, uploading... > " + filePath);
+            logger.info("New file, attempting to upload... > " + filePath);
             remote.upload({
                 account,
                 watcher,
                 filePath,
-                rootNodeId: watcher.document_library_node
+                rootNodeId: watcher.document_library_node,
+                overwrite: "false",
+                isNewFile: true
             }, async (uploadCompleted) => {
                 // Process the next worker record
                 uploadCompleted && isRecursive && await exports.runUpload();
@@ -109,8 +111,8 @@ exports.runUpload = async (isRecursive = false) => {
             continue;
         }
 
-        // If the record exists in the DB 
-        if (record) {
+        // If the record exists in the DB and has a nodeID
+        if (record && record.node_id !== '') {
             // Make a request to the server to get the node details
             const remoteNodeResponse = await remote.getNode({
                 account,
@@ -118,7 +120,7 @@ exports.runUpload = async (isRecursive = false) => {
             });
 
             // Give a break if the server throws an internal server error
-            if (remoteNodeResponse.statusCode !== 200) {
+            if (remoteNodeResponse && remoteNodeResponse.statusCode !== 200) {
                 logger.info('Pausing since server load seems high. Status code' + remoteNodeResponse.statusCode);
                 await _base.sleep(30000);
                 continue;
@@ -137,13 +139,15 @@ exports.runUpload = async (isRecursive = false) => {
                 && record.upload_in_progress === false
                 && localFileSize > 0
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
-                logger.info("File modified on local, uploading..." + filePath);
+                logger.info("File modified on local, attempting to upload..." + filePath);
                 // Upload the local changes to the server.
                 await remote.upload({
                     account,
                     watcher,
                     filePath,
-                    rootNodeId: watcher.document_library_node
+                    rootNodeId: watcher.document_library_node,
+                    overwrite: "true",
+                    isNewFile: false
                 }, async (uploadCompleted) => {
                     // Process the next worker record
                     uploadCompleted && isRecursive && await exports.runUpload();

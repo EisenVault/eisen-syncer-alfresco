@@ -44,7 +44,7 @@ exports.recursiveDownload = async params => {
   }
 
   // If a folder does not have any sub-files/sub-folders, go to its parent folder.
-  if (children.list.entries.length === 0) {
+  if (!children || children.list.entries.length === 0) {
     if (nodeMap.has(sourceNodeId)) {
       const getMapData = nodeMap.get(sourceNodeId);
       const parentId = getMapData.parentId;
@@ -57,8 +57,13 @@ exports.recursiveDownload = async params => {
         skipCount
       });
     }
-    return;
-
+    return await exports.recursiveDownload({
+      account,
+      watcher,
+      sourceNodeId,
+      destinationPath,
+      skipCount
+    });
   }
 
   const node = children.list.entries[0].entry;
@@ -342,20 +347,17 @@ exports.recursiveUpload = async params => {
     }
 
     try {
-      const statSync = fs.statSync(filePath);
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+        exports.recursiveUpload({
+          account,
+          watcher,
+          rootFolder: filePath + '/*'
+        });
+      }
     } catch (error) {
       errorLogAdd(account.id, error, `${__filename}/recursiveUpload`);
       return;
     }
-
-    if (fs.existsSync(filePath) && statSync.isDirectory()) {
-      exports.recursiveUpload({
-        account,
-        watcher,
-        rootFolder: filePath + '/*'
-      });
-    }
-
   }); // Filelist iteration end
 
   return;
