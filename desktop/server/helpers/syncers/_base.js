@@ -8,6 +8,9 @@ const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
 const { eventLogModel, types: eventType } = require("../../models/log-event");
 
+// Logger
+const { logger } = require('../logger');
+
 exports.deferFileUpdate = async (uri, delay = 3000) => {
   setTimeout(async () => {
     const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
@@ -53,6 +56,7 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
         });
 
       console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
+      logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
 
       // Add an event log
       await eventLogModel.create({
