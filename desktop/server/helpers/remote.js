@@ -13,6 +13,9 @@ const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
 const _path = require('./path');
 
+// Logger
+const { logger } = require('./logger');
+
 /**
  * @param object params
  * {
@@ -545,6 +548,7 @@ exports.upload = async (params, callback) => {
             } catch (error) { }
 
             console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
+            logger.info(`Done uploading file: ${filePath} to ${account.instance_url}`);
 
             try {
               // Add an event log
