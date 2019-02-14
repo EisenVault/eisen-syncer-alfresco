@@ -188,7 +188,7 @@ exports._processDownload = async params => {
   if (record && record.download_in_progress === true) {
     // If the file is stalled, we will change its modified date to a backdated date
     if (await _base.isStalledDownload(record) === true) {
-      const btime = 447775200000; // 1984-03-10T14:00:00.000Z
+      const btime = 395114400000; // Saturday, July 10, 1982 7:30:00 AM
       const mtime = btime;
       const atime = btime;
       _base.deferFileModifiedDate({
