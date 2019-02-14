@@ -28,7 +28,7 @@ exports.getNode = async params => {
   }
 
   if (record.node_id === '') {
-    return;
+    throw new Error("Record must have a node_id");
   }
 
   var options = {
@@ -71,6 +71,10 @@ exports.getChildren = async params => {
 
   if (!account) {
     throw new Error("Account not found");
+  }
+
+  if (!parentNodeId) {
+    throw new Error("parentNodeId is mandatory");
   }
 
   var options = {
@@ -232,29 +236,29 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    // Add reference to the nodes table
-    await nodeModel.upsert({
-      account_id: account.id,
-      site_id: watcher.site_id,
-      node_id: node.id,
-      remote_folder_path: remoteFolderPath,
-      file_name: path.basename(destinationPath),
-      file_path: _path.toUnix(destinationPath),
-      local_folder_path: path.dirname(destinationPath),
-      file_update_at: _base.convertToUTC(node.modifiedAt),
-      last_uploaded_at: 0,
-      last_downloaded_at: _base.getCurrentTime(),
-      is_folder: false,
-      is_file: true,
-      download_in_progress: true,
-      upload_in_progress: false
-    },
-      {
+    try {
+      // Add reference to the nodes table
+      await nodeModel.upsert({
         account_id: account.id,
         site_id: watcher.site_id,
         node_id: node.id,
+        remote_folder_path: remoteFolderPath,
+        file_name: path.basename(destinationPath),
         file_path: _path.toUnix(destinationPath),
-      });
+        local_folder_path: path.dirname(destinationPath),
+        file_update_at: 0,
+        last_uploaded_at: 0,
+        last_downloaded_at: _base.getCurrentTime(),
+        is_folder: false,
+        is_file: true,
+        download_in_progress: true,
+        upload_in_progress: false
+      }, {
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: node.id
+        });
+    } catch (error) { }
 
     let totalBytes = 0;
     let recievedSize = 0;
@@ -295,14 +299,24 @@ exports.upload = async (params, callback) => {
   let watcher = params.watcher;
   let filePath = params.filePath;
   let rootNodeId = params.rootNodeId;
+  let overwrite = params.overwrite || "true";
+  let isNewFile = params.isNewFile || false;
   let options = {};
 
   if (!account) {
     throw new Error("Account not found");
   }
 
+  let statSync = null;
+  try {
+    statSync = fs.statSync(filePath);
+  } catch (error) {
+    errorLogAdd(account.id, error, `${__filename}/upload_statSync`);
+    return;
+  }
+
   // If its a directory, send a request to create the directory.
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+  if (fs.existsSync(filePath) && statSync.isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = path.dirname(filePath).split('documentLibrary')[1];
 
@@ -329,6 +343,25 @@ exports.upload = async (params, callback) => {
     };
 
     try {
+      await nodeModel.insert({
+        account_id: account.id,
+        site_id: watcher.site_id,
+        node_id: '',
+        remote_folder_path: '',
+        file_name: path.basename(filePath),
+        file_path: _path.toUnix(filePath),
+        local_folder_path: path.dirname(filePath),
+        file_update_at: 0,
+        last_uploaded_at: 0,
+        last_downloaded_at: 0,
+        is_folder: true,
+        is_file: false,
+        download_in_progress: false,
+        upload_in_progress: true,
+      });
+    } catch (error) { }
+
+    try {
       let response = await request(options)
         .on('error', function (e) {
           console.error(e);
@@ -347,7 +380,8 @@ exports.upload = async (params, callback) => {
         }, 0);
 
         try {
-          await nodeModel.create({
+          // Update the record in the db
+          await nodeModel.update({
             account_id: account.id,
             site_id: watcher.site_id,
             node_id: response.entry.id,
@@ -357,12 +391,18 @@ exports.upload = async (params, callback) => {
             local_folder_path: path.dirname(filePath),
             file_update_at: mtime,
             last_uploaded_at: _base.getCurrentTime(),
-            last_downloaded_at: 0,
             is_folder: true,
             is_file: false,
-            download_in_progress: 0,
-            upload_in_progress: 0,
-          });
+            download_in_progress: false,
+            upload_in_progress: false,
+          }, {
+              where: {
+                account_id: account.id,
+                site_id: watcher.site_id,
+                node_id: response.entry.id,
+                file_path: _path.toUnix(filePath),
+              }
+            });
         } catch (error) { }
 
         // Add an event log
@@ -396,7 +436,7 @@ exports.upload = async (params, callback) => {
   }
 
   // If its a file, send a request to upload the file.
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+  if (fs.existsSync(filePath) && statSync.isFile()) {
     const split = path.dirname(filePath).split('documentLibrary');
 
     if (typeof split[1] === 'undefined') {
@@ -424,63 +464,108 @@ exports.upload = async (params, callback) => {
         },
         name: path.basename(filePath),
         relativePath: relativePath,
-        overwrite: "true"
+        overwrite
       }
     };
 
-    requestNative(options, async (error, response, body) => {
+    try {
 
-      if (error) {
-        console.log('remote.upload', error);
+      if (isNewFile) {
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          file_name: path.basename(filePath),
+          file_path: _path.toUnix(filePath),
+          local_folder_path: path.dirname(filePath),
+          last_uploaded_at: _base.getCurrentTime(),
+          is_folder: false,
+          is_file: true,
+          download_in_progress: false,
+          upload_in_progress: true,
+        });
+      } else {
+        await nodeModel.update({
+          last_uploaded_at: _base.getCurrentTime(),
+          download_in_progress: false,
+          upload_in_progress: true,
+        }, {
+            where: {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              file_path: _path.toUnix(filePath)
+            }
+          });
       }
 
-      if (!error && response.statusCode == 201) {
-        var node = JSON.parse(body);
+    } catch (error) { console.log(error) }
 
-        // Update the time meta properties of the downloaded file
-        const btime = _base.convertToUTC(node.entry.createdAt);
-        const mtime = _base.convertToUTC(node.entry.modifiedAt);
-        const atime = undefined;
+    try {
+      requestNative(options, async (error, response, body) => {
 
-        _base.deferFileModifiedDate({
-          filePath, btime, mtime, atime
-        }, 2000);
+        if (error) {
+          console.log('remote.upload', error);
+        }
 
-        // Add a record in the db
-        try {
-          await nodeModel.create({
-            account_id: account.id,
-            site_id: watcher.site_id,
-            node_id: node.entry.id,
-            remote_folder_path: node.entry.path.name,
-            file_name: path.basename(filePath),
-            file_path: _path.toUnix(filePath),
-            local_folder_path: path.dirname(filePath),
-            file_update_at: _base.convertToUTC(node.entry.modifiedAt),
-            last_uploaded_at: _base.getCurrentTime(),
-            last_downloaded_at: 0,
-            is_folder: false,
-            is_file: true,
-            download_in_progress: 0,
-            upload_in_progress: 0,
+        if (!error && response.statusCode == 201) {
+          var node = JSON.parse(body);
+
+          // Update the time meta properties of the downloaded file
+          const btime = _base.convertToUTC(node.entry.createdAt);
+          const mtime = _base.convertToUTC(node.entry.modifiedAt);
+          const atime = undefined;
+
+          _base.deferFileModifiedDate({
+            filePath, btime, mtime, atime
+          }, 2000, async () => {
+
+            // File date modification done, lets update record
+            // Update the record in the db
+            try {
+              await nodeModel.update({
+                account_id: account.id,
+                site_id: watcher.site_id,
+                node_id: node.entry.id,
+                remote_folder_path: node.entry.path.name,
+                file_name: path.basename(filePath),
+                file_path: _path.toUnix(filePath),
+                local_folder_path: path.dirname(filePath),
+                file_update_at: _base.convertToUTC(node.entry.modifiedAt),
+                last_uploaded_at: _base.getCurrentTime(),
+                is_folder: false,
+                is_file: true,
+                download_in_progress: false,
+                upload_in_progress: false,
+              }, {
+                  where: {
+                    account_id: account.id,
+                    site_id: watcher.site_id,
+                    file_path: _path.toUnix(filePath),
+                  }
+                });
+            } catch (error) { }
+
+            console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
+
+            try {
+              // Add an event log
+              await eventLogModel.create({
+                account_id: account.id,
+                type: eventType.UPLOAD_FILE,
+                description: `Uploaded File: ${filePath} to ${account.instance_url}`
+              });
+            } catch (error) { }
+
+            // Completed upload, run the callback
+            callback(true);
           });
-        } catch (error) { }
 
-        console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
+        }
 
-        try {
-          // Add an event log
-          await eventLogModel.create({
-            account_id: account.id,
-            type: eventType.UPLOAD_FILE,
-            description: `Uploaded File: ${filePath} to ${account.instance_url}`
-          });
-        } catch (error) { }
-
-        // Completed upload, run the callback
-        callback(true);
-      }
-    });
+      });
+    } catch (error) {
+      // Add an error log
+      errorLogAdd(account.id, error, `${__filename}/upload file`);
+    }
   }
   return;
 };

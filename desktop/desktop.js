@@ -1,5 +1,5 @@
 const electron = require("electron");
-const { session } = require("electron");
+const { session, shell, dialog } = require("electron");
 const { app, BrowserWindow, Menu, Tray, ipcMain } = electron;
 const url = require("url");
 const path = require("path");
@@ -181,6 +181,21 @@ app.on("ready", () => {
           })
         );
         mainWindow.show();
+      }
+    },
+    {
+      label: "View System Logs",
+      click() {
+        const logPath = path.join(__dirname + "/server/logs/output.log");
+        const open = shell.openItem(logPath);
+        if (!open) {
+          dialog.showMessageBox(mainWindow, {
+            type: 'error',
+            title: "Error loading log",
+            message: `${logPath} was not found`,
+            icon: path.join(__dirname, "src/assets/logos/256.png")
+          });
+        }
       }
     },
     { type: "separator" },

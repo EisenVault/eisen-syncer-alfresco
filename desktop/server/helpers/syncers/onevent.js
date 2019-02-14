@@ -8,6 +8,7 @@ const _base = require("./_base");
 const rimraf = require('rimraf');
 const _ = require('lodash');
 const ondemand = require('./ondemand');
+const fileWatcher = require('../watcher');
 
 exports.create = async ({ account, watcherData, socketData, localPath }) => {
   if (socketData.is_file === true && fs.existsSync(localPath)) {
@@ -86,7 +87,12 @@ exports.move = async params => {
       nodePath: socketData.path
     });
 
+    // Close file watching
+    fileWatcher.closeAll();
     rimraf(node.file_path, async () => {
+      // Resume file watching
+      fileWatcher.watchAll();
+
       // Delete the record from the DB
       if (node.is_file === true) {
         await nodeModel.destroy({

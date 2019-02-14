@@ -4,6 +4,7 @@ const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { nodeModel } = require("../models/node");
 const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
+const { add: errorLogAdd } = require("../models/log-error");
 const remote = require("./remote");
 const worker = require('../helpers/syncers/worker');
 const _path = require('./path');
@@ -14,15 +15,21 @@ const chokidar = require('chokidar');
 // Logger
 const { logger } = require('./logger');
 
+let watcher = chokidar.watch('__test', {
+  ignored: /(^|[\/\\])\../,
+  ignoreInitial: true,
+  ignorePermissionErrors: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 2000,
+  }
+});
+
+exports.closeAll = async () => {
+  logger.info("Watcher Closed");
+  watcher.close();
+}
+
 exports.watchAll = async () => {
-  let watcher = chokidar.watch('__test', {
-    ignored: /(^|[\/\\])\../,
-    ignoreInitial: true,
-    ignorePermissionErrors: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 2000,
-    }
-  });
   // Remove all watchers first
   watcher.close();
   logger.info("Watcher started");
@@ -119,13 +126,21 @@ async function _upload(account, filePath) {
       logger.info("Unable to delete worker record");
     }
 
+    let statSync = null;
+    try {
+      statSync = fs.statSync(filePath);
+    } catch (error) {
+      errorLogAdd(account.id, error, `${__filename}/_upload`);
+      return;
+    }
+
     try {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
         file_path: filePath,
         root_node_id: watcher.document_library_node,
-        priority: fs.statSync(filePath).isDirectory() ? 2 : 1
+        priority: statSync.isDirectory() ? 2 : 1
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
