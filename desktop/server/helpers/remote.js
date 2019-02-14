@@ -504,9 +504,27 @@ exports.upload = async (params, callback) => {
 
     try {
       requestNative(options, async (error, response, body) => {
-
         if (error) {
-          console.log('remote.upload', error);
+          console.log('error', error);
+          errorLogAdd(account.id, error, `${__filename}/upload_file/requestNative`);
+          return;
+        }
+
+        if (response && response.statusCode == 409) {
+          // For duplicate/conflict, reset progress flags
+          logger.info('File overwrite prohibitted by server. ' + response.statusCode);
+          try {
+            await nodeModel.update({
+              download_in_progress: false,
+              upload_in_progress: false,
+            }, {
+                where: {
+                  account_id: account.id,
+                  site_id: watcher.site_id,
+                  file_path: _path.toUnix(filePath),
+                }
+              });
+          } catch (error) { }
         }
 
         if (!error && response.statusCode == 201) {
