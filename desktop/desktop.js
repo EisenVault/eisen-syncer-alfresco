@@ -186,7 +186,7 @@ app.on("ready", () => {
     {
       label: "View System Logs",
       click() {
-        const logPath = path.join(__dirname + "/server/logs/output.log");
+        const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
         const open = shell.openItem(logPath);
         if (!open) {
           dialog.showMessageBox(mainWindow, {
