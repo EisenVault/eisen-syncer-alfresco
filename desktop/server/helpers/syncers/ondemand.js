@@ -155,7 +155,7 @@ exports._processDownload = async params => {
   const watcher = params.watcher;
   const destinationPath = params.destinationPath; // where on local to download
 
-  logger.info("download step 1");
+  logger.info("_processDownload Started");
 
   if (
     account.sync_enabled == false) {
