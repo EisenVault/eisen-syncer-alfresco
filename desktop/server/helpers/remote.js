@@ -340,7 +340,7 @@ exports.upload = async (params, callback) => {
   try {
     statSync = fs.statSync(filePath);
   } catch (error) {
-    errorLogAdd(account.id, error, `${__filename}/upload_statSync`);
+    logger.info(`statSync error ${filePath}`);
     return;
   }
 
@@ -393,7 +393,7 @@ exports.upload = async (params, callback) => {
     try {
       let response = await request(options)
         .on('error', function (e) {
-          console.error(e);
+          errorLogAdd(account.id, e, `${__filename}/responseError for file ${filePath}`);
           return;
         });
       response = JSON.parse(response.body);
@@ -464,6 +464,7 @@ exports.upload = async (params, callback) => {
     const split = path.dirname(filePath).split('documentLibrary');
 
     if (typeof split[1] === 'undefined') {
+      logger.info(`split undefined for ${filePath}`);
       return;
     }
 
@@ -607,6 +608,10 @@ exports.upload = async (params, callback) => {
             callback(true);
           });
 
+        }
+
+        if(response) {
+          logger.info(`Response code ${response.statusCode} for file ${filePath}`);
         }
 
       });
