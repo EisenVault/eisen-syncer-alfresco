@@ -239,29 +239,55 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    try {
-      // Add reference to the nodes table
-      await nodeModel.upsert({
-        account_id: account.id,
-        site_id: watcher.site_id,
-        node_id: node.id,
-        remote_folder_path: remoteFolderPath,
-        file_name: path.basename(destinationPath),
-        file_path: _path.toUnix(destinationPath),
-        local_folder_path: path.dirname(destinationPath),
-        file_update_at: 0,
-        last_uploaded_at: 0,
-        last_downloaded_at: _base.getCurrentTime(),
-        is_folder: false,
-        is_file: true,
-        download_in_progress: true,
-        upload_in_progress: false
-      }, {
+    try { 
+
+      // Check if the record already exists
+      const nodeData = await nodeModel.findOne({
+        where: {
           account_id: account.id,
           site_id: watcher.site_id,
           node_id: node.id
+        }
+      });
+
+      const { dataValues: nodeRecord } = {...nodeData};
+
+      if(!nodeRecord) {
+        // Create NEW record
+        await nodeModel.create({
+          account_id: account.id,
+          site_id: watcher.site_id,
+          node_id: node.id,
+          remote_folder_path: remoteFolderPath,
+          file_name: path.basename(destinationPath),
+          file_path: _path.toUnix(destinationPath),
+          local_folder_path: path.dirname(destinationPath),
+          file_update_at: 0,
+          last_uploaded_at: 0,
+          last_downloaded_at: 0,
+          is_folder: false,
+          is_file: true,
+          download_in_progress: true,
+          upload_in_progress: false
         });
-    } catch (error) { }
+
+      } else {
+        // Update existing record
+         await nodeModel.update({
+          download_in_progress: false,
+          upload_in_progress: false
+        }, {
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: node.id
+          }
+        });
+      }
+    } catch (error) {
+      console.log( 'error_upsert', error );
+      errorLogAdd(account.id, error, `${__filename}/download`);
+     }
 
     let totalBytes = 0;
     let recievedSize = 0;
@@ -385,28 +411,23 @@ exports.upload = async (params, callback) => {
         try {
           // Update the record in the db
           await nodeModel.update({
-            account_id: account.id,
-            site_id: watcher.site_id,
             node_id: response.entry.id,
             remote_folder_path: response.entry.path.name,
-            file_name: path.basename(filePath),
-            file_path: _path.toUnix(filePath),
-            local_folder_path: path.dirname(filePath),
             file_update_at: mtime,
             last_uploaded_at: _base.getCurrentTime(),
-            is_folder: true,
-            is_file: false,
             download_in_progress: false,
             upload_in_progress: false,
           }, {
               where: {
                 account_id: account.id,
                 site_id: watcher.site_id,
-                node_id: response.entry.id,
                 file_path: _path.toUnix(filePath),
               }
             });
         } catch (error) { }
+
+        console.log(`Done uploading Folder: ${filePath} to ${account.instance_url}`);
+        logger.info(`Done uploading Folder: ${filePath} to ${account.instance_url}`);
 
         // Add an event log
         await eventLogModel.create({
@@ -474,21 +495,27 @@ exports.upload = async (params, callback) => {
     try {
 
       if (isNewFile) {
+        // Create NEW record
         await nodeModel.create({
           account_id: account.id,
           site_id: watcher.site_id,
+          node_id: '',
+          remote_folder_path: '',
           file_name: path.basename(filePath),
           file_path: _path.toUnix(filePath),
           local_folder_path: path.dirname(filePath),
-          last_uploaded_at: _base.getCurrentTime(),
+          file_update_at: 0,
+          last_uploaded_at: 0,
+          last_downloaded_at: 0,
           is_folder: false,
           is_file: true,
           download_in_progress: false,
           upload_in_progress: true,
         });
+
       } else {
+        // Update existing record
         await nodeModel.update({
-          last_uploaded_at: _base.getCurrentTime(),
           download_in_progress: false,
           upload_in_progress: true,
         }, {
@@ -500,7 +527,10 @@ exports.upload = async (params, callback) => {
           });
       }
 
-    } catch (error) { console.log(error) }
+    } catch (error) { 
+      console.log(error) 
+      errorLogAdd(account.id, error, `${__filename}/upload_file/create_update_records`);
+    }
 
     try {
       requestNative(options, async (error, response, body) => {
@@ -512,7 +542,7 @@ exports.upload = async (params, callback) => {
 
         if (response && response.statusCode == 409) {
           // For duplicate/conflict, reset progress flags
-          logger.info('File overwrite prohibitted by server. ' + response.statusCode);
+          logger.info('File overwrite prohibitted by server. ' + filePath);
           try {
             await nodeModel.update({
               download_in_progress: false,
@@ -525,6 +555,10 @@ exports.upload = async (params, callback) => {
                 }
               });
           } catch (error) { }
+
+          // Completed upload, run the callback
+          callback(true);
+          return;
         }
 
         if (!error && response.statusCode == 201) {
@@ -539,21 +573,13 @@ exports.upload = async (params, callback) => {
             filePath, btime, mtime, atime
           }, 2000, async () => {
 
-            // File date modification done, lets update record
-            // Update the record in the db
+            // File date modification done, lets update record in the db
             try {
               await nodeModel.update({
-                account_id: account.id,
-                site_id: watcher.site_id,
                 node_id: node.entry.id,
                 remote_folder_path: node.entry.path.name,
-                file_name: path.basename(filePath),
-                file_path: _path.toUnix(filePath),
-                local_folder_path: path.dirname(filePath),
                 file_update_at: _base.convertToUTC(node.entry.modifiedAt),
                 last_uploaded_at: _base.getCurrentTime(),
-                is_folder: false,
-                is_file: true,
                 download_in_progress: false,
                 upload_in_progress: false,
               }, {

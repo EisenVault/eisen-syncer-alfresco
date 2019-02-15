@@ -33,20 +33,12 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
 
       // set download progress to false
       await nodeModel.update({
-        account_id: account.id,
-        site_id: watcher.site_id,
         node_id: node.id,
         remote_folder_path: remoteFolderPath,
-        file_name: path.basename(destinationPath),
-        file_path: _path.toUnix(destinationPath),
         local_folder_path: path.dirname(destinationPath),
         file_update_at: mtime,
-        last_uploaded_at: 0,
         last_downloaded_at: exports.getCurrentTime(),
-        is_folder: false,
-        is_file: true,
-        download_in_progress: false,
-        upload_in_progress: false
+        download_in_progress: false
       }, {
           where: {
             account_id: account.id,
