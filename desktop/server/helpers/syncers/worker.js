@@ -101,7 +101,6 @@ exports.runUpload = async (isRecursive = false) => {
         try {
             statSync = fs.statSync(filePath);
         } catch (error) {
-            errorLogAdd(account.id, error, `${__filename}/worker`);
             continue;
         }
 
