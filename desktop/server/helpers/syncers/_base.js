@@ -32,10 +32,8 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
       }
 
       // set download progress to false
-      await nodeModel.update({
-        node_id: node.id,
-        remote_folder_path: remoteFolderPath,
-        local_folder_path: path.dirname(destinationPath),
+      try {
+        await nodeModel.update({
         file_update_at: mtime,
         last_downloaded_at: exports.getCurrentTime(),
         download_in_progress: false
@@ -46,6 +44,9 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
             file_path: _path.toUnix(destinationPath),
           }
         });
+      } catch (error) {
+        errorLogAdd(account.id, error, `${__filename}/deferFileUpdate_update`);
+      }
 
       console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
       logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);

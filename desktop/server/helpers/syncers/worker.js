@@ -33,6 +33,7 @@ exports.runUpload = async (isRecursive = false) => {
         });
 
         if (_.isEmpty(workerData)) {
+            logger.info('No Worker Data');
             continue;
         }
         logger.info('Worker Started');
@@ -101,7 +102,7 @@ exports.runUpload = async (isRecursive = false) => {
             statSync = fs.statSync(filePath);
         } catch (error) {
             errorLogAdd(account.id, error, `${__filename}/worker`);
-            return;
+            continue;
         }
 
         // If its a file and its size is 0, bail out
