@@ -40,8 +40,19 @@ exports.update = async ({
   localPath
 }) => {
 
-  if (fs.existsSync(localPath) &&
-    _base.convertToUTC(socketData.modifiedAt) < _base.getFileModifiedTime(localPath)) {
+  const nodeData = await nodeModel.findOne({
+    where: {
+      node_id: socketData.node_id
+    }
+  });
+
+  const {dataValues: nodeRecord} = {...nodeData};
+  if (nodeRecord && nodeRecord.upload_in_progress === true) {
+    return;
+  }
+  
+  if (fs.existsSync(localPath)
+    && _base.convertToUTC(socketData.modifiedAt) < _base.getFileModifiedTime(localPath)) {
     return;
   }
 

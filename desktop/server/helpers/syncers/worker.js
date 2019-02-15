@@ -3,9 +3,11 @@ const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
 const { workerModel } = require("../../models/worker");
 const { settingModel } = require("../../models/setting");
+const { add: errorLogAdd } = require("../../models/log-error");
 
 const remote = require('../remote');
 const rimraf = require('rimraf');
+const fs = require('fs');
 const _base = require("./_base");
 const _ = require('lodash');
 
@@ -94,8 +96,22 @@ exports.runUpload = async (isRecursive = false) => {
             continue;
         }
 
+        let statSync = null;
+        try {
+            statSync = fs.statSync(filePath);
+        } catch (error) {
+            errorLogAdd(account.id, error, `${__filename}/worker`);
+            return;
+        }
+
+        // If its a file and its size is 0, bail out
+        if(statSync.isFile() && localFileSize === 0) {
+            logger.info("Zero file size. Bailing! " + filePath);
+            continue;
+        }
+
         // Case A: File created or renamed on local, upload it
-        if (!record && localFileSize > 0) {
+        if (!record) {
             logger.info("New file, attempting to upload... > " + filePath);
             remote.upload({
                 account,
@@ -137,7 +153,6 @@ exports.runUpload = async (isRecursive = false) => {
                 && record.is_file === true
                 && record.download_in_progress === false
                 && record.upload_in_progress === false
-                && localFileSize > 0
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
                 logger.info("File modified on local, attempting to upload..." + filePath);
                 // Upload the local changes to the server.

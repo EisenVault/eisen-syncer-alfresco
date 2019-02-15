@@ -27,6 +27,7 @@ try {
     }
   });
 } catch (error) {
+  errorLogAdd(0, error, `${__filename}/chokidar`);
   return;
 }
 
