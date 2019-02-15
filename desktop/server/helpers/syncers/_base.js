@@ -44,9 +44,7 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
             file_path: _path.toUnix(destinationPath),
           }
         });
-      } catch (error) {
-        errorLogAdd(account.id, error, `${__filename}/deferFileUpdate_update`);
-      }
+      } catch (error) {}
 
       console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
       logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
