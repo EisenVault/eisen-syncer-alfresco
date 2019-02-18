@@ -86,6 +86,9 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, filePath) {
+
+  filePath = _path.toUnix(filePath);
+
   // Set Sync in progress
   await syncStart({
     account: {
@@ -114,7 +117,7 @@ async function _upload(account, filePath) {
     const nodeRecord = await nodeModel.findOne({
       where: {
         account_id: account.id,
-        file_path: filePath
+        file_path: _path.toUnix(filePath)
       }
     });
 
@@ -131,7 +134,7 @@ async function _upload(account, filePath) {
         where: {
           account_id: account.id,
           watcher_id: watcher.id,
-          file_path: filePath
+          file_path: _path.toUnix(filePath)
         }
       });
     } catch (error) {
@@ -151,7 +154,7 @@ async function _upload(account, filePath) {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
-        file_path: filePath,
+        file_path: _path.toUnix(filePath),
         root_node_id: watcher.document_library_node,
         priority: statSync.isDirectory() ? 2 : 1
       });
@@ -175,6 +178,9 @@ async function _upload(account, filePath) {
 }
 
 async function _delete(account, filePath) {
+
+  filePath = _path.toUnix(filePath);
+
   let nodeData = await nodeModel.findOne({
     where: {
       file_path: filePath

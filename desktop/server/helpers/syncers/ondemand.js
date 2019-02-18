@@ -10,6 +10,7 @@ const { settingModel } = require("../../models/setting");
 const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
+const _path = require('../path');
 
 // Logger
 const { logger } = require("../logger");
@@ -335,7 +336,7 @@ exports.recursiveUpload = async params => {
       await workerModel.create({
         account_id: account.id,
         watcher_id: watcher.id,
-        file_path: filePath,
+        file_path: _path.toUnix(filePath),
         root_node_id: watcher.document_library_node,
         priority: 0
       });
