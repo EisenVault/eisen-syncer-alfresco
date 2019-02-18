@@ -195,6 +195,23 @@ exports.createItemOnLocal = async params => {
             upload_in_progress: false
           });
         } catch (error) { }
+        return;
+      }
+
+      const { dataValues: nodeRecord } = { ...nodeData };
+
+      // If there are any record that has the node_id missing, we will update it.
+      if (nodeRecord.node_id === '') {
+        await nodeModel.update({
+          node_id: node.id,
+          remote_folder_path: node.path.name
+        }, {
+            where: {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              file_path: _path.toUnix(currentPath)
+            }
+          });
       }
 
       return;
