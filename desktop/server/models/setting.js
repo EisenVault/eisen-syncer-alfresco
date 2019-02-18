@@ -15,9 +15,4 @@ const settingModel = db.connection.define('setting', {
         timestamps: false
     });
 
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
-
 exports.settingModel = settingModel;

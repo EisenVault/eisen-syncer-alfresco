@@ -32,16 +32,11 @@ const workerModel = db.connection.define('worker', {
         },
         indexes: [
             {
+                name: 'unique_workers',
                 unique: true,
                 fields: ['account_id', 'watcher_id', 'file_path', 'root_node_id']
             }
         ]
     });
-
-
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
 
 exports.workerModel = workerModel;
