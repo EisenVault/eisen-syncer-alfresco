@@ -285,7 +285,6 @@ exports.download = async params => {
           });
       }
     } catch (error) {
-      console.log('error_upsert', error);
       errorLogAdd(account.id, error, `${__filename}/download`);
     }
 
@@ -529,7 +528,6 @@ exports.upload = async (params, callback) => {
       }
 
     } catch (error) {
-      console.log(error)
       errorLogAdd(account.id, error, `${__filename}/upload_file/create_update_records`);
     }
 
