@@ -27,11 +27,6 @@ const eventLogModel = db.connection.define('log_event', {
 
 eventLogModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
-
 exports.eventLogModel = eventLogModel;
 
 exports.types = {

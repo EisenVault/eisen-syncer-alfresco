@@ -25,7 +25,9 @@ const connection = new Sequelize(null, null, null, {
     logging
 });
 
-exports.flush = false;
-exports.logging = logging;
-exports.connection = connection;
+connection.sync({
+    force: false,
+    logging: logging
+});
 
+exports.connection = connection;
