@@ -34,17 +34,17 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
       // set download progress to false
       try {
         await nodeModel.update({
-        file_update_at: mtime,
-        last_downloaded_at: exports.getCurrentTime(),
-        download_in_progress: false
-      }, {
-          where: {
-            account_id: account.id,
-            site_id: watcher.site_id,
-            file_path: _path.toUnix(destinationPath),
-          }
-        });
-      } catch (error) {}
+          file_update_at: mtime,
+          last_downloaded_at: exports.getCurrentTime(),
+          download_in_progress: false
+        }, {
+            where: {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              file_path: _path.toUnix(destinationPath),
+            }
+          });
+      } catch (error) { }
 
       console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
       logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
@@ -167,25 +167,52 @@ exports.createItemOnLocal = async params => {
         }, 1000);
       }
 
-      // Add reference to the nodes table
-      try {
-        await nodeModel.create({
+      const nodeData = await nodeModel.findOne({
+        where: {
           account_id: account.id,
           site_id: watcher.site_id,
+          file_path: _path.toUnix(currentPath)
+        }
+      });
+
+      // Only add a new data if the record does not exists
+      if (!nodeData) {
+        try {
+          await nodeModel.create({
+            account_id: account.id,
+            site_id: watcher.site_id,
+            node_id: node.id,
+            remote_folder_path: node.path.name,
+            file_name: path.basename(currentPath),
+            file_path: _path.toUnix(currentPath),
+            local_folder_path: _path.toUnix(path.dirname(currentPath)),
+            file_update_at: exports.convertToUTC(node.modifiedAt),
+            last_uploaded_at: 0,
+            last_downloaded_at: exports.getCurrentTime(),
+            is_folder: true,
+            is_file: false,
+            download_in_progress: false,
+            upload_in_progress: false
+          });
+        } catch (error) { }
+        return;
+      }
+
+      const { dataValues: nodeRecord } = { ...nodeData };
+
+      // If there are any record that has the node_id missing, we will update it.
+      if (nodeRecord.node_id === '') {
+        await nodeModel.update({
           node_id: node.id,
-          remote_folder_path: node.path.name,
-          file_name: path.basename(currentPath),
-          file_path: _path.toUnix(currentPath),
-          local_folder_path: path.dirname(currentPath),
-          file_update_at: exports.convertToUTC(node.modifiedAt),
-          last_uploaded_at: 0,
-          last_downloaded_at: exports.getCurrentTime(),
-          is_folder: true,
-          is_file: false,
-          download_in_progress: false,
-          upload_in_progress: false
-        });
-      } catch (error) { }
+          remote_folder_path: node.path.name
+        }, {
+            where: {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              file_path: _path.toUnix(currentPath)
+            }
+          });
+      }
 
       return;
     }

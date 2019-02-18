@@ -86,6 +86,9 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, filePath) {
+
+  filePath = _path.toUnix(filePath);
+
   // Set Sync in progress
   await syncStart({
     account: {
@@ -163,8 +166,6 @@ async function _upload(account, filePath) {
     }
   } // end for loop
 
-  //await worker.runUpload(true);
-
   // Stop Sync in progress
   syncComplete({
     account: {
@@ -175,6 +176,9 @@ async function _upload(account, filePath) {
 }
 
 async function _delete(account, filePath) {
+
+  filePath = _path.toUnix(filePath);
+
   let nodeData = await nodeModel.findOne({
     where: {
       file_path: filePath

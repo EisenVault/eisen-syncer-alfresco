@@ -7,7 +7,7 @@ exports.toUnix = (path) => {
 
 // Returns the site-name from a local path 
 exports.getSiteNameFromPath = filePath => {
-    let explode = filePath.split(path.sep);
+    let explode = filePath.split(exports.toUnix(path.sep));
     explode = explode.splice(explode.indexOf('documentLibrary') - 1, 1);
     return explode[0] || '';
 }
@@ -33,5 +33,5 @@ exports.getLocalPathFromNodePath = params => {
         nodePath.indexOf(`${sitename}/documentLibrary`)
     );
 
-    return path.join(account.sync_path, relevantPath);
+    return exports.toUnix(path.join(account.sync_path, relevantPath));
 }

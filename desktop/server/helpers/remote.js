@@ -239,7 +239,7 @@ exports.download = async params => {
       mkdirp.sync(destinationDirectory);
     }
 
-    try { 
+    try {
 
       // Check if the record already exists
       const nodeData = await nodeModel.findOne({
@@ -250,9 +250,9 @@ exports.download = async params => {
         }
       });
 
-      const { dataValues: nodeRecord } = {...nodeData};
+      const { dataValues: nodeRecord } = { ...nodeData };
 
-      if(!nodeRecord) {
+      if (!nodeRecord) {
         // Create NEW record
         await nodeModel.create({
           account_id: account.id,
@@ -261,7 +261,7 @@ exports.download = async params => {
           remote_folder_path: remoteFolderPath,
           file_name: path.basename(destinationPath),
           file_path: _path.toUnix(destinationPath),
-          local_folder_path: path.dirname(destinationPath),
+          local_folder_path: _path.toUnix(path.dirname(destinationPath)),
           file_update_at: 0,
           last_uploaded_at: 0,
           last_downloaded_at: 0,
@@ -273,21 +273,20 @@ exports.download = async params => {
 
       } else {
         // Update existing record
-         await nodeModel.update({
+        await nodeModel.update({
           download_in_progress: false,
           upload_in_progress: false
         }, {
-          where: {
-            account_id: account.id,
-            site_id: watcher.site_id,
-            node_id: node.id
-          }
-        });
+            where: {
+              account_id: account.id,
+              site_id: watcher.site_id,
+              node_id: node.id
+            }
+          });
       }
     } catch (error) {
-      console.log( 'error_upsert', error );
       errorLogAdd(account.id, error, `${__filename}/download`);
-     }
+    }
 
     let totalBytes = 0;
     let recievedSize = 0;
@@ -372,7 +371,7 @@ exports.upload = async (params, callback) => {
     };
 
     try {
-      await nodeModel.insert({
+      await nodeModel.create({
         account_id: account.id,
         site_id: watcher.site_id,
         node_id: '',
@@ -447,7 +446,7 @@ exports.upload = async (params, callback) => {
         }, {
             where: {
               account_id: account.id,
-              file_path: filePath
+              file_path: _path.toUnix(filePath)
             }
           });
       } else {
@@ -504,7 +503,7 @@ exports.upload = async (params, callback) => {
           remote_folder_path: '',
           file_name: path.basename(filePath),
           file_path: _path.toUnix(filePath),
-          local_folder_path: path.dirname(filePath),
+          local_folder_path: _path.toUnix(path.dirname(filePath)),
           file_update_at: 0,
           last_uploaded_at: 0,
           last_downloaded_at: 0,
@@ -528,8 +527,7 @@ exports.upload = async (params, callback) => {
           });
       }
 
-    } catch (error) { 
-      console.log(error) 
+    } catch (error) {
       errorLogAdd(account.id, error, `${__filename}/upload_file/create_update_records`);
     }
 
@@ -610,7 +608,7 @@ exports.upload = async (params, callback) => {
 
         }
 
-        if(response) {
+        if (response) {
           logger.info(`Response code ${response.statusCode} for file ${filePath}`);
         }
 

@@ -82,6 +82,7 @@ exports.runUpload = async (isRecursive = false) => {
         let nodeData = await nodeModel.findOne({
             where: {
                 account_id: account.id,
+                site_id: watcher.site_id,
                 file_path: filePath
             }
         });
@@ -105,7 +106,7 @@ exports.runUpload = async (isRecursive = false) => {
         }
 
         // If its a file and its size is 0, bail out
-        if(statSync.isFile() && localFileSize === 0) {
+        if (statSync.isFile() && localFileSize === 0) {
             logger.info("Zero file size. Bailing! " + filePath);
             continue;
         }
