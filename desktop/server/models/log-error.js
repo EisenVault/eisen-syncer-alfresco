@@ -27,11 +27,6 @@ const errorLogModel = db.connection.define('log_error', {
 
 errorLogModel.belongsTo(accountModel, { foreignKey: 'account_id' });
 
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
-
 exports.errorLogModel = errorLogModel;
 
 exports.add = (accountId, description, originatedFrom = '') => {

@@ -31,16 +31,11 @@ const nodeModel = db.connection.define('node', {
         },
         indexes: [
             {
+                name: 'unique_nodes',
                 unique: true,
                 fields: ['account_id', 'site_id', 'file_path']
             }
         ]
     });
-
-
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
 
 exports.nodeModel = nodeModel;

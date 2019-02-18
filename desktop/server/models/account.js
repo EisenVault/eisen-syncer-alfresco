@@ -37,11 +37,6 @@ const accountModel = db.connection.define('account', {
     });
 
 
-exports.connection = db.connection.sync({
-    force: db.flush,
-    logging: db.logging
-});
-
 exports.accountModel = accountModel;
 
 exports.syncStart = async (params) => {
