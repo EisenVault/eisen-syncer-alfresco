@@ -23,6 +23,11 @@ exports.recursiveDownload = async params => {
   const destinationPath = params.destinationPath; // where on local to download
   let skipCount = params.skipCount || 0;
 
+  if (account.sync_enabled === false) {
+    logger.info("Recursive download bailed");
+    return;
+  }
+
   const setting = await settingModel.findOne({
     where: {
       name: 'SYNC_PAUSE_SECONDS'

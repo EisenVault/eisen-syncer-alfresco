@@ -12,7 +12,7 @@ exports.download = async (request, response) => {
 
   const { dataValues: account } = await accountModel.findByPk(request.params.accountId);
 
-  if (!account || account.sync_enabled === false) {
+  if (!account || account.sync_enabled === false || account.download_in_progress === true) {
     logger.info("Download Bailed");
     return false;
   }
@@ -66,7 +66,7 @@ exports.upload = async (request, response) => {
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
 
-  if (!account || account.sync_enabled == 0) {
+  if (!account || account.sync_enabled == 0 || account.upload_in_progress === true) {
     logger.info("Upload Bailed");
     return false;
   }
@@ -102,9 +102,6 @@ exports.upload = async (request, response) => {
         rootFolder
       });
     }
-
-    // Run the worker
-    //await worker.runUpload();
 
     // Set the sync completed time and also set issync flag to off
     await syncComplete({
