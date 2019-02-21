@@ -184,19 +184,39 @@ app.on("ready", () => {
       }
     },
     {
-      label: "View System Logs",
-      click() {
-        const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
-        const open = shell.openItem(logPath);
-        if (!open) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'error',
-            title: "Error loading log",
-            message: `${logPath} was not found`,
-            icon: path.join(__dirname, "src/assets/logos/256.png")
-          });
+      label: "View Raw Logs",
+      submenu: [
+        {
+          label: "Open Log File",
+          click() {
+            const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
+            const open = shell.openItem(logPath);
+            if (!open) {
+              dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: "Error loading log",
+                message: `${logPath} was not found`,
+                icon: path.join(__dirname, "src/assets/logos/256.png")
+              });
+            }
+          }
+        },
+        {
+          label: "Open Log Folder",
+          click() {
+            const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
+            const open = shell.showItemInFolder(logPath);
+            if (!open) {
+              dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: "Error loading log",
+                message: `${logPath} was not found`,
+                icon: path.join(__dirname, "src/assets/logos/256.png")
+              });
+            }
+          }
         }
-      }
+      ]
     },
     { type: "separator" },
     {
