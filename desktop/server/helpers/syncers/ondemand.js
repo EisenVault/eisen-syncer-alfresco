@@ -176,6 +176,8 @@ exports._processDownload = async params => {
   let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
   const currentPath = path.join(destinationPath, relevantPath, node.name);
 
+  logger.info(`\n Attempting to download ${currentPath} \n`);
+
   // Check if the node is present in the database
   let recordData = await nodeModel.findOne({
     where: {

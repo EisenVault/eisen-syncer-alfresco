@@ -111,6 +111,9 @@ exports.runUpload = async (isRecursive = false) => {
             continue;
         }
 
+        logger.info(`\n Attempting to upload ${filePath} \n`);
+
+
         // Case A: File created or renamed on local, upload it
         if (!record) {
             logger.info("New file, attempting to upload... > " + filePath);
