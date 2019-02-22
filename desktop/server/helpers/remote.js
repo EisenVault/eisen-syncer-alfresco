@@ -27,11 +27,11 @@ exports.getNode = async params => {
   let record = params.record;
 
   if (!record || !account) {
-    throw new Error("Invalid paramerters");
+    throw new Error("Record or Account missing");
   }
 
   if (record.node_id === '') {
-    throw new Error("Record must have a node_id");
+    throw new Error("NoideId missing");
   }
 
   var options = {
@@ -173,7 +173,7 @@ exports.deleteServerNode = async params => {
       await eventLogModel.create({
         account_id: account.id,
         type: eventType.DELETE_NODE,
-        description: `Deleted NodeId: ${record.node_id} from ${account.instance_url}`
+        description: `Deleted: ${record.file_path} from ${account.instance_url}`
       });
     }
 
@@ -240,7 +240,6 @@ exports.download = async params => {
     }
 
     try {
-
       // Check if the record already exists
       const nodeData = await nodeModel.findOne({
         where: {
@@ -439,18 +438,7 @@ exports.upload = async (params, callback) => {
       }
     } catch (error) {
       // Ignore "duplicate" status codes
-      if (error.statusCode == 409) {
-        // In case of duplicate error, we will update the file modified date to the db so that it does not try to update next time
-        await nodeModel.update({
-          file_update_at: _base.getFileModifiedTime(filePath)
-        }, {
-            where: {
-              account_id: account.id,
-              file_path: _path.toUnix(filePath)
-            }
-          });
-      } else {
-        // Add an error log
+      if (error.statusCode !== 409) {
         errorLogAdd(account.id, error, `${__filename}/upload Directory`);
       }
     }

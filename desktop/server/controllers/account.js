@@ -53,8 +53,8 @@ exports.addAccount = async (request, response) => {
     .then(data => {
       return response.status(201).json(data.dataValues);
     })
-    .catch(() => {
-      return response.status(500).json(data.dataValues);
+    .catch(error => {
+      return response.status(500).json(error);
     });
 };
 
@@ -77,7 +77,7 @@ exports.updateAccount = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json(data.dataValues);
+      return response.status(500).json(error);
     });
 };
 
@@ -97,7 +97,7 @@ exports.updateCredentials = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json(data.dataValues);
+      return response.status(500).json(error);
     });
 };
 
@@ -115,7 +115,7 @@ exports.updateSyncPath = async (request, response) => {
     })
     .catch(error => {
       errorLogAdd(request.params.id, error);
-      return response.status(500).json(data.dataValues);
+      return response.status(500).json(error);
     });
 };
 

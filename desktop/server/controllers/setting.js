@@ -25,26 +25,34 @@ exports.about = async (request, response) => {
 };
 
 exports.add = async (request, response) => {
-  let setting = await settingModel.create({
-    name: request.body.name,
-    value: request.body.value
-  });
+  try {
+    let setting = await settingModel.create({
+      name: request.body.name,
+      value: request.body.value
+    });
 
-  return response.status(201).json({
-    setting: setting
-  });
+    return response.status(201).json({
+      setting: setting
+    });
+  } catch (error) {
+
+  }
 };
 
 exports.update = async (request, response) => {
-  let setting = await settingModel.update({
-    value: request.body.value
-  }, {
-      where: {
-        name: request.params.name
-      }
-    });
+  try {
+    let setting = await settingModel.update({
+      value: request.body.value
+    }, {
+        where: {
+          name: request.params.name
+        }
+      });
 
-  return response.status(200).json({
-    setting: setting
-  });
+    return response.status(200).json({
+      setting: setting
+    });
+  } catch (error) {
+
+  }
 };

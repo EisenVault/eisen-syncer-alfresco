@@ -3,8 +3,7 @@ const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
 const { workerModel } = require("../../models/worker");
 const { settingModel } = require("../../models/setting");
-const { add: errorLogAdd } = require("../../models/log-error");
-
+const fileWatcher = require('../watcher');
 const remote = require('../remote');
 const rimraf = require('rimraf');
 const fs = require('fs');
@@ -113,10 +112,9 @@ exports.runUpload = async (isRecursive = false) => {
 
         logger.info(`\n Attempting to upload ${filePath} \n`);
 
-
-        // Case A: File created or renamed on local, upload it
+        // Case A: File created or renamed on local but unavailable on server, upload it
         if (!record) {
-            logger.info("New file, attempting to upload... > " + filePath);
+            logger.info("New file, attempting to upload... > " + account.id + " --- " + filePath);
             remote.upload({
                 account,
                 watcher,
@@ -133,6 +131,7 @@ exports.runUpload = async (isRecursive = false) => {
 
         // If the record exists in the DB and has a nodeID
         if (record && record.node_id !== '') {
+
             // Make a request to the server to get the node details
             const remoteNodeResponse = await remote.getNode({
                 account,
@@ -142,7 +141,7 @@ exports.runUpload = async (isRecursive = false) => {
             // Give a break if the server throws an internal server error
             if (remoteNodeResponse && (remoteNodeResponse.statusCode === 503 || remoteNodeResponse.statusCode === 500)) {
                 logger.info('Pausing since server load seems high. Status code' + remoteNodeResponse.statusCode);
-                await _base.sleep(30000);
+                await _base.sleep(60000);
                 continue;
             }
 
@@ -159,6 +158,7 @@ exports.runUpload = async (isRecursive = false) => {
                 && record.upload_in_progress === false
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
                 logger.info("File modified on local, attempting to upload..." + filePath);
+
                 // Upload the local changes to the server.
                 await remote.upload({
                     account,
@@ -175,12 +175,18 @@ exports.runUpload = async (isRecursive = false) => {
             }
 
             // Case C: File deleted on server? delete on local
-            if (remoteNodeResponse && remoteNodeResponse.statusCode === 404 && record.download_in_progress === false && record.upload_in_progress == false) {
+            if (remoteNodeResponse
+                && remoteNodeResponse.statusCode === 404
+                && record.download_in_progress === false
+                && record.upload_in_progress === false) {
                 logger.info(
                     "Node not available on server, deleting on local: " + record.file_path + " - " + record.id
                 );
+
+                fileWatcher.closeAll();
                 // If the node is not found on the server, delete the file on local
                 rimraf(record.file_path, async () => {
+                    fileWatcher.watchAll();
                     // Delete the node record
                     await nodeModel.destroy({
                         where: {
@@ -195,13 +201,19 @@ exports.runUpload = async (isRecursive = false) => {
                 continue;
             }
 
-            // OR if the node exists on server but that path of node does not match the one with local file path, then delete it from local (possible the file was moved to a different location)
-            if (remoteNodeResponse && remoteNodeResponse.statusCode === 200 && remoteNodeResponseBody.entry && remoteNodeResponseBody.entry.path.name !== record.remote_folder_path) {
+            // OR if the node exists on server but that path of node does not match the one with local file path, 
+            // then delete it from local (possible the file was moved to a different location)
+            if (remoteNodeResponse
+                && remoteNodeResponse.statusCode === 200
+                && remoteNodeResponseBody.entry
+                && remoteNodeResponseBody.entry.path.name !== record.remote_folder_path) {
                 logger.info(
                     "Node was moved to some other location, deleting on local: " + record.file_path + " - " + record.id
                 );
 
+                fileWatcher.closeAll();
                 rimraf(record.file_path, async () => {
+                    fileWatcher.watchAll();
                     await nodeModel.destroy({
                         where: {
                             account_id: account.id,
