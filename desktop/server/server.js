@@ -107,6 +107,7 @@ socket.on("sync-notification", async data => {
     // Since the delete action does not contain path, we will handle it in a diff way
     if (action === 'DELETE') {
       await onevent.delete({
+        account,
         node_id: socketData.node_id
       });
       continue;

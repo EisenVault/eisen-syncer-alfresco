@@ -51,37 +51,46 @@ exports.watchAll = async () => {
   });
 
   if (accounts) {
-    for (let { dataValues: account } of accounts) {
+    const accountSet = new Set();
 
+    for (let { dataValues: account } of accounts) {
       if (!fs.existsSync(account.sync_path)) {
         return;
       }
 
       try {
         watcher
-          .add(account.sync_path)
-          .on('all', async (event, path) => {
-            switch (event) {
-              case 'add':
-              case 'addDir':
-                logger.info(`${event} - ${path}`);
-                await _upload(account, path);
-                break;
-              case 'change':
-                logger.info(`${event} - ${path}`);
-                await _upload(account, path);
-                break;
-              case 'unlink':
-              case 'unlinkDir':
-                logger.info(`${event} - ${path}`);
-                await _delete(account, path);
-                break;
-            }
-          });
+          .add(account.sync_path);
+        accountSet.add(account);
       } catch (error) {
         return;
       }
     }
+
+    // Listen to the events
+    watcher
+      .on('all', async (event, path) => {
+        accountSet.forEach(async accountItem => {
+          if (path.indexOf(accountItem.sync_path + '/') !== -1) {
+            switch (event) {
+              case 'add':
+              case 'addDir':
+                logger.info(`${event} - ${path}`);
+                await _upload(accountItem, path);
+                break;
+              case 'change':
+                logger.info(`${event} - ${path}`);
+                await _upload(accountItem, path);
+                break;
+              case 'unlink':
+              case 'unlinkDir':
+                logger.info(`${event} - ${path}`);
+                await _delete(accountItem, path);
+                break;
+            }
+          }
+        });
+      });
   }
 };
 
@@ -117,6 +126,7 @@ async function _upload(account, filePath) {
     const nodeRecord = await nodeModel.findOne({
       where: {
         account_id: account.id,
+        site_id: watcher.site_id,
         file_path: filePath
       }
     });
@@ -181,6 +191,7 @@ async function _delete(account, filePath) {
 
   let nodeData = await nodeModel.findOne({
     where: {
+      account_id: account.id,
       file_path: filePath
     }
   });

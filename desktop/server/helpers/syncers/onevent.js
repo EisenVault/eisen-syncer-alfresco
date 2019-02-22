@@ -42,15 +42,17 @@ exports.update = async ({
 
   const nodeData = await nodeModel.findOne({
     where: {
+      account_id: account.id,
+      site_id: watcherData.site_id,
       node_id: socketData.node_id
     }
   });
 
-  const {dataValues: nodeRecord} = {...nodeData};
+  const { dataValues: nodeRecord } = { ...nodeData };
   if (nodeRecord && nodeRecord.upload_in_progress === true) {
     return;
   }
-  
+
   if (fs.existsSync(localPath)
     && _base.convertToUTC(socketData.modifiedAt) < _base.getFileModifiedTime(localPath)) {
     return;
@@ -78,6 +80,8 @@ exports.move = async params => {
   const { account, watcherData, socketData, localPath } = params;
   const nodeData = await nodeModel.findOne({
     where: {
+      account_id: account.id,
+      site_id: watcherData.site_id,
       node_id: socketData.node_id
     }
   });
@@ -213,6 +217,7 @@ exports.move = async params => {
 exports.delete = async params => {
   const nodeData = await nodeModel.findOne({
     where: {
+      account_id: params.account.id,
       node_id: params.node_id
     }
   });
