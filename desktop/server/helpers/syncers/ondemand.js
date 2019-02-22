@@ -187,13 +187,14 @@ exports._processDownload = async params => {
   let recordData = await nodeModel.findOne({
     where: {
       account_id: account.id,
+      site_id: watcher.site_id,
       node_id: node.id
     }
   });
 
   let { dataValues: record } = { ...recordData };
 
-  if (record && record.download_in_progress === true) {
+  if (record && (record.download_in_progress === true || record.upload_in_progress === true)) {
     // If the file is stalled, we will change its modified date to a backdated date
     if (await _base.isStalledDownload(record) === true) {
       const btime = 395114400000; // Saturday, July 10, 1982 7:30:00 AM
@@ -244,6 +245,7 @@ exports._processDownload = async params => {
         await nodeModel.destroy({
           where: {
             account_id: account.id,
+            site_id: watcher.site_id,
             node_id: record.node_id
           }
         });
@@ -252,6 +254,7 @@ exports._processDownload = async params => {
         await nodeModel.destroy({
           where: {
             account_id: account.id,
+            site_id: watcher.site_id,
             [Sequelize.Op.or]: [
               {
                 file_path: {
@@ -293,7 +296,7 @@ exports._processDownload = async params => {
       fileRenamed === false
     ) {
       logger.info(
-        "deleted on server, because deleted on local" + currentPath
+        "Deleting on server, because deleted on local" + currentPath
       );
       await remote.deleteServerNode({
         account,

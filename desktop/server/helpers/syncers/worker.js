@@ -114,7 +114,7 @@ exports.runUpload = async (isRecursive = false) => {
 
         // Case A: File created or renamed on local but unavailable on server, upload it
         if (!record) {
-            logger.info("New file, attempting to upload... > " + filePath);
+            logger.info("New file, attempting to upload... > " + account.id + " --- " + filePath);
             remote.upload({
                 account,
                 watcher,
@@ -158,6 +158,7 @@ exports.runUpload = async (isRecursive = false) => {
                 && record.upload_in_progress === false
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
                 logger.info("File modified on local, attempting to upload..." + filePath);
+
                 // Upload the local changes to the server.
                 await remote.upload({
                     account,
