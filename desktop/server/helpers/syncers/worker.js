@@ -147,7 +147,12 @@ exports.runUpload = async (isRecursive = false) => {
 
             let remoteNodeResponseBody = {};
             if (remoteNodeResponse && 'body' in remoteNodeResponse) {
-                remoteNodeResponseBody = JSON.parse(remoteNodeResponse.body);
+                try {
+                    remoteNodeResponseBody = JSON.parse(remoteNodeResponse.body);
+                } catch (error) {
+                    logger.info('Unable to parse JSON. Bad response data. Check your internet connection.');
+                    continue;
+                }
             }
 
             // Case B: File modified on local, upload it
