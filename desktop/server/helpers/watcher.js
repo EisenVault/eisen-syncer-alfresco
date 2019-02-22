@@ -70,22 +70,22 @@ exports.watchAll = async () => {
     // Listen to the events
     watcher
       .on('all', async (event, path) => {
-        accountSet.forEach(async item => {
-          if (path.indexOf(item.sync_path + '/') !== -1) {
+        accountSet.forEach(async accountItem => {
+          if (path.indexOf(accountItem.sync_path + '/') !== -1) {
             switch (event) {
               case 'add':
               case 'addDir':
                 logger.info(`${event} - ${path}`);
-                await _upload(item, path);
+                await _upload(accountItem, path);
                 break;
               case 'change':
                 logger.info(`${event} - ${path}`);
-                await _upload(item, path);
+                await _upload(accountItem, path);
                 break;
               case 'unlink':
               case 'unlinkDir':
                 logger.info(`${event} - ${path}`);
-                await _delete(item, path);
+                await _delete(accountItem, path);
                 break;
             }
           }
