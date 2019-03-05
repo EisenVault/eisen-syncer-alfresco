@@ -129,8 +129,6 @@ exports.runUpload = async (isRecursive = false) => {
 
         // If the record exists in the DB and has a nodeID
         if (record && record.node_id !== '') {
-            logger.info('Worker  - Inside Record');
-
             // Make a request to the server to get the node details
             const remoteNodeResponse = await remote.getNode({
                 account,

@@ -206,7 +206,6 @@ exports._processDownload = async params => {
 
   // If the record is present
   if (record) {
-    logger.info("onDemand -  Has Record");
     // Case A: Perhaps the file was RENAMED on server. Delete from local
     if (record.file_name !== node.name) {
       logger.info("Deleted renamed (old) path..." + record.file_path);
@@ -282,7 +281,6 @@ exports._processDownload = async params => {
 
   // Case D: If not present on local or if the file is not present on local, download...
   if (!record && fileRenamed === false) {
-    logger.info("ondemand - case D");
     await _base.createItemOnLocal({
       watcher,
       node,

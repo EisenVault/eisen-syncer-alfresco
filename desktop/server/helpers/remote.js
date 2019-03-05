@@ -54,7 +54,6 @@ exports.getNode = async params => {
     logger.info('Remote - After return request. Nodeid: ' + record.node_id + " StatusCode: " + req.statusCode);
     return req;
   } catch (error) {
-    console.log('Remote error', error);
     errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
     try {
       error = JSON.parse(error.error);
@@ -302,7 +301,6 @@ exports.download = async params => {
     await requestNative(options)
       .on('error', function (e) {
         errorLogAdd(account.id, e, `${__filename}/download for file ${destinationPath}`);
-        console.error('requestNative error on response', e);
         return;
       })
       .on('response', function (response) {
@@ -660,7 +658,6 @@ exports.upload = async (params) => {
       }
 
     } catch (error) {
-      console.log('error-upload', error);
       // Add an error log
       errorLogAdd(account.id, error, `${__filename}/upload file`);
     }
