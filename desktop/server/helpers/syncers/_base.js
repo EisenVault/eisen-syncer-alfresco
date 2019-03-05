@@ -7,6 +7,7 @@ const remote = require("../remote");
 const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
 const { eventLogModel, types: eventType } = require("../../models/log-event");
+const rimraf = require('rimraf');
 
 // Logger
 const { logger } = require('../logger');
@@ -46,7 +47,6 @@ exports.deferFileUpdate = async (uri, delay = 3000) => {
           });
       } catch (error) { }
 
-      console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
       logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
 
       // Add an event log
@@ -68,10 +68,16 @@ exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
         return;
       }
       if (callback) {
-        callback(true);
+        callback(params);
       }
     })
   }, delay);
+}
+
+exports.customRimRaf = (path, custom = {}, callback) => {
+  rimraf(path, () => {
+    callback(custom);
+  });
 }
 
 /**

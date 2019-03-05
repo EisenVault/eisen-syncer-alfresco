@@ -9,6 +9,8 @@ exports.getAll = async (request, response) => {
 
   var options = {
     method: "GET",
+    agent: false,
+    timeout: 20000,
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +

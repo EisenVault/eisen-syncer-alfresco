@@ -40,6 +40,7 @@ app.use("/watchers", require("./routes/watcher"));
 
 // Set the timezone in the process env
 process.env.TZ = 'Etc/Greenwich';
+process.env.UV_THREADPOOL_SIZE = 128;
 
 (async () => {
   accountModel.findAll({

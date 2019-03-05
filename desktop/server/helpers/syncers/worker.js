@@ -3,9 +3,9 @@ const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
 const { workerModel } = require("../../models/worker");
 const { settingModel } = require("../../models/setting");
+const { Op } = require('sequelize');
 const fileWatcher = require('../watcher');
 const remote = require('../remote');
-const rimraf = require('rimraf');
 const fs = require('fs');
 const _base = require("./_base");
 const _ = require('lodash');
@@ -22,6 +22,7 @@ exports.runUpload = async (isRecursive = false) => {
 
     while (true) {
 
+        logger.info('Worker about to sleep');
         await _base.sleep(Number(setting.value) * 1000);
 
         let workerData = await workerModel.findOne({
@@ -122,21 +123,20 @@ exports.runUpload = async (isRecursive = false) => {
                 rootNodeId: watcher.document_library_node,
                 overwrite: "false",
                 isNewFile: true
-            }, async (uploadCompleted) => {
-                // Process the next worker record
-                uploadCompleted && isRecursive && await exports.runUpload();
             });
             continue;
         }
 
         // If the record exists in the DB and has a nodeID
         if (record && record.node_id !== '') {
+            logger.info('Worker  - Inside Record');
 
             // Make a request to the server to get the node details
             const remoteNodeResponse = await remote.getNode({
                 account,
                 record
             });
+            logger.info('Worker  - Got Node Response');
 
             // Give a break if the server throws an internal server error
             if (remoteNodeResponse && (remoteNodeResponse.statusCode === 503 || remoteNodeResponse.statusCode === 500)) {
@@ -162,20 +162,17 @@ exports.runUpload = async (isRecursive = false) => {
                 && record.download_in_progress === false
                 && record.upload_in_progress === false
                 && localFileModifiedDate > _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt)) {
-                logger.info("File modified on local, attempting to upload..." + filePath);
+                logger.info("File modified on local, " + localFileModifiedDate + " - modifiedAt: " + remoteNodeResponseBody.entry.modifiedAt + ' > convertToUTC: ' + _base.convertToUTC(remoteNodeResponseBody.entry.modifiedAt) + " attempting to upload..." + filePath);
 
                 // Upload the local changes to the server.
-                await remote.upload({
-                    account,
-                    watcher,
-                    filePath,
-                    rootNodeId: watcher.document_library_node,
-                    overwrite: "true",
-                    isNewFile: false
-                }, async (uploadCompleted) => {
-                    // Process the next worker record
-                    uploadCompleted && isRecursive && await exports.runUpload();
-                });
+                // await remote.upload({
+                //     account,
+                //     watcher,
+                //     filePath,
+                //     rootNodeId: watcher.document_library_node,
+                //     overwrite: "true",
+                //     isNewFile: false
+                // });
                 continue;
             }
 
@@ -189,16 +186,42 @@ exports.runUpload = async (isRecursive = false) => {
                 );
 
                 fileWatcher.closeAll();
+                const custom = {
+                    record,
+                    account,
+                    watcher
+                };
+
                 // If the node is not found on the server, delete the file on local
-                rimraf(record.file_path, async () => {
+                _base.customRimRaf(record.file_path, custom, async (custom) => {
                     fileWatcher.watchAll();
-                    // Delete the node record
-                    await nodeModel.destroy({
-                        where: {
-                            account_id: account.id,
-                            node_id: record.node_id
-                        }
-                    });
+                    if (custom.record.is_file === true) {
+                        await nodeModel.destroy({
+                            where: {
+                                account_id: custom.account.id,
+                                site_id: custom.watcher.site_id,
+                                node_id: custom.record.node_id
+                            }
+                        });
+                    } else if (custom.record.is_folder === true) {
+                        // Delete all records that are relavant to the file/folder path
+                        await nodeModel.destroy({
+                            where: {
+                                account_id: custom.account.id,
+                                site_id: custom.watcher.site_id,
+                                [Op.or]: [
+                                    {
+                                        file_path: {
+                                            [Op.like]: custom.record.file_path + "%"
+                                        }
+                                    },
+                                    {
+                                        local_folder_path: custom.record.file_path
+                                    }
+                                ]
+                            }
+                        });
+                    }
                 });
 
                 // Process the next worker record
@@ -217,12 +240,17 @@ exports.runUpload = async (isRecursive = false) => {
                 );
 
                 fileWatcher.closeAll();
-                rimraf(record.file_path, async () => {
+                const custom = {
+                    account,
+                    record,
+                };
+
+                _base.customRimRaf(record.file_path, custom, async (custom) => {
                     fileWatcher.watchAll();
                     await nodeModel.destroy({
                         where: {
-                            account_id: account.id,
-                            file_path: record.file_path
+                            account_id: custom.account.id,
+                            file_path: custom.record.file_path
                         }
                     });
                 });

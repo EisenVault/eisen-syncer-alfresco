@@ -1,6 +1,6 @@
 {
   "name": "eisenvaultsync",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "author": "Argali Knowledge Services Pvt. Ltd. <engineering@eisenvault.com>",
   "description": "A two-way file sync desktop application for EisenVault DMS",
   "homepage": "https://www.eisenvault.com",
@@ -54,7 +54,7 @@
       "certificateFile": "eisenvault.pfx",
       "verifyUpdateCodeSignature": false,
       "publisherName": "eisenvault",
-      "rfc3161TimeStampServer": "http://sha256timestamp.ws.symantec.com/sha256/timestamp",
+      "rfc3161TimeStampServer": "http://tsa.starfieldtech.com",
       "target": [
         {
           "target": "nsis",

@@ -11,6 +11,7 @@ const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
 const _path = require('../path');
+const _ = require('lodash');
 
 // Logger
 const { logger } = require("../logger");
@@ -73,33 +74,6 @@ exports.recursiveDownload = async params => {
   }
 
   const node = children.list.entries[0].entry;
-
-  // If iteration of all children is complete, go to its parent folder
-  if (children.list.pagination.hasMoreItems === false) {
-
-    if (nodeMap.has(node.parentId)) {
-      const getMapData = nodeMap.get(node.parentId);
-      const parentId = getMapData.parentId;
-      const skipCount = getMapData.skipCount + 1;
-
-      // Download the node
-      await exports._processDownload({
-        node,
-        account,
-        watcher,
-        sourceNodeId,
-        destinationPath
-      });
-
-      return await exports.recursiveDownload({
-        account,
-        watcher,
-        sourceNodeId: parentId,
-        destinationPath,
-        skipCount
-      });
-    }
-  }
 
   if (node.isFolder) {
     // In case of folder, save the skipcount of the current folder
@@ -204,15 +178,16 @@ exports._processDownload = async params => {
         filePath: record.file_path,
         btime,
         mtime,
-        atime
+        atime,
+        record
       }, 2000,
-        async (done) => {
-          if (done === true) {
+        async (params) => {
+          if (_.has(params, 'record.id')) {
             await nodeModel.update({
               download_in_progress: false
             }, {
                 where: {
-                  id: record.id
+                  id: params.record.id
                 }
               });
           }
@@ -231,7 +206,7 @@ exports._processDownload = async params => {
 
   // If the record is present
   if (record) {
-
+    logger.info("onDemand -  Has Record");
     // Case A: Perhaps the file was RENAMED on server. Delete from local
     if (record.file_name !== node.name) {
       logger.info("Deleted renamed (old) path..." + record.file_path);
@@ -307,6 +282,7 @@ exports._processDownload = async params => {
 
   // Case D: If not present on local or if the file is not present on local, download...
   if (!record && fileRenamed === false) {
+    logger.info("ondemand - case D");
     await _base.createItemOnLocal({
       watcher,
       node,
