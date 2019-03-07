@@ -272,7 +272,7 @@ exports.download = async params => {
           local_folder_path: _path.toUnix(path.dirname(destinationPath)),
           file_update_at: 0,
           last_uploaded_at: 0,
-          last_downloaded_at: 0,
+          last_downloaded_at: _base.getCurrentTime(),
           is_folder: false,
           is_file: true,
           download_in_progress: true,
@@ -351,7 +351,6 @@ exports.download = async params => {
               });
 
             });
-            // await _base.deferFileUpdate(uri);
             return;
           }
         })
