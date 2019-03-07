@@ -8,19 +8,20 @@ const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
 const rimraf = require('rimraf');
 
-exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
+exports.deferFileModifiedDate = (params, callback) => {
   const { filePath, btime, mtime, atime } = params;
-  setTimeout(() => {
-    Utimes.utimes(filePath, btime, mtime, atime, async () => {
-      if (mtime != exports.getFileModifiedTime(filePath)) {
-        exports.deferFileModifiedDate(params, delay * 2);
-        return;
-      }
-      if (callback) {
-        callback(params);
-      }
-    })
-  }, delay);
+  Utimes.utimes(filePath, btime, mtime, atime, (error) => {
+    if (error) {
+      return;
+    }
+    if (mtime !== exports.getFileModifiedTime(filePath)) {
+      exports.deferFileModifiedDate(params, callback);
+      return;
+    }
+    if (callback) {
+      callback(params);
+    }
+  })
 }
 
 exports.customRimRaf = (path, custom = {}, callback) => {

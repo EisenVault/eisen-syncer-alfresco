@@ -100,18 +100,17 @@ exports.runUpload = async (isRecursive = false) => {
                     mtime,
                     atime,
                     record
-                }, 2000,
-                    async (params) => {
-                        if (_.has(params, 'record.id')) {
-                            await nodeModel.update({
-                                download_in_progress: false
-                            }, {
-                                    where: {
-                                        id: params.record.id
-                                    }
-                                });
-                        }
-                    });
+                }, async (params) => {
+                    if (_.has(params, 'record.id')) {
+                        await nodeModel.update({
+                            download_in_progress: false
+                        }, {
+                                where: {
+                                    id: params.record.id
+                                }
+                            });
+                    }
+                });
             }
             logger.info("Bailed upload, download in progress. " + filePath);
             continue;
