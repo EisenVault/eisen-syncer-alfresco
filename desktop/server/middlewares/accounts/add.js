@@ -80,6 +80,8 @@ module.exports = async (request, response, next) => {
   ) {
     var options = {
       method: "POST",
+      agent: false,
+      timeout: 20000,
       resolveWithFullResponse: true,
       url:
         request.body.instance_url +

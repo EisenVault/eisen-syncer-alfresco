@@ -6,58 +6,7 @@ const { nodeModel } = require("../../models/node");
 const remote = require("../remote");
 const { add: errorLogAdd } = require("../../models/log-error");
 const Utimes = require('@ronomon/utimes');
-const { eventLogModel, types: eventType } = require("../../models/log-event");
-
-// Logger
-const { logger } = require('../logger');
-
-exports.deferFileUpdate = async (uri, delay = 3000) => {
-  setTimeout(async () => {
-    const { destinationPath, remoteFolderPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
-
-    // Update the time meta properties of the downloaded file
-    const btime = exports.convertToUTC(node.createdAt);
-    const mtime = exports.convertToUTC(node.modifiedAt);
-    const atime = undefined;
-
-    Utimes.utimes(destinationPath, btime, mtime, atime, async (error) => {
-      if (error) {
-        errorLogAdd(account.id, error, `${__filename}/download_utimeerror`);
-        return;
-      }
-
-      if (mtime != exports.getFileModifiedTime(destinationPath)) {
-        exports.deferFileUpdate(uri, delay * 2);
-        return;
-      }
-
-      // set download progress to false
-      try {
-        await nodeModel.update({
-          file_update_at: mtime,
-          last_downloaded_at: exports.getCurrentTime(),
-          download_in_progress: false
-        }, {
-            where: {
-              account_id: account.id,
-              site_id: watcher.site_id,
-              file_path: _path.toUnix(destinationPath),
-            }
-          });
-      } catch (error) { }
-
-      console.log(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-      logger.info(`Downloaded File: ${destinationPath} from ${account.instance_url}`);
-
-      // Add an event log
-      await eventLogModel.create({
-        account_id: account.id,
-        type: eventType.DOWNLOAD_FILE,
-        description: `Downloaded File: ${destinationPath} from ${account.instance_url}`,
-      });
-    });
-  }, delay);
-}
+const rimraf = require('rimraf');
 
 exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
   const { filePath, btime, mtime, atime } = params;
@@ -68,10 +17,16 @@ exports.deferFileModifiedDate = (params, delay = 2000, callback) => {
         return;
       }
       if (callback) {
-        callback(true);
+        callback(params);
       }
     })
   }, delay);
+}
+
+exports.customRimRaf = (path, custom = {}, callback) => {
+  rimraf(path, () => {
+    callback(custom);
+  });
 }
 
 /**

@@ -31,7 +31,13 @@ exports.errorLogModel = errorLogModel;
 
 exports.add = (accountId, description, originatedFrom = '') => {
 
-    if (description && (description.toString().indexOf("StatusCodeError: 404") > -1 || description.toString().indexOf("StatusCodeError: 409") > -1)) {
+    if (description
+        && (
+            description.toString().indexOf("StatusCodeError: 404") > -1
+            || description.toString().indexOf("StatusCodeError: 409") > -1
+            || description.toString().indexOf("SequelizeUniqueConstraintError") > -1
+        )
+    ) {
         return;
     }
 

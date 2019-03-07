@@ -70,6 +70,7 @@ exports.watchAll = async () => {
     // Listen to the events
     watcher
       .on('all', async (event, path) => {
+        path = _path.toUnix(path);
         accountSet.forEach(async accountItem => {
           if (path.indexOf(accountItem.sync_path + '/') !== -1) {
             switch (event) {
