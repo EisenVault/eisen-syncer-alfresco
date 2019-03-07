@@ -324,7 +324,7 @@ exports.download = async params => {
               node,
               account,
               watcher
-            }, 2000, async (params) => {
+            }, async (params) => {
 
               // Set download progress to false
               try {
@@ -610,7 +610,7 @@ exports.upload = async (params) => {
           node,
           account,
           watcher
-        }, 2000, async (params) => {
+        }, async (params) => {
 
           if (!_.has(params, 'node.entry.id')) {
             logger.info(`node.entry.id does not exists. Bailout.`);
