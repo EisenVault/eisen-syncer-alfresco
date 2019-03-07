@@ -12,6 +12,8 @@ const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require('@ronomon/utimes');
 const _path = require('./path');
+const promisify = require('./promisify');
+const _ = require('lodash');
 
 // Logger
 const { logger } = require('./logger');
@@ -36,17 +38,21 @@ exports.getNode = async params => {
 
   var options = {
     method: "GET",
+    agent: false,
     pool: { maxSockets: 1 },
     resolveWithFullResponse: true,
+    timeout: 20000,
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${record.node_id}?include=path`,
     headers: {
-      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
 
   try {
-    return await request(options);
+    logger.info('Remote - Before return request. Nodeid: ' + record.node_id);
+    const req = await promisify.getPm(options);
+    logger.info('Remote - After return request. Nodeid: ' + record.node_id + " StatusCode: " + req.statusCode);
+    return req;
   } catch (error) {
     errorLogAdd(account.id, error, `${__filename}/getNode/${record.node_id}`);
     try {
@@ -82,6 +88,8 @@ exports.getChildren = async params => {
 
   var options = {
     method: "GET",
+    agent: false,
+    timeout: 20000,
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
@@ -89,7 +97,6 @@ exports.getChildren = async params => {
       "/children?include=path&skipCount=" + skipCount + "&maxItems=" +
       maxItems,
     headers: {
-      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -123,14 +130,15 @@ exports.deleteServerNode = async params => {
 
   var options = {
     method: "DELETE",
+    agent: false,
     pool: { maxSockets: 1 },
+    timeout: 20000,
     resolveWithFullResponse: true,
     url:
       account.instance_url +
       "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
       record.node_id,
     headers: {
-      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -224,10 +232,11 @@ exports.download = async params => {
 
   var options = {
     method: "GET",
+    agent: false,
     pool: { maxSockets: 1 },
+    timeout: 20000,
     url: `${account.instance_url}/alfresco/api/-default-/public/alfresco/versions/1/nodes/${node.id}/content?attachment=true&customData=${encodeURIComponent(JSON.stringify(customData))}`,
     headers: {
-      Connection: "keep-alive",
       authorization: "Basic " + (await token.get(account))
     }
   };
@@ -263,7 +272,7 @@ exports.download = async params => {
           local_folder_path: _path.toUnix(path.dirname(destinationPath)),
           file_update_at: 0,
           last_uploaded_at: 0,
-          last_downloaded_at: 0,
+          last_downloaded_at: _base.getCurrentTime(),
           is_folder: false,
           is_file: true,
           download_in_progress: true,
@@ -273,7 +282,7 @@ exports.download = async params => {
       } else {
         // Update existing record
         await nodeModel.update({
-          download_in_progress: false,
+          download_in_progress: true,
           upload_in_progress: false
         }, {
             where: {
@@ -290,6 +299,10 @@ exports.download = async params => {
     let totalBytes = 0;
     let recievedSize = 0;
     await requestNative(options)
+      .on('error', function (e) {
+        errorLogAdd(account.id, e, `${__filename}/download for file ${destinationPath}`);
+        return;
+      })
       .on('response', function (response) {
         totalBytes = response.headers['content-length'];
         response.on('data', async function (data) {
@@ -298,7 +311,46 @@ exports.download = async params => {
 
           if (response.statusCode === 200 && recievedSize >= totalBytes) {
             const uri = response.req.path.split('customData=')[1];
-            await _base.deferFileUpdate(uri);
+            const { destinationPath, account, node, watcher } = JSON.parse(decodeURIComponent(uri));
+            const btime = _base.convertToUTC(node.createdAt);
+            const mtime = _base.convertToUTC(node.modifiedAt);
+            const atime = undefined;
+
+            _base.deferFileModifiedDate({
+              filePath: destinationPath,
+              btime,
+              mtime,
+              atime,
+              node,
+              account,
+              watcher
+            }, 2000, async (params) => {
+
+              // Set download progress to false
+              try {
+                await nodeModel.update({
+                  file_update_at: params.mtime,
+                  last_downloaded_at: _base.getCurrentTime(),
+                  download_in_progress: false
+                }, {
+                    where: {
+                      account_id: params.account.id,
+                      site_id: params.watcher.site_id,
+                      file_path: _path.toUnix(params.filePath),
+                    }
+                  });
+              } catch (error) { }
+
+              logger.info(`Downloaded File: ${params.filePath} from ${params.account.instance_url}`);
+
+              // Add an event log
+              await eventLogModel.create({
+                account_id: params.account.id,
+                type: eventType.DOWNLOAD_FILE,
+                description: `Downloaded File: ${params.filePath} from ${params.account.instance_url}`,
+              });
+
+            });
             return;
           }
         })
@@ -321,7 +373,7 @@ exports.download = async params => {
  *  uploadDirectory: <String>,
  * }
  */
-exports.upload = async (params, callback) => {
+exports.upload = async (params) => {
   let account = params.account;
   let watcher = params.watcher;
   let filePath = params.filePath;
@@ -352,13 +404,14 @@ exports.upload = async (params, callback) => {
     options = {
       resolveWithFullResponse: true,
       method: "POST",
+      agent: false,
+      timeout: 20000,
       url:
         account.instance_url +
         "/alfresco/api/-default-/public/alfresco/versions/1/nodes/" +
         rootNodeId +
         "/children?include=path",
       headers: {
-        Connection: "keep-alive",
         "content-type": "application/json",
         Authorization: "Basic " + (await token.get(account))
       },
@@ -424,7 +477,6 @@ exports.upload = async (params, callback) => {
             });
         } catch (error) { }
 
-        console.log(`Done uploading Folder: ${filePath} to ${account.instance_url}`);
         logger.info(`Done uploading Folder: ${filePath} to ${account.instance_url}`);
 
         // Add an event log
@@ -461,12 +513,13 @@ exports.upload = async (params, callback) => {
     options = {
       pool: { maxSockets: 1 },
       resolveWithFullResponse: true,
+      timeout: 20000,
+      agent: false,
       method: "POST",
       url: `${
         account.instance_url
         }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${rootNodeId}/children?include=path`,
       headers: {
-        Connection: "keep-alive",
         Authorization: "Basic " + (await token.get(account))
       },
       formData: {
@@ -515,96 +568,99 @@ exports.upload = async (params, callback) => {
           });
       }
 
-    } catch (error) {
-      errorLogAdd(account.id, error, `${__filename}/upload_file/create_update_records`);
-    }
+    } catch (error) { }
 
     try {
-      requestNative(options, async (error, response, body) => {
-        if (error) {
-          console.log('error', error);
-          errorLogAdd(account.id, error, `${__filename}/upload_file/requestNative`);
-          return;
-        }
+      const response = await promisify.postPm(options);
+      const body = response.body;
 
-        if (response && response.statusCode == 409) {
-          // For duplicate/conflict, reset progress flags
-          logger.info('File overwrite prohibitted by server. ' + filePath);
+      if (response && response.statusCode == 409) {
+        // For duplicate/conflict, reset progress flags
+        logger.info('File overwrite prohibitted by server. ' + filePath);
+        try {
+          await nodeModel.update({
+            download_in_progress: false,
+            upload_in_progress: false,
+          }, {
+              where: {
+                account_id: account.id,
+                site_id: watcher.site_id,
+                file_path: _path.toUnix(filePath),
+              }
+            });
+        } catch (error) { }
+
+        // Completed upload, run the callback
+        return;
+      }
+
+      if (response.statusCode == 201) {
+        var node = JSON.parse(body);
+
+        // Update the time meta properties of the downloaded file
+        const btime = _base.convertToUTC(node.entry.createdAt);
+        const mtime = _base.convertToUTC(node.entry.modifiedAt);
+        const atime = undefined;
+
+        _base.deferFileModifiedDate({
+          filePath,
+          btime,
+          mtime,
+          atime,
+          node,
+          account,
+          watcher
+        }, 2000, async (params) => {
+
+          if (!_.has(params, 'node.entry.id')) {
+            logger.info(`node.entry.id does not exists. Bailout.`);
+            return;
+          }
+
+          // File date modification done, lets update record in the db
           try {
             await nodeModel.update({
+              node_id: params.node.entry.id,
+              remote_folder_path: params.node.entry.path.name,
+              file_update_at: _base.convertToUTC(params.node.entry.modifiedAt),
+              last_uploaded_at: _base.getCurrentTime(),
               download_in_progress: false,
               upload_in_progress: false,
             }, {
                 where: {
-                  account_id: account.id,
-                  site_id: watcher.site_id,
-                  file_path: _path.toUnix(filePath),
+                  account_id: params.account.id,
+                  site_id: params.watcher.site_id,
+                  file_path: _path.toUnix(params.filePath),
                 }
               });
           } catch (error) { }
 
+          logger.info(`Done uploading file: ${params.filePath} to ${params.account.instance_url}`);
+
+          try {
+            // Add an event log
+            await eventLogModel.create({
+              account_id: params.account.id,
+              type: eventType.UPLOAD_FILE,
+              description: `Uploaded File: ${params.filePath} to ${params.account.instance_url}`
+            });
+          } catch (error) { }
+
           // Completed upload, run the callback
-          callback(true);
-          return;
-        }
+          return
+        });
 
-        if (!error && response.statusCode == 201) {
-          var node = JSON.parse(body);
+      }
 
-          // Update the time meta properties of the downloaded file
-          const btime = _base.convertToUTC(node.entry.createdAt);
-          const mtime = _base.convertToUTC(node.entry.modifiedAt);
-          const atime = undefined;
+      if (response) {
+        logger.info(`Response code ${response.statusCode} for file ${filePath}`);
+      }
 
-          _base.deferFileModifiedDate({
-            filePath, btime, mtime, atime
-          }, 2000, async () => {
-
-            // File date modification done, lets update record in the db
-            try {
-              await nodeModel.update({
-                node_id: node.entry.id,
-                remote_folder_path: node.entry.path.name,
-                file_update_at: _base.convertToUTC(node.entry.modifiedAt),
-                last_uploaded_at: _base.getCurrentTime(),
-                download_in_progress: false,
-                upload_in_progress: false,
-              }, {
-                  where: {
-                    account_id: account.id,
-                    site_id: watcher.site_id,
-                    file_path: _path.toUnix(filePath),
-                  }
-                });
-            } catch (error) { }
-
-            console.log(`Done uploading file: ${filePath} to ${account.instance_url}`);
-            logger.info(`Done uploading file: ${filePath} to ${account.instance_url}`);
-
-            try {
-              // Add an event log
-              await eventLogModel.create({
-                account_id: account.id,
-                type: eventType.UPLOAD_FILE,
-                description: `Uploaded File: ${filePath} to ${account.instance_url}`
-              });
-            } catch (error) { }
-
-            // Completed upload, run the callback
-            callback(true);
-          });
-
-        }
-
-        if (response) {
-          logger.info(`Response code ${response.statusCode} for file ${filePath}`);
-        }
-
-      });
     } catch (error) {
       // Add an error log
       errorLogAdd(account.id, error, `${__filename}/upload file`);
     }
+
   }
   return;
 };

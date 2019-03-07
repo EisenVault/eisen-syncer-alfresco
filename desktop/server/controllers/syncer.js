@@ -4,7 +4,6 @@ const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { watcherModel } = require("../models/watcher");
 const { logger } = require("../helpers/logger");
 const path = require('path');
-const worker = require('../helpers/syncers/worker');
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
