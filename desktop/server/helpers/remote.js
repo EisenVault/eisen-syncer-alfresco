@@ -296,6 +296,14 @@ exports.download = async params => {
       errorLogAdd(account.id, error, `${__filename}/download`);
     }
 
+    const writeSteam = fs.createWriteStream(destinationPath);
+
+    writeSteam.on('error', err => {
+      logger.error("Error creatingWiteStream. " + err.code + " " + err.path);
+      errorLogAdd(account.id, err, `${__filename}/download.writeSteam`);
+      return params;
+    })
+
     let totalBytes = 0;
     let recievedSize = 0;
     await requestNative(options)
@@ -355,7 +363,7 @@ exports.download = async params => {
           }
         })
       })
-      .pipe(fs.createWriteStream(destinationPath));
+      .pipe(writeSteam);
 
     return params;
   } catch (error) {

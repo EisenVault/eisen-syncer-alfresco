@@ -44,7 +44,7 @@ exports.add = (accountId, description, originatedFrom = '') => {
     logger.error("---~ERROR~---" + ' ' + originatedFrom + ' ' + description);
     errorLogModel.create({
         account_id: accountId,
-        description: description ? CircularJSON.stringify(description).replace(/"/g, '') : '',
+        description: description ? CircularJSON.stringify(description).replace(/"/g, '') + ' originatedFrom: ' + originatedFrom : '',
         created_at: new Date().getTime()
     })
         .then(({ dataValues: logData }) => {

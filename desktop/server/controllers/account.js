@@ -76,7 +76,7 @@ exports.updateAccount = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogAdd(request.params.id, error);
+      errorLogAdd(request.params.id, error, `${__filename}/updateAccount`);
       return response.status(500).json(error);
     });
 };
@@ -96,7 +96,7 @@ exports.updateCredentials = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogAdd(request.params.id, error);
+      errorLogAdd(request.params.id, error, `${__filename}/updateCredentials`);
       return response.status(500).json(error);
     });
 };
@@ -114,7 +114,7 @@ exports.updateSyncPath = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogAdd(request.params.id, error);
+      errorLogAdd(request.params.id, error, `${__filename}/update`);
       return response.status(500).json(error);
     });
 };
@@ -156,7 +156,7 @@ exports.addWatchNodes = async (request, response) => {
           })
             .then(() => { })
             .catch(error => {
-              errorLogAdd(request.params.id, error);
+              errorLogAdd(request.params.id, error, `${__filename}/addWatchNodes1`);
             });
           insertedRecords.push(iterator.watchPath);
         }
@@ -166,7 +166,7 @@ exports.addWatchNodes = async (request, response) => {
 
     })
     .catch(error => {
-      errorLogAdd(request.params.id, error);
+      errorLogAdd(request.params.id, error, `${__filename}/addWatchNodes2`);
       return response.status(500).json(error);
     });
 };
@@ -189,7 +189,7 @@ exports.updateSync = async (request, response) => {
       return response.status(200).json({ account_id: request.params.id });
     })
     .catch(error => {
-      errorLogAdd(request.params.id, error);
+      errorLogAdd(request.params.id, error, `${__filename}/updateSync`);
       return response.status(500).json(error);
     });
 };
