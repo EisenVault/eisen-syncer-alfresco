@@ -47,7 +47,7 @@ exports.getFileLatestTime = record => {
   try {
     if (fs.existsSync(record.file_path)) {
       let fileStat = fs.statSync(record.file_path);
-      let fileModifiedTime = exports.convertToUTC(fileStat.mtime.toUTCString());
+      let fileModifiedTime = exports.convertToUTC(fileStat.mtime);
 
       if (fileModifiedTime > record.file_update_at) {
         return fileModifiedTime;
@@ -64,10 +64,22 @@ exports.getFileModifiedTime = filePath => {
   try {
     if (fs.existsSync(filePath)) {
       let fileStat = fs.statSync(filePath);
-      return exports.convertToUTC(fileStat.mtime.toUTCString());
+      return exports.convertToUTC(fileStat.mtime);
     }
   } catch (error) {
     errorLogAdd(0, error, `${__filename}/getFileModifiedTime`);
+  }
+  return 0;
+};
+
+exports.getFileLocalModifiedTime = filePath => {
+  try {
+    if (fs.existsSync(filePath)) {
+      let fileStat = fs.statSync(filePath);
+      return new Date(fileStat.mtime).getTime();
+    }
+  } catch (error) {
+    errorLogAdd(0, error, `${__filename}/getFileLocalModifiedTime`);
   }
   return 0;
 };
