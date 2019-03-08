@@ -10,18 +10,23 @@ const rimraf = require('rimraf');
 
 exports.deferFileModifiedDate = (params, callback) => {
   const { filePath, btime, mtime, atime } = params;
-  Utimes.utimes(filePath, btime, mtime, atime, (error) => {
-    if (error) {
-      return;
-    }
-    if (mtime !== exports.getFileModifiedTime(filePath)) {
-      exports.deferFileModifiedDate(params, callback);
-      return;
-    }
-    if (callback) {
-      callback(params);
-    }
-  })
+  const timer = 10000 + (Math.ceil(Math.random() * 10) * 1000);
+  setTimeout(() => {
+    Utimes.utimes(filePath, btime, mtime, atime, (error) => {
+      if (error) {
+        errorLogAdd(0, error, `${__filename}/deferFileModifiedDate`);
+        return;
+      }
+      const localFileTimestamp = exports.getFileLocalModifiedTime(filePath);
+      if (mtime !== localFileTimestamp) {
+        exports.deferFileModifiedDate(params, callback);
+        return;
+      }
+      if (callback) {
+        callback(params);
+      }
+    })
+  }, timer);
 }
 
 exports.customRimRaf = (path, custom = {}, callback) => {
