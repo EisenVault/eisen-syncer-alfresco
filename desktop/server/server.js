@@ -169,7 +169,7 @@ socket.on("sync-notification", async data => {
 });
 
 process.on("uncaughtException", async (error) => {
-  await errorLogAdd(0, error);
+  await errorLogAdd(0, error, `${__filename}/server.js`);
   logger.error(`An uncaughtException has occurred : ${error}`);
 });
 

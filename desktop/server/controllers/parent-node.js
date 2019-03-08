@@ -30,6 +30,6 @@ exports.getAll = async (request, response) => {
     let data = await http(options);
     return response.status(200).json(JSON.parse(data));
   } catch (error) {
-    errorLogAdd(account.id, error);
+    errorLogAdd(account.id, error, `${__filename}/getAll`);
   }
 };
