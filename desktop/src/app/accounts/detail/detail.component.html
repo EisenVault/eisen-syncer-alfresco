@@ -10,7 +10,8 @@
       <tr>
         <th colspan="2">
           <h5 class="float-left">Instance Settings:</h5>
-          <a class="btn btn-info float-right" title="Edit Instance Settings" href="#" (click)="onEdit($event, '/account-credentials')">Edit</a>
+          <a class="btn btn-info float-right" title="Edit Instance Settings" href="#"
+            (click)="onEdit($event, '/account-credentials')">Edit</a>
         </th>
       </tr>
       <tr>
@@ -25,7 +26,8 @@
       <tr>
         <th colspan="2">
           <h5 class="float-left mt-3">Sync Location:</h5>
-          <a class="btn btn-info float-right" title="Edit Sync Location" href="#" (click)="onEdit($event, '/account-sync-path')">Edit</a>
+          <a class="btn btn-info float-right hide" title="Edit Sync Location" href="#"
+            (click)="onEdit($event, '/account-sync-path')">Edit</a>
         </th>
       </tr>
       <tr>
@@ -54,7 +56,8 @@
 
 
     <h5 class="mt-3 mb-3 float-left">Sync Department(s)</h5>
-    <a class="btn btn-info float-right" title="Edit Sync Departments" href="#" (click)="onEdit($event, '/account-remote-folder/' + accountId)">Edit</a>
+    <a class="btn btn-info float-right" title="Edit Sync Departments" href="#"
+      (click)="onEdit($event, '/account-remote-folder/' + accountId)">Edit</a>
 
     <!-- Department Table -->
     <table class="table table-bordered table-sm" *ngIf="departments && departments.length > 0; else nodepartment">
