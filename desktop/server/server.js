@@ -12,16 +12,25 @@ const _path = require('./helpers/path');
 const _base = require('./helpers/syncers/_base');
 const onevent = require('./helpers/syncers/onevent');
 const worker = require('./helpers/syncers/worker');
-var bugsnag = require("bugsnag");
-bugsnag.register(env.BUGSNAG_KEY);
+var bugsnag = require('@bugsnag/js');
+bugsnag({
+  apiKey: env.BUGSNAG_KEY,
+  onUncaughtException: function (error, report) {
+    errorLogAdd(0, error, `${__filename}/server.js`);
+    logger.error(`An onUncaughtException has occurred : ${error}`);
+  },
+  onUnhandledRejection: function (error, report) {
+    errorLogAdd(0, error, `${__filename}/server.js`);
+    logger.error(`An onUnhandledRejection has occurred : ${error}`);
+  }
+});
+
 const app = express();
 
 // Logger
 const { logger } = require("./helpers/logger");
 
 // Middlewares
-app.use(bugsnag.errorHandler);
-app.use(bugsnag.requestHandler);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -36,7 +45,6 @@ app.use("/sites", require("./routes/site"));
 app.use("/nodes/parents", require("./routes/parent-node"));
 app.use("/nodes", require("./routes/node"));
 app.use("/watchers", require("./routes/watcher"));
-
 
 // Set the timezone in the process env
 process.env.TZ = 'Etc/Greenwich';
@@ -166,11 +174,6 @@ socket.on("sync-notification", async data => {
       });
     }
   }
-});
-
-process.on("uncaughtException", async (error) => {
-  await errorLogAdd(0, error, `${__filename}/server.js`);
-  logger.error(`An uncaughtException has occurred : ${error}`);
 });
 
 app.listen(env.SERVER_PORT, () => {
