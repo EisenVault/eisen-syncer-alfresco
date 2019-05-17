@@ -1,10 +1,10 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform } from "@angular/core";
 
 @Pipe({
-    name: 'cleanString'
+  name: "cleanString"
 })
 export class CleanStringPipe implements PipeTransform {
-    transform(value: any, ...args: any[]) {
-        return value.replace(/\\/g, "");
-    }
+  transform(value: any, ...args: any[]) {
+    return value.replace(/\\/g, "");
+  }
 }

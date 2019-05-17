@@ -6,24 +6,25 @@ const { workerModel } = require("../models/worker");
 const { watcherModel } = require("../models/watcher");
 const { add: errorLogAdd } = require("../models/log-error");
 const remote = require("./remote");
-const worker = require('../helpers/syncers/worker');
-const _path = require('./path');
-const _base = require('./syncers/_base');
-const _ = require('lodash');
-const chokidar = require('chokidar');
+const worker = require("../helpers/syncers/worker");
+const _path = require("./path");
+const _base = require("./syncers/_base");
+const _ = require("lodash");
+const chokidar = require("chokidar");
+const Sequelize = require("sequelize");
 
 // Logger
-const { logger } = require('./logger');
+const { logger } = require("./logger");
 
 let watcher = null;
 
 try {
-  watcher = chokidar.watch('__test', {
+  watcher = chokidar.watch("__test", {
     ignored: /(^|[\/\\])\../,
     ignoreInitial: true,
     ignorePermissionErrors: true,
     awaitWriteFinish: {
-      stabilityThreshold: 2000,
+      stabilityThreshold: 2000
     }
   });
 } catch (error) {
@@ -35,10 +36,11 @@ exports.closeAll = async () => {
   logger.info("Watcher Closed");
   try {
     watcher.close();
-  } catch (error) { }
-}
+  } catch (error) {}
+};
 
 exports.watchAll = async () => {
+  return;
   // Remove all watchers first
   exports.closeAll();
   logger.info("Watcher started");
@@ -59,8 +61,7 @@ exports.watchAll = async () => {
       }
 
       try {
-        watcher
-          .add(account.sync_path);
+        watcher.add(account.sync_path);
         accountSet.add(account);
       } catch (error) {
         return;
@@ -68,37 +69,35 @@ exports.watchAll = async () => {
     }
 
     // Listen to the events
-    watcher
-      .on('all', async (event, path) => {
-        path = _path.toUnix(path);
-        accountSet.forEach(async accountItem => {
-          if (path.indexOf(accountItem.sync_path + '/') !== -1) {
-            switch (event) {
-              case 'add':
-              case 'addDir':
-                logger.info(`${event} - ${path}`);
-                await _upload(accountItem, path);
-                break;
-              case 'change':
-                logger.info(`${event} - ${path}`);
-                await _upload(accountItem, path);
-                break;
-              case 'unlink':
-              case 'unlinkDir':
-                logger.info(`${event} - ${path}`);
-                await _delete(accountItem, path);
-                break;
-            }
+    watcher.on("all", async (event, path) => {
+      path = _path.toUnix(path);
+      accountSet.forEach(async accountItem => {
+        if (path.indexOf(accountItem.sync_path + "/") !== -1) {
+          switch (event) {
+            case "add":
+            case "addDir":
+              logger.info(`${event} - ${path}`);
+              await _upload(accountItem, path);
+              break;
+            case "change":
+              logger.info(`${event} - ${path}`);
+              await _upload(accountItem, path);
+              break;
+            case "unlink":
+            case "unlinkDir":
+              logger.info(`${event} - ${path}`);
+              await _delete(accountItem, path);
+              break;
           }
-        });
+        }
       });
+    });
   }
 };
 
 async function _upload(account, filePath) {
-
   filePath = _path.toUnix(filePath);
-
+  return;
   // Set Sync in progress
   await syncStart({
     account: {
@@ -110,19 +109,42 @@ async function _upload(account, filePath) {
   const watchers = await watcherModel.findAll({
     where: {
       account_id: account.id
-    }
+    },
+    order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
   });
 
   for (const item of watchers) {
     const { dataValues: watcher } = item;
 
     const siteName = _path.getSiteNameFromPath(filePath);
+    const localPath = _path.getLocalPathFromNodePath({
+      account,
+      nodePath: watcher.watch_folder
+    });
 
-    if (watcher.site_name !== siteName || path.basename(filePath) == 'documentLibrary') {
+    // If the site name is different or the filePath does not belong to the watchlist then ignore...
+    if (watcher.site_name !== siteName || !filePath.includes(localPath)) {
       continue;
     }
 
-    // If the node's file_update_at is same as file's updated timestamp 
+    let statSync = null;
+    try {
+      statSync = fs.statSync(filePath);
+    } catch (error) {
+      errorLogAdd(account.id, error, `${__filename}/_upload`);
+      return;
+    }
+
+    // To be used (when its a file) for adding record in worker table
+    // let rootNodeId = watcher.parent_node;
+    // if (statSync.isDirectory()) {
+    //   rootNodeId = watcher.document_library_node;
+    //   // if(path.basename(path.dirname(filePath)) === "documentLibrary") {
+
+    //   // }
+    // }
+
+    // If the node's file_update_at is same as file's updated timestamp
     // OR if download_in_progress is true, bail out (since the file was just downloaded or is still downloading)
     const nodeRecord = await nodeModel.findOne({
       where: {
@@ -134,7 +156,10 @@ async function _upload(account, filePath) {
 
     if (nodeRecord) {
       const { dataValues: node } = { ...nodeRecord };
-      if (node.download_in_progress === true || node.file_update_at === _base.getFileModifiedTime(filePath)) {
+      if (
+        node.download_in_progress === true ||
+        node.file_update_at === _base.getFileModifiedTime(filePath)
+      ) {
         continue;
       }
     }
@@ -149,16 +174,8 @@ async function _upload(account, filePath) {
         }
       });
     } catch (error) {
-      console.log('watcher._upload', error);
+      console.log("watcher._upload", error);
       logger.info("Unable to delete worker record");
-    }
-
-    let statSync = null;
-    try {
-      statSync = fs.statSync(filePath);
-    } catch (error) {
-      errorLogAdd(account.id, error, `${__filename}/_upload`);
-      return;
     }
 
     try {
@@ -171,10 +188,12 @@ async function _upload(account, filePath) {
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
-      if (_.has(error, 'parent.errno') && error.parent.errno !== 19) {
-        console.log('error', error);
+      if (_.has(error, "parent.errno") && error.parent.errno !== 19) {
+        console.log("error", error);
       }
     }
+
+    break;
   } // end for loop
 
   // Stop Sync in progress
@@ -187,7 +206,6 @@ async function _upload(account, filePath) {
 }
 
 async function _delete(account, filePath) {
-
   filePath = _path.toUnix(filePath);
 
   let nodeData = await nodeModel.findOne({
@@ -210,6 +228,19 @@ async function _delete(account, filePath) {
 
     if (_.isEmpty(watcherData)) {
       return;
+    }
+
+    const { dataValues: watcher } = watcherData;
+
+    // If the deleted item is a folder, and its also available in the watchlist, delete it
+    if (record.is_folder === true) {
+      await watcherModel.destroy({
+        where: {
+          account_id: account.id,
+          id: watcher.id,
+          watch_node: record.node_id
+        }
+      });
     }
 
     await remote.deleteServerNode({

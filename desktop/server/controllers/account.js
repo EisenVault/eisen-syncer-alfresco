@@ -3,10 +3,10 @@ const { nodeModel } = require("../models/node");
 const { watcherModel } = require("../models/watcher");
 const { add: errorLogAdd } = require("../models/log-error");
 const watcher = require("../helpers/watcher");
-const rimraf = require('rimraf');
+const rimraf = require("rimraf");
 const crypt = require("../config/crypt");
-const fs = require('fs');
-const _path = require('../helpers/path');
+const fs = require("fs");
+const _path = require("../helpers/path");
 const fileWatcher = require("../helpers/watcher");
 const mkdirp = require("mkdirp");
 
@@ -14,13 +14,14 @@ exports.getAll = async (request, response) => {
   const syncEnabled = request.query.sync_enabled;
   let whereCondition = {};
   if (syncEnabled) {
-    whereCondition.sync_enabled = syncEnabled
+    whereCondition.sync_enabled = syncEnabled;
   }
 
-  accountModel.findAll({
-    attributes: { exclude: ['password'] },
-    where: whereCondition
-  })
+  accountModel
+    .findAll({
+      attributes: { exclude: ["password"] },
+      where: whereCondition
+    })
     .then(data => {
       return response.status(200).json(data.map(data => data.dataValues));
     })
@@ -30,26 +31,28 @@ exports.getAll = async (request, response) => {
 };
 
 exports.getOne = async (request, response) => {
-  accountModel.findByPk(request.params.id, {
-    attributes: { exclude: ['password'] },
-  })
+  accountModel
+    .findByPk(request.params.id, {
+      attributes: { exclude: ["password"] }
+    })
     .then(data => {
       return response.status(200).json(data.dataValues);
     })
     .catch(error => {
       return response.status(400).json(error);
-    })
+    });
 };
 
 exports.addAccount = async (request, response) => {
-  accountModel.create({
-    instance_url: request.body.instance_url.replace(/\/+$/, ""),
-    username: request.body.username,
-    password: crypt.encrypt(request.body.password),
-    sync_path: _path.toUnix(request.body.sync_path),
-    sync_enabled: request.body.sync_enabled,
-    sync_frequency: request.body.sync_frequency
-  })
+  accountModel
+    .create({
+      instance_url: request.body.instance_url.replace(/\/+$/, ""),
+      username: request.body.username,
+      password: crypt.encrypt(request.body.password),
+      sync_path: _path.toUnix(request.body.sync_path),
+      sync_enabled: request.body.sync_enabled,
+      sync_frequency: request.body.sync_frequency
+    })
     .then(data => {
       return response.status(201).json(data.dataValues);
     })
@@ -59,19 +62,23 @@ exports.addAccount = async (request, response) => {
 };
 
 exports.updateAccount = async (request, response) => {
-  accountModel.update({
-    instance_url: request.body.instance_url.replace(/\/+$/, ""),
-    username: request.body.username,
-    password: crypt.encrypt(request.body.password),
-    sync_path: _path.toUnix(request.body.sync_path),
-    sync_enabled: request.body.sync_enabled,
-    sync_frequency: request.body.sync_frequency,
-    updated_at: new Date().getTime()
-  }, {
-      where: {
-        id: request.params.id
+  accountModel
+    .update(
+      {
+        instance_url: request.body.instance_url.replace(/\/+$/, ""),
+        username: request.body.username,
+        password: crypt.encrypt(request.body.password),
+        sync_path: _path.toUnix(request.body.sync_path),
+        sync_enabled: request.body.sync_enabled,
+        sync_frequency: request.body.sync_frequency,
+        updated_at: new Date().getTime()
+      },
+      {
+        where: {
+          id: request.params.id
+        }
       }
-    })
+    )
     .then(() => {
       return response.status(200).json({ account_id: request.params.id });
     })
@@ -82,16 +89,20 @@ exports.updateAccount = async (request, response) => {
 };
 
 exports.updateCredentials = async (request, response) => {
-  accountModel.update({
-    instance_url: request.body.instance_url.replace(/\/+$/, ""),
-    username: request.body.username,
-    password: crypt.encrypt(request.body.password),
-    updated_at: new Date().getTime()
-  }, {
-      where: {
-        id: request.params.id
+  accountModel
+    .update(
+      {
+        instance_url: request.body.instance_url.replace(/\/+$/, ""),
+        username: request.body.username,
+        password: crypt.encrypt(request.body.password),
+        updated_at: new Date().getTime()
+      },
+      {
+        where: {
+          id: request.params.id
+        }
       }
-    })
+    )
     .then(() => {
       return response.status(200).json({ account_id: request.params.id });
     })
@@ -102,14 +113,18 @@ exports.updateCredentials = async (request, response) => {
 };
 
 exports.updateSyncPath = async (request, response) => {
-  accountModel.update({
-    sync_path: _path.toUnix(request.body.sync_path),
-    updated_at: new Date().getTime()
-  }, {
-      where: {
-        id: request.params.id
+  accountModel
+    .update(
+      {
+        sync_path: _path.toUnix(request.body.sync_path),
+        updated_at: new Date().getTime()
+      },
+      {
+        where: {
+          id: request.params.id
+        }
       }
-    })
+    )
     .then(() => {
       return response.status(200).json({ account_id: request.params.id });
     })
@@ -120,16 +135,17 @@ exports.updateSyncPath = async (request, response) => {
 };
 
 exports.addWatchNodes = async (request, response) => {
-  watcherModel.destroy({
-    where: {
-      account_id: request.params.id
-    }
-  })
+  // Remove old watchers first
+  watcherModel
+    .destroy({
+      where: {
+        account_id: request.params.id
+      }
+    })
     .then(async () => {
       let insertedRecords = [];
       for (const iterator of request.body) {
         if (insertedRecords.indexOf(iterator.watchPath) === -1) {
-
           const account = await accountModel.findOne({
             where: {
               id: request.params.id
@@ -146,24 +162,29 @@ exports.addWatchNodes = async (request, response) => {
             mkdirp(localPath);
           }
 
-          watcherModel.create({
-            account_id: request.params.id,
-            site_name: iterator.siteName,
-            site_id: iterator.siteId,
-            document_library_node: iterator.documentLibraryId,
-            watch_node: iterator.watchNodeId,
-            watch_folder: iterator.watchPath,
-          })
-            .then(() => { })
+          watcherModel
+            .create({
+              account_id: request.params.id,
+              site_name: iterator.site.siteId,
+              site_id: iterator.site.id,
+              document_library_node: iterator.documentLibrary,
+              parent_node: iterator.parentId,
+              watch_node: iterator.id,
+              watch_folder: iterator.watchPath
+            })
+            .then(() => {})
             .catch(error => {
-              errorLogAdd(request.params.id, error, `${__filename}/addWatchNodes1`);
+              errorLogAdd(
+                request.params.id,
+                error,
+                `${__filename}/addWatchNodes1`
+              );
             });
           insertedRecords.push(iterator.watchPath);
         }
       }
 
       return response.status(200).json({ account_id: request.params.id });
-
     })
     .catch(error => {
       errorLogAdd(request.params.id, error, `${__filename}/addWatchNodes2`);
@@ -172,17 +193,21 @@ exports.addWatchNodes = async (request, response) => {
 };
 
 exports.updateSync = async (request, response) => {
-  accountModel.update({
-    sync_enabled: request.body.sync_enabled,
-    sync_in_progress: 0,
-    download_in_progress: 0,
-    upload_in_progress: 0,
-    updated_at: new Date().getTime()
-  }, {
-      where: {
-        id: request.params.id
+  accountModel
+    .update(
+      {
+        sync_enabled: request.body.sync_enabled,
+        sync_in_progress: 0,
+        download_in_progress: 0,
+        upload_in_progress: 0,
+        updated_at: new Date().getTime()
+      },
+      {
+        where: {
+          id: request.params.id
+        }
       }
-    })
+    )
     .then(() => {
       // Start watcher now
       fileWatcher.watchAll();
@@ -198,40 +223,51 @@ exports.deleteAccount = async (request, response) => {
   const accountId = request.params.id;
   const forceDelete = request.params.force_delete;
 
-  accountModel.findByPk(accountId)
+  accountModel
+    .findByPk(accountId)
     .then(account => {
-      watcherModel.findAll({
-        where: {
-          account_id: accountId
-        }
-      })
+      watcherModel
+        .findAll({
+          where: {
+            account_id: accountId
+          }
+        })
         .then(watchers => {
           // Permanantly delete account, files and all node data from the db
-          if (forceDelete === 'true') {
+          if (forceDelete === "true") {
             for (const watcher of watchers) {
               // Remove the files physically...
-              rimraf(account.dataValues.sync_path + '/' + watcher.dataValues.site_name, () => { });
+              rimraf(
+                account.dataValues.sync_path +
+                  "/" +
+                  watcher.dataValues.site_name,
+                () => {}
+              );
             }
           }
 
-          accountModel.destroy({
-            where: {
-              id: accountId
-            }
-          })
+          accountModel
+            .destroy({
+              where: {
+                id: accountId
+              }
+            })
             .then(() => {
-              nodeModel.destroy({
-                where: {
-                  account_id: accountId
-                }
-              })
-                .then(() => {
-                  watcherModel.destroy({
-                    where: {
-                      account_id: accountId
-                    }
-                  }).then()
+              nodeModel
+                .destroy({
+                  where: {
+                    account_id: accountId
+                  }
                 })
+                .then(() => {
+                  watcherModel
+                    .destroy({
+                      where: {
+                        account_id: accountId
+                      }
+                    })
+                    .then();
+                });
             })
             .catch(error => console.log(error));
 

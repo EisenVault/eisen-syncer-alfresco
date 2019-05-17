@@ -3,16 +3,17 @@ const _path = require("../path");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const { nodeModel } = require("../../models/node");
+const { watcherModel } = require("../../models/watcher");
 const remote = require("../remote");
 const { add: errorLogAdd } = require("../../models/log-error");
-const Utimes = require('@ronomon/utimes');
-const rimraf = require('rimraf');
+const Utimes = require("@ronomon/utimes");
+const rimraf = require("rimraf");
 
 exports.deferFileModifiedDate = (params, callback) => {
   const { filePath, btime, mtime, atime } = params;
-  const timer = 10000 + (Math.ceil(Math.random() * 10) * 1000);
+  const timer = 10000 + Math.ceil(Math.random() * 10) * 1000;
   setTimeout(() => {
-    Utimes.utimes(filePath, btime, mtime, atime, (error) => {
+    Utimes.utimes(filePath, btime, mtime, atime, error => {
       if (error) {
         errorLogAdd(0, error, `${__filename}/deferFileModifiedDate`);
         return;
@@ -25,15 +26,15 @@ exports.deferFileModifiedDate = (params, callback) => {
       if (callback) {
         callback(params);
       }
-    })
+    });
   }, timer);
-}
+};
 
 exports.customRimRaf = (path, custom = {}, callback) => {
   rimraf(path, () => {
     callback(custom);
   });
-}
+};
 
 /**
  * Returns the latest modified date between the physical file vs its record in db.
@@ -111,21 +112,59 @@ exports.getInstanceUrl = instance_url => {
 exports.isStalledDownload = async record => {
   const now = exports.getCurrentTime();
   // Check if a file is stalled for more than 20 minutes
-  if (((now - record.last_downloaded_at) / 60000) > 20) {
+  if ((now - record.last_downloaded_at) / 60000 > 20) {
     return true;
   }
   return false;
-}
+};
 
 exports.createItemOnLocal = async params => {
   const account = params.account;
   const watcher = params.watcher;
   const node = params.node;
   const currentPath = params.currentPath;
+  let socketData = params.socketData || {};
+
+  // If the Realtime notification couldnt send the data, we will rely on the onDemand helper
+  if (!socketData.node_id) {
+    socketData = {
+      account_id: watcher.account_id,
+      site_id: watcher.site_name,
+      site_uuid: watcher.site_id,
+      document_library_uuid: watcher.document_library_node,
+      parent_uuid: node.parentId,
+      node_id: node.id,
+      path: `${node.path.name}/${node.name}`,
+      is_file: node.isFile,
+      is_folder: node.isFolder
+    };
+  }
+
+  // Add to the watcher table
+  if (socketData.node_id) {
+    let watchNode = socketData.node_id,
+      watchFolder = socketData.path;
+
+    if (socketData.is_file === true) {
+      watchNode = socketData.parent_uuid;
+      watchFolder = path.dirname(socketData.path);
+    }
+
+    try {
+      await watcherModel.create({
+        account_id: account.id,
+        site_name: socketData.site_id,
+        site_id: socketData.site_uuid,
+        document_library_node: socketData.document_library_uuid,
+        parent_node: socketData.parent_uuid,
+        watch_node: watchNode,
+        watch_folder: watchFolder
+      });
+    } catch (error) {}
+  }
 
   try {
     if (node.isFolder === true) {
-
       // If the child is a folder, create the folder first
       if (!fs.existsSync(currentPath)) {
         mkdirp.sync(currentPath);
@@ -136,7 +175,7 @@ exports.createItemOnLocal = async params => {
         const atime = undefined;
 
         setTimeout(() => {
-          Utimes.utimes(currentPath, btime, mtime, atime, async () => { });
+          Utimes.utimes(currentPath, btime, mtime, atime, async () => {});
         }, 1000);
       }
 
@@ -167,24 +206,27 @@ exports.createItemOnLocal = async params => {
             download_in_progress: false,
             upload_in_progress: false
           });
-        } catch (error) { }
+        } catch (error) {}
         return;
       }
 
       const { dataValues: nodeRecord } = { ...nodeData };
 
       // If there are any record that has the node_id missing, we will update it.
-      if (nodeRecord.node_id === '') {
-        await nodeModel.update({
-          node_id: node.id,
-          remote_folder_path: node.path.name
-        }, {
+      if (nodeRecord.node_id === "") {
+        await nodeModel.update(
+          {
+            node_id: node.id,
+            remote_folder_path: node.path.name
+          },
+          {
             where: {
               account_id: account.id,
               site_id: watcher.site_id,
               file_path: _path.toUnix(currentPath)
             }
-          });
+          }
+        );
       }
 
       return;
@@ -204,7 +246,5 @@ exports.createItemOnLocal = async params => {
     errorLogAdd(account.id, error, `${__filename}/createItemLocal`);
   }
 };
-
-
 
 exports.sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

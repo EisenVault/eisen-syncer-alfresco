@@ -72,6 +72,20 @@ app.on("ready", () => {
     }
   });
 
+  // Make single instance application
+  var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+  
+  if (shouldQuit) {
+    app.quit();
+    return;
+  }
+
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
 
