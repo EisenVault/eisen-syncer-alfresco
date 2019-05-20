@@ -125,12 +125,26 @@ exports.move = async params => {
           }
         });
 
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account: custom.account,
+          localPath: custom.node.file_path
+        });
+
         // Delete the folder record from the watcher table
         await watcherModel.destroy({
           where: {
             account_id: custom.account.id,
-            watch_node: custom.node.node_id,
-            watch_folder: custom.node.file_path
+            site_id: custom.node.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
+              }
+            ]
           }
         });
       }
@@ -222,12 +236,26 @@ exports.move = async params => {
           }
         });
 
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account: custom.account,
+          localPath: custom.node.file_path
+        });
+
         // Delete the folder record from the watcher table
         await watcherModel.destroy({
           where: {
             account_id: custom.account.id,
-            watch_node: custom.node.node_id,
-            watch_folder: custom.node.file_path
+            site_id: custom.node.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
+              }
+            ]
           }
         });
 
@@ -291,7 +319,8 @@ exports.delete = async params => {
 
   const custom = {
     node,
-    watcher
+    watcher,
+    account: params.account
   };
 
   // If node is deleted on server, delete the file on local
@@ -307,10 +336,25 @@ exports.delete = async params => {
 
     // Delete the folder record from the watcher table
     if (custom.node.is_folder === true) {
+      const localToRemotePath = _path.getRemotePathFromLocalPath({
+        account: custom.account,
+        localPath: custom.node.file_path
+      });
+
       await watcherModel.destroy({
         where: {
           account_id: custom.node.account_id,
-          watch_node: custom.node.node_id
+          site_id: custom.node.site_id,
+          [Sequelize.Op.or]: [
+            {
+              watch_folder: {
+                [Sequelize.Op.like]: localToRemotePath + "%"
+              }
+            },
+            {
+              watch_folder: localToRemotePath
+            }
+          ]
         }
       });
     }

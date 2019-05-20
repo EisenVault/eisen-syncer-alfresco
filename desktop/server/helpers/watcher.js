@@ -1,3 +1,5 @@
+const Sequelize = require("sequelize");
+const chokidar = require("chokidar");
 const fs = require("fs");
 const path = require("path");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
@@ -10,8 +12,6 @@ const worker = require("../helpers/syncers/worker");
 const _path = require("./path");
 const _base = require("./syncers/_base");
 const _ = require("lodash");
-const chokidar = require("chokidar");
-const Sequelize = require("sequelize");
 
 // Logger
 const { logger } = require("./logger");
@@ -40,7 +40,6 @@ exports.closeAll = async () => {
 };
 
 exports.watchAll = async () => {
-  return;
   // Remove all watchers first
   exports.closeAll();
   logger.info("Watcher started");
@@ -97,7 +96,7 @@ exports.watchAll = async () => {
 
 async function _upload(account, filePath) {
   filePath = _path.toUnix(filePath);
-  return;
+
   // Set Sync in progress
   await syncStart({
     account: {
@@ -108,7 +107,10 @@ async function _upload(account, filePath) {
 
   const watchers = await watcherModel.findAll({
     where: {
-      account_id: account.id
+      account_id: account.id,
+      document_library_node: {
+        [Sequelize.Op.not]: null
+      }
     },
     order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
   });
@@ -123,7 +125,10 @@ async function _upload(account, filePath) {
     });
 
     // If the site name is different or the filePath does not belong to the watchlist then ignore...
-    if (watcher.site_name !== siteName || !filePath.includes(localPath)) {
+    if (
+      watcher.site_name !== siteName ||
+      !filePath.includes(path.dirname(localPath))
+    ) {
       continue;
     }
 
@@ -134,15 +139,6 @@ async function _upload(account, filePath) {
       errorLogAdd(account.id, error, `${__filename}/_upload`);
       return;
     }
-
-    // To be used (when its a file) for adding record in worker table
-    // let rootNodeId = watcher.parent_node;
-    // if (statSync.isDirectory()) {
-    //   rootNodeId = watcher.document_library_node;
-    //   // if(path.basename(path.dirname(filePath)) === "documentLibrary") {
-
-    //   // }
-    // }
 
     // If the node's file_update_at is same as file's updated timestamp
     // OR if download_in_progress is true, bail out (since the file was just downloaded or is still downloading)
@@ -169,7 +165,6 @@ async function _upload(account, filePath) {
       await workerModel.destroy({
         where: {
           account_id: account.id,
-          watcher_id: watcher.id,
           file_path: filePath
         }
       });
@@ -181,7 +176,6 @@ async function _upload(account, filePath) {
     try {
       await workerModel.create({
         account_id: account.id,
-        watcher_id: watcher.id,
         file_path: filePath,
         root_node_id: watcher.document_library_node,
         priority: statSync.isDirectory() ? 2 : 1
@@ -234,11 +228,25 @@ async function _delete(account, filePath) {
 
     // If the deleted item is a folder, and its also available in the watchlist, delete it
     if (record.is_folder === true) {
+      const localToRemotePath = _path.getRemotePathFromLocalPath({
+        account,
+        localPath: record.file_path
+      });
+
       await watcherModel.destroy({
         where: {
           account_id: account.id,
-          id: watcher.id,
-          watch_node: record.node_id
+          site_id: record.site_id,
+          [Sequelize.Op.or]: [
+            {
+              watch_folder: {
+                [Sequelize.Op.like]: localToRemotePath + "%"
+              }
+            },
+            {
+              watch_folder: localToRemotePath
+            }
+          ]
         }
       });
     }

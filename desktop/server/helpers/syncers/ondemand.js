@@ -19,6 +19,7 @@ const { logger } = require("../logger");
 
 const nodeMap = new Map();
 exports.recursiveDownload = async params => {
+  return;
   const account = params.account;
   const watcher = params.watcher;
   const sourceNodeId = params.sourceNodeId; // the nodeid to download
@@ -173,8 +174,6 @@ exports._processDownload = async params => {
   let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
   const currentPath = path.join(relevantPath, node.name);
 
-  logger.info(`\n Attempting to download ${currentPath} \n`);
-
   // Check if the node is present in the database
   let recordData = await nodeModel.findOne({
     where: {
@@ -268,12 +267,26 @@ exports._processDownload = async params => {
           }
         });
 
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account,
+          localPath: record.file_path
+        });
+
         // If the deleted item is a folder, and its also available in the watchlist, delete it
         await watcherModel.destroy({
           where: {
             account_id: account.id,
-            id: watcher.id,
-            watch_node: record.node_id
+            site_id: watcher.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
+              }
+            ]
           }
         });
       }
@@ -305,17 +318,6 @@ exports._processDownload = async params => {
       fileRenamed === false
     ) {
       logger.info("Deleting on server, because deleted on local" + currentPath);
-
-      // If the deleted item is a folder, and its also available in the watchlist, delete it
-      if (record.is_folder === true) {
-        await watcherModel.destroy({
-          where: {
-            account_id: account.id,
-            watch_node: record.node_id
-          }
-        });
-      }
-
       await remote.deleteServerNode({
         account,
         record
@@ -344,6 +346,7 @@ exports._processDownload = async params => {
  * }
  */
 exports.recursiveUpload = async params => {
+  return;
   const account = params.account;
   const watcher = params.watcher;
   let rootFolder = params.rootFolder;
@@ -361,7 +364,6 @@ exports.recursiveUpload = async params => {
     try {
       await workerModel.create({
         account_id: account.id,
-        watcher_id: watcher.id,
         file_path: _path.toUnix(filePath),
         root_node_id: watcher.document_library_node,
         priority: 0

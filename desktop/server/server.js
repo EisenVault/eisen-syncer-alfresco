@@ -1,4 +1,5 @@
 const express = require("express");
+const Sequelize = require("sequelize");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const io = require("socket.io-client");
@@ -151,7 +152,8 @@ socket.on("sync-notification", async data => {
       where: {
         account_id: account.id,
         site_name: siteName
-      }
+      },
+      order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
     });
 
     let watcherData;

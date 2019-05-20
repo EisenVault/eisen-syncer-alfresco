@@ -2,6 +2,7 @@
 const Sequelize = require("sequelize");
 const fs = require("fs");
 const path = require("path");
+const _path = require("./path");
 const mkdirp = require("mkdirp");
 const request = require("request-promise-native");
 const requestNative = require("request");
@@ -12,7 +13,6 @@ const { watcherModel } = require("../models/watcher");
 const token = require("./token");
 const _base = require("./syncers/_base");
 const Utimes = require("@ronomon/utimes");
-const _path = require("./path");
 const promisify = require("./promisify");
 const _ = require("lodash");
 
@@ -162,7 +162,9 @@ exports.deleteServerNode = async params => {
             node_id: record.node_id
           }
         });
-      } else if (record.is_folder === true) {
+      }
+
+      if (record.is_folder === true) {
         await nodeModel.destroy({
           where: {
             account_id: account.id,
@@ -174,6 +176,29 @@ exports.deleteServerNode = async params => {
               },
               {
                 local_folder_path: record.file_path
+              }
+            ]
+          }
+        });
+
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account,
+          localPath: record.file_path
+        });
+
+        // If the deleted item is a folder, and its also available in the watchlist, delete it
+        await watcherModel.destroy({
+          where: {
+            account_id: account.id,
+            site_id: record.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
               }
             ]
           }
@@ -673,8 +698,26 @@ exports.upload = async params => {
         return;
       }
 
-      if (response.statusCode == 201) {
+      if (response.statusCode === 201) {
         var node = JSON.parse(body);
+
+        // As soon as the response is received, update the node_id and remote_folder_path
+        // File date modification done, lets update record in the db
+        try {
+          await nodeModel.update(
+            {
+              node_id: node.entry.id,
+              remote_folder_path: node.entry.path.name
+            },
+            {
+              where: {
+                account_id: account.id,
+                site_id: watcher.site_id,
+                file_path: _path.toUnix(filePath)
+              }
+            }
+          );
+        } catch (error) {}
 
         // Update the time meta properties of the downloaded file
         const btime = _base.convertToUTC(node.entry.createdAt);
@@ -701,8 +744,6 @@ exports.upload = async params => {
             try {
               await nodeModel.update(
                 {
-                  node_id: params.node.entry.id,
-                  remote_folder_path: params.node.entry.path.name,
                   file_update_at: _base.convertToUTC(
                     params.node.entry.modifiedAt
                   ),

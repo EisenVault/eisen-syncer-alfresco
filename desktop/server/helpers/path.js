@@ -35,3 +35,21 @@ exports.getLocalPathFromNodePath = params => {
 
   return exports.toUnix(path.join(account.sync_path, relevantPath));
 };
+
+/**
+ * Converts the local path to an equivilant rempote path
+ * Eg: Converts
+ * /home/test-01/documentLibrary/0001.jpg
+ * to
+ * /Company Home/Sites/test-01/documentLibrary/0001.jpg
+ */
+exports.getRemotePathFromLocalPath = params => {
+  const { account, localPath } = params;
+  const explode = localPath.split("/");
+  const sitename = explode.splice(explode.indexOf("documentLibrary") - 1, 1)[0];
+  const relevantPath = localPath
+    .substring(localPath.indexOf(`${sitename}/documentLibrary`))
+    .replace(account.sync_path, "");
+
+  return exports.toUnix(path.join("/Company Home/Sites/", relevantPath));
+};
