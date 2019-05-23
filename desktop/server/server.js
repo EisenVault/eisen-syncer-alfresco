@@ -57,18 +57,18 @@ app.use("/watchers", require("./routes/watcher"));
 process.env.TZ = "Etc/Greenwich";
 process.env.UV_THREADPOOL_SIZE = 128;
 
-(async () => {
+(() => {
   accountModel
     .findAll({
       where: {
         sync_enabled: 1
       }
     })
-    .then(accounts => {
+    .then(async accounts => {
       // For every account, set the sync progress to compeleted
       for (const { dataValues: account } of accounts) {
         if (account && account.id) {
-          accountModel.update(
+          await accountModel.update(
             {
               sync_in_progress: 0,
               download_in_progress: 0,

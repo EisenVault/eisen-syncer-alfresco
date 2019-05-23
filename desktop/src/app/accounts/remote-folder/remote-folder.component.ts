@@ -154,7 +154,6 @@ export class RemoteFolderComponent implements OnInit {
           });
 
           this.isLoading = false;
-          console.log("selectedList Count", this.selectedList.length);
         });
     });
   }
