@@ -12,6 +12,7 @@ import { ParentNodeService } from "./services/parent-node.service";
 import { SettingService } from "./services/setting.service";
 import { SyncerService } from "./services/syncer.service";
 
+import { TreeComponent } from "./tree/tree.component";
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
 
@@ -24,9 +25,9 @@ import { ErrorComponent } from "./logs/error/error.component";
 import { ManageComponent } from "./accounts/manage/manage.component";
 import { SharedModule } from "./shared/shared.module";
 import { SettingsComponent } from "./settings/settings.component";
-import { DetailComponent } from './accounts/detail/detail.component';
-import { CredentialsComponent } from './accounts/credentials/credentials.component';
-import { SyncPathComponent } from './accounts/sync-path/sync-path.component';
+import { DetailComponent } from "./accounts/detail/detail.component";
+import { CredentialsComponent } from "./accounts/credentials/credentials.component";
+import { SyncPathComponent } from "./accounts/sync-path/sync-path.component";
 
 @NgModule({
   declarations: [
@@ -41,7 +42,8 @@ import { SyncPathComponent } from './accounts/sync-path/sync-path.component';
     SettingsComponent,
     DetailComponent,
     CredentialsComponent,
-    SyncPathComponent
+    SyncPathComponent,
+    TreeComponent
   ],
   imports: [
     BrowserModule,

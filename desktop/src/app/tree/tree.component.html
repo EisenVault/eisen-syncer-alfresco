@@ -1,0 +1,50 @@
+<ul *ngIf="treeData">
+  <li *ngFor="let node of treeData">
+    <span
+      class="pointer"
+      *ngIf="node.children != 0"
+      (click)="toggleChild(node)"
+    >
+      <i
+        *ngIf="node.showChildren; else caret_right"
+        class="fas fa-caret-down"
+      ></i>
+      <ng-template #caret_right>
+        <i class="fas fa-caret-right"></i>
+      </ng-template>
+      &nbsp;
+    </span>
+    <input
+      type="checkbox"
+      [checked]="shouldBeChecked(node)"
+      (change)="showNode(node, $event)"
+      *ngIf="node.checkboxVisible"
+    />
+    <span class="pointer" (click)="showNode(node, { isChecked: false })">
+      <i
+        *ngIf="!node.checkboxVisible"
+        [ngClass]="
+          isPreSelectedWatcherList(node.value)
+            ? 'fas fa-folder highlight'
+            : 'fas fa-folder'
+        "
+      ></i>
+      <i
+        *ngIf="node.checkboxVisible === true"
+        [ngClass]="
+          isPreSelectedWatcherList(node.value)
+            ? 'fas fa-folder pl highlight'
+            : 'fas fa-folder pl'
+        "
+      ></i>
+      {{ node.name }}
+    </span>
+    <app-tree
+      *ngIf="node.showChildren"
+      [treeData]="node.children"
+      (selectedNode)="onSelectedChange($event)"
+      [preSelectedSiteIdList]="preSelectedSiteIdList"
+      [preSelectedWatcherList]="preSelectedWatcherList"
+    ></app-tree>
+  </li>
+</ul>

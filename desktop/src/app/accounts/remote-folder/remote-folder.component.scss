@@ -1,18 +1,19 @@
 .list-container {
-    height: 30%;
-    overflow: auto;
-    position: relative;
+  height: 300px;
+  overflow: scroll;
+  position: relative;
+  width: 100%;
 }
 
-.modal-loader{
-    position: absolute; 
-    width: 100%; 
-    height: 100%;  
-    background-color: rgba(250, 250, 250, 0.8);  
-    z-index: 150;
-    display: flex;
+.modal-loader {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(250, 250, 250, 0.8);
+  z-index: 150;
+  display: flex;
 
-    .spinner {
-        margin: auto;
-    }
+  .spinner {
+    margin: auto;
+  }
 }

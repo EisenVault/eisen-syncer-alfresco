@@ -1,13 +1,13 @@
-const Sequelize = require('sequelize');
+const Sequelize = require("sequelize");
 const fs = require("fs");
 const path = require("path");
 const _path = require("../path");
 const { nodeModel } = require("../../models/node");
 const { watcherModel } = require("../../models/watcher");
 const _base = require("./_base");
-const _ = require('lodash');
-const ondemand = require('./ondemand');
-const fileWatcher = require('../watcher');
+const _ = require("lodash");
+const ondemand = require("./ondemand");
+const fileWatcher = require("../watcher");
 
 exports.create = async ({ account, watcherData, socketData, localPath }) => {
   if (socketData.is_file === true && fs.existsSync(localPath)) {
@@ -28,17 +28,12 @@ exports.create = async ({ account, watcherData, socketData, localPath }) => {
       createdAt: socketData.createdAt,
       modifiedAt: socketData.modifiedAt
     },
-    currentPath: localPath
+    currentPath: localPath,
+    socketData
   });
-}
+};
 
-exports.update = async ({
-  account,
-  watcherData,
-  socketData,
-  localPath
-}) => {
-
+exports.update = async ({ account, watcherData, socketData, localPath }) => {
   const nodeData = await nodeModel.findOne({
     where: {
       account_id: account.id,
@@ -52,8 +47,11 @@ exports.update = async ({
     return;
   }
 
-  if (fs.existsSync(localPath)
-    && _base.convertToUTC(socketData.modifiedAt) < _base.getFileModifiedTime(localPath)) {
+  if (
+    fs.existsSync(localPath) &&
+    _base.convertToUTC(socketData.modifiedAt) <
+      _base.getFileModifiedTime(localPath)
+  ) {
     return;
   }
 
@@ -71,16 +69,16 @@ exports.update = async ({
       createdAt: socketData.createdAt,
       modifiedAt: socketData.modifiedAt
     },
-    currentPath: localPath
+    currentPath: localPath,
+    socketData
   });
-}
+};
 
 exports.move = async params => {
   const { account, watcherData, socketData, localPath } = params;
 
   // If moved to a different site that isnt watched, just delete the node
-  if (watcherData === null) {
-
+  if (typeof watcherData === "undefined") {
     const nodeData = await nodeModel.findOne({
       where: {
         account_id: account.id,
@@ -100,7 +98,7 @@ exports.move = async params => {
       account
     };
 
-    _base.customRimRaf(node.file_path, custom, async (custom) => {
+    _base.customRimRaf(node.file_path, custom, async custom => {
       // Delete the record from the DB
       if (custom.node.is_file === true) {
         await nodeModel.destroy({
@@ -122,6 +120,29 @@ exports.move = async params => {
               },
               {
                 local_folder_path: custom.node.file_path
+              }
+            ]
+          }
+        });
+
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account: custom.account,
+          localPath: custom.node.file_path
+        });
+
+        // Delete the folder record from the watcher table
+        await watcherModel.destroy({
+          where: {
+            account_id: custom.account.id,
+            site_id: custom.node.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
               }
             ]
           }
@@ -167,7 +188,7 @@ exports.move = async params => {
       localDirectoryPath
     };
 
-    _base.customRimRaf(node.file_path, custom, async (custom) => {
+    _base.customRimRaf(node.file_path, custom, async custom => {
       // Resume file watching
       fileWatcher.watchAll();
 
@@ -194,9 +215,9 @@ exports.move = async params => {
             createdAt: custom.socketData.createdAt,
             modifiedAt: custom.socketData.modifiedAt
           },
-          currentPath: custom.localPath
+          currentPath: custom.localPath,
+          socketData
         }); // end createItem
-
       } else if (custom.node.is_folder === true) {
         // Delete all records that are relavant to the file/folder path
         await nodeModel.destroy({
@@ -210,6 +231,29 @@ exports.move = async params => {
               },
               {
                 local_folder_path: custom.node.file_path
+              }
+            ]
+          }
+        });
+
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account: custom.account,
+          localPath: custom.node.file_path
+        });
+
+        // Delete the folder record from the watcher table
+        await watcherModel.destroy({
+          where: {
+            account_id: custom.account.id,
+            site_id: custom.node.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
               }
             ]
           }
@@ -229,7 +273,8 @@ exports.move = async params => {
             createdAt: custom.socketData.createdAt,
             modifiedAt: custom.socketData.modifiedAt
           },
-          currentPath: custom.localDirectoryPath
+          currentPath: custom.localDirectoryPath,
+          socketData
         });
 
         // Download all files inside folder
@@ -241,9 +286,8 @@ exports.move = async params => {
         });
       }
     });
-
   }
-}
+};
 
 exports.delete = async params => {
   const nodeData = await nodeModel.findOne({
@@ -275,11 +319,12 @@ exports.delete = async params => {
 
   const custom = {
     node,
-    watcher
+    watcher,
+    account: params.account
   };
 
   // If node is deleted on server, delete the file on local
-  _base.customRimRaf(node.file_path, custom, async (custom) => {
+  _base.customRimRaf(node.file_path, custom, async custom => {
     // Delete the node record
     await nodeModel.destroy({
       where: {
@@ -288,7 +333,32 @@ exports.delete = async params => {
         node_id: custom.node.node_id
       }
     });
+
+    // Delete the folder record from the watcher table
+    if (custom.node.is_folder === true) {
+      const localToRemotePath = _path.getRemotePathFromLocalPath({
+        account: custom.account,
+        localPath: custom.node.file_path
+      });
+
+      await watcherModel.destroy({
+        where: {
+          account_id: custom.node.account_id,
+          site_id: custom.node.site_id,
+          [Sequelize.Op.or]: [
+            {
+              watch_folder: {
+                [Sequelize.Op.like]: localToRemotePath + "%"
+              }
+            },
+            {
+              watch_folder: localToRemotePath
+            }
+          ]
+        }
+      });
+    }
   });
 
   return;
-}
+};

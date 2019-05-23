@@ -13,7 +13,7 @@ let mainWindow, tray;
 let forceQuit = false;
 
 // Set the max memory size of the app
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
 
 ipcMain.on("autolaunch", (event, arg) => {
   const autoLauncher = new AutoLaunch({
@@ -21,8 +21,9 @@ ipcMain.on("autolaunch", (event, arg) => {
     mac: { useLaunchAgent: true }
   });
 
-  autoLauncher.isEnabled()
-    .then(function (isEnabled) {
+  autoLauncher
+    .isEnabled()
+    .then(function(isEnabled) {
       if (!isEnabled && arg == 1) {
         autoLauncher.enable();
       } else {
@@ -30,14 +31,13 @@ ipcMain.on("autolaunch", (event, arg) => {
       }
       event.returnValue = arg;
     })
-    .catch(function (error) {
-      console.log('autolaunch_error', error);
+    .catch(function(error) {
+      console.log("autolaunch_error", error);
     });
 });
 
 // Listen for app to be ready
 app.on("ready", () => {
-
   // Hide on taskbar for mac
   if (process.platform == "darwin") {
     // app.dock.hide();
@@ -64,18 +64,42 @@ app.on("ready", () => {
     width: 1300,
     height: 700,
     skipTaskbar: true,
-    title: "EisenVaultSync - A two-way file sync desktop application for EisenVault DMS",
+    title:
+      "EisenVaultSync - A two-way file sync desktop application for EisenVault DMS",
     show: false,
     icon: path.join(__dirname, "src/assets/logos/256.png"),
     webPreferences: {
-      backgroundThrottling: false,
+      backgroundThrottling: false
     }
   });
+
+  // Make single instance application
+  var shouldQuit = app.makeSingleInstance(function(
+    commandLine,
+    workingDirectory
+  ) {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  if (shouldQuit) {
+    dialog.showMessageBox(mainWindow, {
+      type: "error",
+      title: "App already running",
+      message: `An instance of EisenVaultSync is already running.`,
+      icon: path.join(__dirname, "src/assets/logos/256.png")
+    });
+    app.quit();
+    return;
+  }
 
   // Load system tray
   tray = new Tray(path.join(__dirname, "/src/assets/logos/tray.png"));
 
-  tray.on('right-click', () => {
+  tray.on("right-click", () => {
     mainWindow.loadURL(
       url.format({
         pathname: path.join(__dirname + "/dist/index.html"),
@@ -90,14 +114,15 @@ app.on("ready", () => {
   // Blink the tray icon if the sync is in progress...
   var blinker = null;
   var on = false;
-  ipcMain.on('isSyncing', (event, isSyncing) => {
-
+  ipcMain.on("isSyncing", (event, isSyncing) => {
     if (isSyncing === true && blinker === null) {
-      blinker = setInterval(function () {
+      blinker = setInterval(function() {
         if (on) {
           tray.setImage(path.join(__dirname, `/src/assets/logos/tray.png`));
         } else {
-          tray.setImage(path.join(__dirname, `/src/assets/logos/tray_grey.png`));
+          tray.setImage(
+            path.join(__dirname, `/src/assets/logos/tray_grey.png`)
+          );
         }
         on = !on;
       }, 500);
@@ -189,11 +214,13 @@ app.on("ready", () => {
         {
           label: "Open Log File",
           click() {
-            const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
+            const logPath = path
+              .join(__dirname + "/server/logs/output.log")
+              .replace("app.asar", "app.asar.unpacked");
             const open = shell.openItem(logPath);
             if (!open) {
               dialog.showMessageBox(mainWindow, {
-                type: 'error',
+                type: "error",
                 title: "Error loading log",
                 message: `${logPath} was not found`,
                 icon: path.join(__dirname, "src/assets/logos/256.png")
@@ -204,11 +231,13 @@ app.on("ready", () => {
         {
           label: "Open Log Folder",
           click() {
-            const logPath = path.join(__dirname + "/server/logs/output.log").replace('app.asar', 'app.asar.unpacked');
+            const logPath = path
+              .join(__dirname + "/server/logs/output.log")
+              .replace("app.asar", "app.asar.unpacked");
             const open = shell.showItemInFolder(logPath);
             if (!open) {
               dialog.showMessageBox(mainWindow, {
-                type: 'error',
+                type: "error",
                 title: "Error loading log",
                 message: `${logPath} was not found`,
                 icon: path.join(__dirname, "src/assets/logos/256.png")
@@ -268,19 +297,19 @@ app.on("ready", () => {
     })
   );
 
-  mainWindow.on("close", function (e) {
+  mainWindow.on("close", function(e) {
     if (!forceQuit) {
       e.preventDefault();
       mainWindow.hide();
     }
   });
 
-  mainWindow.on("closed", function () {
+  mainWindow.on("closed", function() {
     mainWindow = null;
     app.quit();
   });
 
-  app.on("activate-with-no-open-windows", function () {
+  app.on("activate-with-no-open-windows", function() {
     mainWindow.show();
   });
 

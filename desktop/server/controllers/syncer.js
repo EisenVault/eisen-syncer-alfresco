@@ -3,15 +3,23 @@ const ondemand = require("../helpers/syncers/ondemand");
 const { accountModel, syncStart, syncComplete } = require("../models/account");
 const { watcherModel } = require("../models/watcher");
 const { logger } = require("../helpers/logger");
-const path = require('path');
+const path = require("path");
+const Sequelize = require("sequelize");
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
+
   logger.info("DOWNLOAD API START");
 
-  const { dataValues: account } = await accountModel.findByPk(request.params.accountId);
+  const { dataValues: account } = await accountModel.findByPk(
+    request.params.accountId
+  );
 
-  if (!account || account.sync_enabled === false || account.download_in_progress === true) {
+  if (
+    !account ||
+    account.sync_enabled === false ||
+    account.download_in_progress === true
+  ) {
     logger.info("Download Bailed");
     return false;
   }
@@ -60,12 +68,17 @@ exports.download = async (request, response) => {
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
+
   logger.info("UPLOAD API START");
 
   let accountData = await accountModel.findByPk(request.body.account_id);
   const { dataValues: account } = { ...accountData };
 
-  if (!account || account.sync_enabled == 0 || account.upload_in_progress === true) {
+  if (
+    !account ||
+    account.sync_enabled == 0 ||
+    account.upload_in_progress === true
+  ) {
     logger.info("Upload Bailed");
     return false;
   }
@@ -110,11 +123,11 @@ exports.upload = async (request, response) => {
 
     logger.info("UPLOAD API END");
 
-    return response
-      .status(200)
-      .json(await accountModel.findByPk(request.body.account_id, {
-        attributes: { exclude: ['password'] },
-      }));
+    return response.status(200).json(
+      await accountModel.findByPk(request.body.account_id, {
+        attributes: { exclude: ["password"] }
+      })
+    );
   } catch (error) {
     // Set the sync completed time and also set issync flag to off
     syncComplete({
@@ -125,4 +138,3 @@ exports.upload = async (request, response) => {
     return false;
   }
 };
-

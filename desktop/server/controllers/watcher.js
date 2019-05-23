@@ -8,11 +8,13 @@ exports.getAll = async (request, response) => {
     where: {
       account_id: accountId
     },
-    include: [{
-      model: accountModel,
-      attributes: { exclude: ['password'] }
-    }],
-  })
+    include: [
+      {
+        model: accountModel,
+        attributes: { exclude: ["password"] }
+      }
+    ]
+  });
 
   return response.status(200).json(watchers);
 };
