@@ -37,7 +37,7 @@ exports.getLocalPathFromNodePath = params => {
 };
 
 /**
- * Converts the local path to an equivilant rempote path
+ * Converts the local path to an equivilant remote path
  * Eg: Converts
  * /home/test-01/documentLibrary/0001.jpg
  * to
