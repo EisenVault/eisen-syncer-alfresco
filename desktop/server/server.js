@@ -1,4 +1,6 @@
 const express = require("express");
+const path = require("path");
+const Sequelize = require("sequelize");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const io = require("socket.io-client");
@@ -6,20 +8,25 @@ const watcher = require("./helpers/watcher");
 const { accountModel } = require("./models/account");
 const { watcherModel } = require("./models/watcher");
 const { add: errorLogAdd } = require("./models/log-error");
-const _ = require('lodash');
+const _ = require("lodash");
 const env = require("./config/env");
-const _path = require('./helpers/path');
-const _base = require('./helpers/syncers/_base');
-const onevent = require('./helpers/syncers/onevent');
-const worker = require('./helpers/syncers/worker');
-var bugsnag = require('@bugsnag/js');
+const _path = require("./helpers/path");
+const _base = require("./helpers/syncers/_base");
+const onevent = require("./helpers/syncers/onevent");
+const worker = require("./helpers/syncers/worker");
+var bugsnag = require("@bugsnag/js");
 bugsnag({
   apiKey: env.BUGSNAG_KEY,
-  onUncaughtException: function (error, report) {
+  onUncaughtException: function(error, report) {
     errorLogAdd(0, error, `${__filename}/server.js`);
     logger.error(`An onUncaughtException has occurred : ${error}`);
+
+    // Exit if another instance is running
+    if (error.message.includes("EADDRINUSE")) {
+      process.exit(0);
+    }
   },
-  onUnhandledRejection: function (error, report) {
+  onUnhandledRejection: function(error, report) {
     errorLogAdd(0, error, `${__filename}/server.js`);
     logger.error(`An onUnhandledRejection has occurred : ${error}`);
   }
@@ -47,29 +54,33 @@ app.use("/nodes", require("./routes/node"));
 app.use("/watchers", require("./routes/watcher"));
 
 // Set the timezone in the process env
-process.env.TZ = 'Etc/Greenwich';
+process.env.TZ = "Etc/Greenwich";
 process.env.UV_THREADPOOL_SIZE = 128;
 
-(async () => {
-  accountModel.findAll({
-    where: {
-      sync_enabled: 1
-    }
-  })
-    .then(accounts => {
+(() => {
+  accountModel
+    .findAll({
+      where: {
+        sync_enabled: 1
+      }
+    })
+    .then(async accounts => {
       // For every account, set the sync progress to compeleted
       for (const { dataValues: account } of accounts) {
         if (account && account.id) {
-          accountModel.update({
-            sync_in_progress: 0,
-            download_in_progress: 0,
-            upload_in_progress: 0,
-            last_synced_at: Math.round(new Date().getTime())
-          }, {
+          await accountModel.update(
+            {
+              sync_in_progress: 0,
+              download_in_progress: 0,
+              upload_in_progress: 0,
+              last_synced_at: Math.round(new Date().getTime())
+            },
+            {
               where: {
                 id: account.id
               }
-            })
+            }
+          );
         }
       }
     })
@@ -104,17 +115,15 @@ socket.on("sync-notification", async data => {
     }
   });
 
-
   if (_.isEmpty(accountData)) {
     return;
   }
 
   for (const accountItem of accountData) {
-
     const { dataValues: account } = { ...accountItem };
 
     // Since the delete action does not contain path, we will handle it in a diff way
-    if (action === 'DELETE') {
+    if (action === "DELETE") {
       await onevent.delete({
         account,
         node_id: socketData.node_id
@@ -122,8 +131,6 @@ socket.on("sync-notification", async data => {
       continue;
     }
 
-    // Extract the node path till documentLibrary
-    const nodeDocLibraryPath = socketData.path.substring(0, socketData.path.indexOf('documentLibrary/')) + 'documentLibrary';
     // Convert the nodepath to a localpath
     const localPath = _path.getLocalPathFromNodePath({
       account,
@@ -134,15 +141,28 @@ socket.on("sync-notification", async data => {
     const siteName = _path.getSiteNameFromPath(localPath);
 
     // For each account, fetch the watcher so that the syncer would only consider syncing the files that are being watched
-    const watcherData = await watcherModel.findOne({
+    const watchers = await watcherModel.findAll({
       where: {
         account_id: account.id,
         site_name: siteName,
-        watch_folder: nodeDocLibraryPath
-      }
+        site_id: socketData.site_uuid
+      },
+      order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
     });
 
-    if (action === 'MOVE') {
+    let watcherData;
+    let socketComparePath = socketData.path;
+    if (socketData.is_file === true) {
+      socketComparePath = path.dirname(socketData.path);
+    }
+    for (const iterator of watchers) {
+      if (`${socketComparePath}/`.includes(`${iterator.watch_folder}/`)) {
+        watcherData = iterator;
+        break;
+      }
+    }
+
+    if (action === "MOVE") {
       await onevent.move({
         account,
         watcherData,
@@ -152,11 +172,11 @@ socket.on("sync-notification", async data => {
     }
 
     // Looks like the path is not being watched
-    if (_.isEmpty(watcherData)) {
+    if (typeof watcherData === "undefined") {
       continue;
     }
 
-    if (action === 'CREATE') {
+    if (action === "CREATE") {
       await onevent.create({
         account,
         watcherData,
@@ -165,7 +185,7 @@ socket.on("sync-notification", async data => {
       });
     }
 
-    if (action === 'UPDATE') {
+    if (action === "UPDATE") {
       await onevent.update({
         account,
         watcherData,

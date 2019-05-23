@@ -1,17 +1,26 @@
-<a href="#" class="btn btn-info float-right" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Back to
-  Manage Accounts</a>
+<a
+  href="#"
+  class="btn btn-info float-right"
+  routerLink="/account/manage"
+  [queryParams]="{ cached: 1 }"
+  >Back to Manage Accounts</a
+>
 <h3>Account Details</h3>
-<hr>
+<hr />
 
 <div class="wrapper">
-
   <div class="mt-5 table-responsive">
     <table class="table">
       <tr>
         <th colspan="2">
           <h5 class="float-left">Instance Settings:</h5>
-          <a class="btn btn-info float-right" title="Edit Instance Settings" href="#"
-            (click)="onEdit($event, '/account-credentials')">Edit</a>
+          <a
+            class="btn btn-info float-right"
+            title="Edit Instance Settings"
+            href="#"
+            (click)="onEdit($event, '/account-credentials')"
+            >Edit Instance Settings</a
+          >
         </th>
       </tr>
       <tr>
@@ -26,13 +35,20 @@
       <tr>
         <th colspan="2">
           <h5 class="float-left mt-3">Sync Location:</h5>
-          <a class="btn btn-info float-right hide" title="Edit Sync Location" href="#"
-            (click)="onEdit($event, '/account-sync-path')">Edit</a>
+          <a
+            class="btn btn-info float-right hide"
+            title="Edit Sync Location"
+            href="#"
+            (click)="onEdit($event, '/account-sync-path')"
+            >Edit Sync Location</a
+          >
         </th>
       </tr>
       <tr>
         <th scope="col"><span class="ml-5">Path</span></th>
-        <td><kbd>{{ account?.sync_path }}</kbd></td>
+        <td>
+          <kbd>{{ account?.sync_path }}</kbd>
+        </td>
       </tr>
 
       <tr>
@@ -43,24 +59,41 @@
       <tr>
         <th scope="col"><span class="ml-5">Auto Sync Enabled</span></th>
         <td>
-          <span class="badge badge-{{ account?.sync_enabled ? 'success' : 'danger' }}">
-            {{ account?.sync_enabled ? 'Yes' : 'No' }}
+          <span
+            class="badge badge-{{
+              account?.sync_enabled ? 'success' : 'danger'
+            }}"
+          >
+            {{ account?.sync_enabled ? "Yes" : "No" }}
           </span>
         </td>
       </tr>
       <tr>
         <th scope="col"><span class="ml-5">Last Synced At</span></th>
-        <td>{{ account?.last_synced_at ? (account.last_synced_at | date:'medium':timezone) : 'Unsynced' }}</td>
+        <td>
+          {{
+            account?.last_synced_at
+              ? (account.last_synced_at | date: "medium":timezone)
+              : "Unsynced"
+          }}
+        </td>
       </tr>
     </table>
 
-
     <h5 class="mt-3 mb-3 float-left">Sync Department(s)</h5>
-    <a class="btn btn-info float-right" title="Edit Sync Departments" href="#"
-      (click)="onEdit($event, '/account-remote-folder/' + accountId)">Edit</a>
+    <a
+      class="btn btn-info float-right"
+      title="Edit Sync Departments"
+      href="#"
+      (click)="onEdit($event, '/account-remote-folder/' + accountId)"
+      >Edit Departments</a
+    >
 
     <!-- Department Table -->
-    <table class="table table-bordered table-sm" *ngIf="departments && departments.length > 0; else nodepartment">
+    <table
+      class="table table-bordered table-sm"
+      *ngIf="departments && departments.length > 0; else nodepartment"
+    >
       <thead>
         <tr>
           <th scope="col">Department Name</th>
@@ -78,12 +111,19 @@
     <ng-template #nodepartment>
       <div class="clearfix">
         <p *ngIf="departmentLoaded === false">LOADING...</p>
-        <p *ngIf="departmentLoaded === true">No departments are currently being watched.</p>
+        <p *ngIf="departmentLoaded === true">
+          No departments are currently being watched.
+        </p>
       </div>
     </ng-template>
     <!-- Department Table End -->
   </div>
 
-  <a href="#" class="btn btn-info mt-5" routerLink="/account/manage" [queryParams]="{ cached: 1 }">Back to Manage
-    Accounts</a>
+  <a
+    href="#"
+    class="btn btn-info mt-5"
+    routerLink="/account/manage"
+    [queryParams]="{ cached: 1 }"
+    >Back to Manage Accounts</a
+  >
 </div>

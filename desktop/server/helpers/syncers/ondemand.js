@@ -7,11 +7,12 @@ const glob = require("glob");
 const { nodeModel } = require("../../models/node");
 const { workerModel } = require("../../models/worker");
 const { settingModel } = require("../../models/setting");
+const { watcherModel } = require("../../models/watcher");
 const { add: errorLogAdd } = require("../../models/log-error");
 const remote = require("../remote");
 const _base = require("./_base");
-const _path = require('../path');
-const _ = require('lodash');
+const _path = require("../path");
+const _ = require("lodash");
 
 // Logger
 const { logger } = require("../logger");
@@ -25,13 +26,13 @@ exports.recursiveDownload = async params => {
   let skipCount = params.skipCount || 0;
 
   if (account.sync_enabled === false) {
-    logger.info("Recursive download bailed");
+    logger.info("Sync Disabled");
     return;
   }
 
   const setting = await settingModel.findOne({
     where: {
-      name: 'SYNC_PAUSE_SECONDS'
+      name: "SYNC_PAUSE_SECONDS"
     }
   });
 
@@ -46,7 +47,11 @@ exports.recursiveDownload = async params => {
   });
 
   // Finished iterating all nodes and its children
-  if (watcher.watch_node === sourceNodeId && children.list.entries.length === 0) {
+  if (
+    watcher.watch_node === sourceNodeId &&
+    children.list.entries.length === 0
+  ) {
+    console.log("Finished iterating all nodes and its children");
     return;
   }
 
@@ -56,6 +61,7 @@ exports.recursiveDownload = async params => {
       const getMapData = nodeMap.get(sourceNodeId);
       const parentId = getMapData.parentId;
       const skipCount = getMapData.skipCount + 1;
+
       return await exports.recursiveDownload({
         account,
         watcher,
@@ -74,6 +80,17 @@ exports.recursiveDownload = async params => {
   }
 
   const node = children.list.entries[0].entry;
+
+  // If the current node path does not match the watched path, bail out!
+  if (!`${node.path.name}/${node.name}/`.includes(`${watcher.watch_folder}/`)) {
+    return await exports.recursiveDownload({
+      account,
+      watcher,
+      sourceNodeId: node.id,
+      destinationPath,
+      skipCount: 0
+    });
+  }
 
   if (node.isFolder) {
     // In case of folder, save the skipcount of the current folder
@@ -98,9 +115,7 @@ exports.recursiveDownload = async params => {
       destinationPath,
       skipCount: 0
     });
-
   } else if (node.isFile) {
-
     // Download the file
     await exports._processDownload({
       node,
@@ -118,7 +133,7 @@ exports.recursiveDownload = async params => {
       skipCount: ++skipCount
     });
   }
-}
+};
 
 /**
  *
@@ -133,29 +148,27 @@ exports._processDownload = async params => {
   const node = params.node;
   const account = params.account;
   const watcher = params.watcher;
-  const destinationPath = params.destinationPath; // where on local to download
+  const destinationPath = params.destinationPath; // where to download on local
 
-  logger.info("_processDownload Started");
-
-  if (
-    account.sync_enabled == false) {
+  if (account.sync_enabled == false) {
     logger.info("download bailed");
     return;
   }
 
   // If the current folder does not exists, we will create it.
-  if (!fs.existsSync(`${destinationPath}/${watcher.site_name}/documentLibrary`)) {
+  if (
+    !fs.existsSync(`${destinationPath}/${watcher.site_name}/documentLibrary`)
+  ) {
     mkdirp(`${destinationPath}/${watcher.site_name}/documentLibrary`);
   }
 
-  let relevantPath = node.path.name.substring(
-    node.path.name.indexOf(`${watcher.site_name}/documentLibrary`)
-  );
+  let relevantPath = _path.getLocalPathFromNodePath({
+    account,
+    nodePath: node.path.name
+  });
 
   let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
-  const currentPath = path.join(destinationPath, relevantPath, node.name);
-
-  logger.info(`\n Attempting to download ${currentPath} \n`);
+  const currentPath = path.join(relevantPath, node.name);
 
   // Check if the node is present in the database
   let recordData = await nodeModel.findOne({
@@ -168,29 +181,38 @@ exports._processDownload = async params => {
 
   let { dataValues: record } = { ...recordData };
 
-  if (record && (record.download_in_progress === true || record.upload_in_progress === true)) {
+  if (
+    record &&
+    (record.download_in_progress === true || record.upload_in_progress === true)
+  ) {
     // If the file is stalled, we will change its modified date to a backdated date
-    if (await _base.isStalledDownload(record) === true) {
+    if ((await _base.isStalledDownload(record)) === true) {
       const btime = 395114400000; // Saturday, July 10, 1982 7:30:00 AM
       const mtime = btime;
       const atime = btime;
-      _base.deferFileModifiedDate({
-        filePath: record.file_path,
-        btime,
-        mtime,
-        atime,
-        record
-      }, async (params) => {
-        if (_.has(params, 'record.id')) {
-          await nodeModel.update({
-            download_in_progress: false
-          }, {
-              where: {
-                id: params.record.id
+      _base.deferFileModifiedDate(
+        {
+          filePath: record.file_path,
+          btime,
+          mtime,
+          atime,
+          record
+        },
+        async params => {
+          if (_.has(params, "record.id")) {
+            await nodeModel.update(
+              {
+                download_in_progress: false
+              },
+              {
+                where: {
+                  id: params.record.id
+                }
               }
-            });
+            );
+          }
         }
-      });
+      );
     }
 
     logger.info("Bailed download, already in progress");
@@ -240,6 +262,29 @@ exports._processDownload = async params => {
             ]
           }
         });
+
+        const localToRemotePath = _path.getRemotePathFromLocalPath({
+          account,
+          localPath: record.file_path
+        });
+
+        // If the deleted item is a folder, and its also available in the watchlist, delete it
+        await watcherModel.destroy({
+          where: {
+            account_id: account.id,
+            site_id: watcher.site_id,
+            [Sequelize.Op.or]: [
+              {
+                watch_folder: {
+                  [Sequelize.Op.like]: localToRemotePath + "%"
+                }
+              },
+              {
+                watch_folder: localToRemotePath
+              }
+            ]
+          }
+        });
       }
     } // end Case A
 
@@ -247,7 +292,8 @@ exports._processDownload = async params => {
     // Convert the time to UTC and then get the unixtimestamp.
     else if (
       fs.existsSync(currentPath) &&
-      _base.convertToUTC(node.modifiedAt) > _base.getFileModifiedTime(record.file_path) &&
+      _base.convertToUTC(node.modifiedAt) >
+        _base.getFileModifiedTime(record.file_path) &&
       record.file_name === path.basename(currentPath) &&
       record.is_file === true
     ) {
@@ -260,7 +306,6 @@ exports._processDownload = async params => {
       });
     } // end Case B
 
-
     // Case C: Perhaps the file was DELETED on local but not on the server.(will skip if the node was renamed on server)
     else if (
       !fs.existsSync(currentPath) &&
@@ -268,9 +313,7 @@ exports._processDownload = async params => {
       record.remote_folder_path === node.path.name && // making sure the file was not moved to another location
       fileRenamed === false
     ) {
-      logger.info(
-        "Deleting on server, because deleted on local" + currentPath
-      );
+      logger.info("Deleting on server, because deleted on local" + currentPath);
       await remote.deleteServerNode({
         account,
         record
@@ -287,7 +330,6 @@ exports._processDownload = async params => {
       account
     });
   }
-
 };
 
 /**
@@ -310,23 +352,21 @@ exports.recursiveUpload = async params => {
   }
 
   glob.sync(rootFolder).forEach(async filePath => {
-
-    if (path.basename(filePath) == 'documentLibrary') {
+    if (path.basename(filePath) == "documentLibrary") {
       return;
     }
 
     try {
       await workerModel.create({
         account_id: account.id,
-        watcher_id: watcher.id,
         file_path: _path.toUnix(filePath),
         root_node_id: watcher.document_library_node,
         priority: 0
       });
     } catch (error) {
       // Log only if its not a unique constraint error.
-      if (error.parent.errno !== 19) {
-        console.log('error', error);
+      if (_.has(error, "parent.errno") && error.parent.errno !== 19) {
+        console.log("error", error);
       }
     }
 
@@ -335,7 +375,7 @@ exports.recursiveUpload = async params => {
         exports.recursiveUpload({
           account,
           watcher,
-          rootFolder: filePath + '/*'
+          rootFolder: filePath + "/*"
         });
       }
     } catch (error) {
@@ -345,5 +385,4 @@ exports.recursiveUpload = async params => {
   }); // Filelist iteration end
 
   return;
-}
-
+};

@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
-import { Account } from '../models/account';
+import { Injectable } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { environment } from "../../environments/environment";
+import { Account } from "../models/account";
 
 interface IAccount {
   id: number;
@@ -15,22 +15,24 @@ interface IAccount {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root"
 })
 export class AccountService {
-  constructor(private _http: HttpClient) { }
+  constructor(private _http: HttpClient) {}
 
-  getAccounts(querystring = '') {
+  getAccounts(querystring = "") {
     return this._http.get(`${environment.apiUrl}/accounts?${querystring}`);
   }
 
   getAccount(accountId) {
-    return this._http.get<IAccount>(`${environment.apiUrl}/accounts/${accountId}`);
+    return this._http.get<IAccount>(
+      `${environment.apiUrl}/accounts/${accountId}`
+    );
   }
 
   addAccount(params) {
     return this._http.post<Account>(
-      environment.apiUrl + '/accounts',
+      environment.apiUrl + "/accounts",
       {
         instance_url: params.instance_url,
         username: params.username,
@@ -40,44 +42,41 @@ export class AccountService {
         sync_enabled: params.sync_enabled
       },
       {
-        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
-        responseType: 'json'
+        observe: "response" as "body", // to display the full response & as 'body' for type cast
+        responseType: "json"
       }
     );
   }
 
   updateCredentials(params) {
     return this._http.put<Account>(
-      environment.apiUrl + '/accounts/credentials/' + params.accountId,
+      environment.apiUrl + "/accounts/credentials/" + params.accountId,
       {
         instance_url: params.instance_url,
         username: params.username,
         password: params.password
       },
       {
-        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
-        responseType: 'json'
+        observe: "response" as "body", // to display the full response & as 'body' for type cast
+        responseType: "json"
       }
     );
   }
 
   updateSyncPath(params) {
     return this._http.put<Account>(
-      environment.apiUrl + '/accounts/sync_path/' + params.accountId,
+      environment.apiUrl + "/accounts/sync_path/" + params.accountId,
       {
         sync_path: params.sync_path
       },
       {
-        observe: 'response' as 'body', // to display the full response & as 'body' for type cast
-        responseType: 'json'
+        observe: "response" as "body", // to display the full response & as 'body' for type cast
+        responseType: "json"
       }
     );
   }
 
-  updateWatchNode(
-    accountId,
-    selectedList
-  ) {
+  updateWatchNode(accountId, selectedList) {
     return this._http.post(
       `${environment.apiUrl}/accounts/${accountId}/watchnode`,
       selectedList
