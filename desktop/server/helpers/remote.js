@@ -136,7 +136,7 @@ exports.deleteServerNode = async params => {
     method: "DELETE",
     agent: false,
     pool: { maxSockets: 1 },
-    timeout: 20000,
+    timeout: 200000,
     resolveWithFullResponse: true,
     url:
       account.instance_url +
@@ -262,7 +262,7 @@ exports.download = async params => {
     method: "GET",
     agent: false,
     pool: { maxSockets: 1 },
-    timeout: 20000,
+    timeout: 200000,
     url: `${
       account.instance_url
     }/alfresco/api/-default-/public/alfresco/versions/1/nodes/${
@@ -481,8 +481,9 @@ exports.upload = async params => {
       })
     };
 
+    var nodeRecord = {};
     try {
-      await nodeModel.create({
+      nodeRecord = await nodeModel.create({
         account_id: account.id,
         site_id: watcher.site_id,
         node_id: "",
@@ -590,8 +591,18 @@ exports.upload = async params => {
         return response.entry.id;
       }
     } catch (error) {
-      // Ignore "duplicate" status codes
-      if (error.statusCode !== 409) {
+      if (error.statusCode === 409) {
+        // If "duplicate" status code is received, delete the node entry if the node_id is empty
+        const { dataValues: node } = nodeRecord;
+        if (node.node_id === "") {
+          await nodeModel.destroy({
+            where: {
+              id: node.id
+            }
+          });
+        }
+      } else if (error.statusCode !== 409) {
+        // Ignore "duplicate" status codes
         errorLogAdd(account.id, error, `${__filename}/upload Directory`);
       }
     }

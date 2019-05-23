@@ -6,7 +6,9 @@ const watcher = require("../helpers/watcher");
 const rimraf = require("rimraf");
 const crypt = require("../config/crypt");
 const fs = require("fs");
+const path = require("path");
 const _path = require("../helpers/path");
+const _base = require("../helpers/syncers/_base");
 const fileWatcher = require("../helpers/watcher");
 const mkdirp = require("mkdirp");
 
@@ -162,6 +164,27 @@ exports.addWatchNodes = async (request, response) => {
             mkdirp(localPath);
           }
 
+          // Add to nodes table
+          try {
+            await nodeModel.create({
+              account_id: request.params.id,
+              site_id: iterator.site.id,
+              node_id: iterator.id,
+              remote_folder_path: iterator.watchPath,
+              file_name: path.basename(localPath),
+              file_path: _path.toUnix(localPath),
+              local_folder_path: _path.toUnix(path.dirname(localPath)),
+              file_update_at: _base.getCurrentTime(),
+              last_uploaded_at: 0,
+              last_downloaded_at: _base.getCurrentTime(),
+              is_folder: true,
+              is_file: false,
+              download_in_progress: false,
+              upload_in_progress: false
+            });
+          } catch (error) {}
+
+          // Add to watch list
           watcherModel
             .create({
               account_id: request.params.id,

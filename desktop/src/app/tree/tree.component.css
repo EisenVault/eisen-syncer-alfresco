@@ -9,3 +9,15 @@ li {
 .pointer {
   cursor: pointer;
 }
+
+.pl {
+  padding-left: 0.5rem;
+}
+
+.fa-folder {
+  color: rgb(165, 163, 163);
+}
+
+.fa-folder.highlight {
+  color: rgb(206, 193, 7);
+}

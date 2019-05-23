@@ -95,6 +95,7 @@ exports.watchAll = async () => {
 };
 
 async function _upload(account, filePath) {
+
   filePath = _path.toUnix(filePath);
 
   // Set Sync in progress
@@ -115,6 +116,14 @@ async function _upload(account, filePath) {
     order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
   });
 
+  var statSync = null;
+  try {
+    statSync = fs.statSync(filePath);
+  } catch (error) {
+    errorLogAdd(account.id, error, `${__filename}/_upload`);
+    return;
+  }
+
   for (const item of watchers) {
     const { dataValues: watcher } = item;
 
@@ -125,19 +134,16 @@ async function _upload(account, filePath) {
     });
 
     // If the site name is different or the filePath does not belong to the watchlist then ignore...
-    if (
-      watcher.site_name !== siteName ||
-      !filePath.includes(path.dirname(localPath))
-    ) {
-      continue;
+    let comparePath = filePath;
+    if (statSync.isFile()) {
+      comparePath = path.dirname(filePath);
     }
 
-    let statSync = null;
-    try {
-      statSync = fs.statSync(filePath);
-    } catch (error) {
-      errorLogAdd(account.id, error, `${__filename}/_upload`);
-      return;
+    if (
+      watcher.site_name !== siteName ||
+      !`${comparePath}/`.includes(`${localPath}/`)
+    ) {
+      continue;
     }
 
     // If the node's file_update_at is same as file's updated timestamp
@@ -200,6 +206,7 @@ async function _upload(account, filePath) {
 }
 
 async function _delete(account, filePath) {
+
   filePath = _path.toUnix(filePath);
 
   let nodeData = await nodeModel.findOne({

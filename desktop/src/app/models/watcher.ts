@@ -11,6 +11,7 @@ export interface WatchData {
   account_id: number;
   site_name: string;
   site_id: string;
+  document_library_node: string;
   parent_node: string;
   watch_node: string;
   watch_folder: string;

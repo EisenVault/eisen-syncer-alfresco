@@ -1,6 +1,7 @@
 import { Component, OnInit, Input, Output, EventEmitter } from "@angular/core";
 import {} from "@angular/core";
 import { TreeNode } from "./tree-node";
+import { of } from "rxjs";
 
 @Component({
   selector: "app-tree",
@@ -10,6 +11,7 @@ import { TreeNode } from "./tree-node";
 export class TreeComponent implements OnInit {
   @Input() treeData: TreeNode[];
   @Input() preSelectedSiteIdList: string[] = [];
+  @Input() preSelectedWatcherList: string[] = [];
   @Output() selectedNode = new EventEmitter();
 
   ngOnInit() {}
@@ -18,10 +20,19 @@ export class TreeComponent implements OnInit {
     return this.preSelectedSiteIdList.includes(node.value.id);
   }
 
-  toggleChild(node) {
-    if (node.showChildren) {
-      this.showNode(node, { isChecked: this.shouldBeChecked(node) });
+  isPreSelectedWatcherList(nodeValue) {
+    if (this.preSelectedWatcherList[nodeValue.site.id]) {
+      for (const iterator of this.preSelectedWatcherList[nodeValue.site.id]) {
+        if (`${iterator}/`.includes(`${nodeValue.watchPath}/`)) {
+          return true;
+        }
+      }
     }
+
+    return false;
+  }
+
+  toggleChild(node) {
     node.showChildren = !node.showChildren;
   }
 

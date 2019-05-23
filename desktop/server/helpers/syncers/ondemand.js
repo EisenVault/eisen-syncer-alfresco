@@ -19,7 +19,6 @@ const { logger } = require("../logger");
 
 const nodeMap = new Map();
 exports.recursiveDownload = async params => {
-  return;
   const account = params.account;
   const watcher = params.watcher;
   const sourceNodeId = params.sourceNodeId; // the nodeid to download
@@ -27,7 +26,7 @@ exports.recursiveDownload = async params => {
   let skipCount = params.skipCount || 0;
 
   if (account.sync_enabled === false) {
-    logger.info("Recursive download bailed");
+    logger.info("Sync Disabled");
     return;
   }
 
@@ -71,7 +70,6 @@ exports.recursiveDownload = async params => {
         skipCount
       });
     }
-
     return await exports.recursiveDownload({
       account,
       watcher,
@@ -84,7 +82,7 @@ exports.recursiveDownload = async params => {
   const node = children.list.entries[0].entry;
 
   // If the current node path does not match the watched path, bail out!
-  if (!`${node.path.name}/${node.name}`.includes(watcher.watch_folder)) {
+  if (!`${node.path.name}/${node.name}/`.includes(`${watcher.watch_folder}/`)) {
     return await exports.recursiveDownload({
       account,
       watcher,
@@ -151,8 +149,6 @@ exports._processDownload = async params => {
   const account = params.account;
   const watcher = params.watcher;
   const destinationPath = params.destinationPath; // where to download on local
-
-  logger.info("_processDownload Started");
 
   if (account.sync_enabled == false) {
     logger.info("download bailed");
@@ -346,7 +342,6 @@ exports._processDownload = async params => {
  * }
  */
 exports.recursiveUpload = async params => {
-  return;
   const account = params.account;
   const watcher = params.watcher;
   let rootFolder = params.rootFolder;

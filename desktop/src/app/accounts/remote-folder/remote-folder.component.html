@@ -3,11 +3,12 @@
 <div class="clearfix">&nbsp;</div>
 
 <hr />
+
 <div
   class="alert alert-info"
-  *ngIf="sites && sites.length == 0 && soSiteData === false"
+  *ngIf="(sites && sites.length == 0 && soSiteData === false) || isLoading"
 >
-  <img src="./assets/imgs/spinner.gif" alt="" /> Loading data...
+  <img src="./assets/imgs/spinner.gif" alt="" /> Loading. Please wait...
 </div>
 
 <div
@@ -26,7 +27,7 @@
     type="button"
     class="btn btn-success float-right"
     (click)="finalize()"
-    [disabled]="disableFinish"
+    [disabled]="disableFinish || isLoading"
   >
     <span *ngIf="isEdit === true">Update</span>
     <span *ngIf="isEdit === false">
@@ -37,7 +38,15 @@
 </div>
 
 <div *ngIf="sites && sites.length > 0">
-  <h5>Select a Department/Folder</h5>
+  <div class="title">
+    <h5 class="float-left">Select a Department/Folder</h5>
+    <button
+      class="btn btn-secondary btn-sm float-right"
+      (click)="clearAllSelectedFolders()"
+    >
+      Clear Selection
+    </button>
+  </div>
 
   <div class="card list-container">
     <div class="tree-wrapper" *ngIf="isEdit && sites && sites.length > 0">
@@ -45,6 +54,7 @@
         [treeData]="folders"
         (selectedNode)="onSelectedChange($event)"
         [preSelectedSiteIdList]="preSelectedSiteIdList"
+        [preSelectedWatcherList]="preSelectedWatcherList"
       ></app-tree>
     </div>
   </div>
@@ -59,7 +69,7 @@
     type="button"
     class="btn btn-success float-right"
     (click)="finalize()"
-    [disabled]="disableFinish"
+    [disabled]="disableFinish || isLoading"
   >
     <span *ngIf="isEdit === true">Update</span>
     <span *ngIf="isEdit === false">

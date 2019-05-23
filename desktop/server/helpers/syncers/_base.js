@@ -132,7 +132,7 @@ exports.createItemOnLocal = async params => {
       site_id: watcher.site_name,
       site_uuid: watcher.site_id,
       document_library_uuid: watcher.document_library_node,
-      parent_uuid: node.parentId,
+      parent_id: node.parentId,
       node_id: node.id,
       path: `${node.path.name}/${node.name}`,
       is_file: node.isFile,
@@ -141,27 +141,25 @@ exports.createItemOnLocal = async params => {
   }
 
   // Add to the watcher table
-  if (socketData.node_id) {
-    let watchNode = socketData.node_id,
-      watchFolder = socketData.path;
+  let watchNode = socketData.node_id,
+    watchFolder = socketData.path;
 
-    if (socketData.is_file === true) {
-      watchNode = socketData.parent_uuid;
-      watchFolder = path.dirname(socketData.path);
-    }
-
-    try {
-      await watcherModel.create({
-        account_id: account.id,
-        site_name: socketData.site_id,
-        site_id: socketData.site_uuid,
-        document_library_node: socketData.document_library_uuid,
-        parent_node: socketData.parent_uuid,
-        watch_node: watchNode,
-        watch_folder: watchFolder
-      });
-    } catch (error) {}
+  if (socketData.is_file === true) {
+    watchNode = socketData.parent_id;
+    watchFolder = path.dirname(socketData.path);
   }
+
+  try {
+    await watcherModel.create({
+      account_id: account.id,
+      site_name: socketData.site_id,
+      site_id: socketData.site_uuid,
+      document_library_node: socketData.document_library_uuid,
+      parent_node: socketData.parent_id,
+      watch_node: watchNode,
+      watch_folder: watchFolder
+    });
+  } catch (error) {}
 
   try {
     if (node.isFolder === true) {

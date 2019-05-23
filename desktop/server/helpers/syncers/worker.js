@@ -76,7 +76,7 @@ exports.runUpload = async (isRecursive = false) => {
       // If the site name is different or the filePath does not belong to the watchlist then ignore...
       if (
         watcher.site_name !== siteName ||
-        !filePath.includes(path.dirname(localPath))
+        !`${filePath}/`.includes(`${path.dirname(localPath)}/`)
       ) {
         continue;
       }

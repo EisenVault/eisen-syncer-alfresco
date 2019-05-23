@@ -18,8 +18,25 @@
       type="checkbox"
       [checked]="shouldBeChecked(node)"
       (change)="showNode(node, $event)"
+      *ngIf="node.checkboxVisible"
     />
-    <span class="pointer" (click)="toggleChild(node)">
+    <span class="pointer" (click)="showNode(node, { isChecked: false })">
+      <i
+        *ngIf="!node.checkboxVisible"
+        [ngClass]="
+          isPreSelectedWatcherList(node.value)
+            ? 'fas fa-folder highlight'
+            : 'fas fa-folder'
+        "
+      ></i>
+      <i
+        *ngIf="node.checkboxVisible === true"
+        [ngClass]="
+          isPreSelectedWatcherList(node.value)
+            ? 'fas fa-folder pl highlight'
+            : 'fas fa-folder pl'
+        "
+      ></i>
       {{ node.name }}
     </span>
     <app-tree
@@ -27,6 +44,7 @@
       [treeData]="node.children"
       (selectedNode)="onSelectedChange($event)"
       [preSelectedSiteIdList]="preSelectedSiteIdList"
+      [preSelectedWatcherList]="preSelectedWatcherList"
     ></app-tree>
   </li>
 </ul>

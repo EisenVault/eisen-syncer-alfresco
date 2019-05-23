@@ -8,6 +8,7 @@ const Sequelize = require("sequelize");
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
+
   logger.info("DOWNLOAD API START");
 
   const { dataValues: account } = await accountModel.findByPk(
@@ -40,7 +41,7 @@ exports.download = async (request, response) => {
       await ondemand.recursiveDownload({
         account,
         watcher,
-        sourceNodeId: watcher.parent_node,
+        sourceNodeId: watcher.watch_node,
         destinationPath: account.sync_path
       });
     }
@@ -67,6 +68,7 @@ exports.download = async (request, response) => {
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
+
   logger.info("UPLOAD API START");
 
   let accountData = await accountModel.findByPk(request.body.account_id);

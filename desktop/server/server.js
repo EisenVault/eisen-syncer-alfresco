@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const Sequelize = require("sequelize");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -97,7 +98,6 @@ worker.runUpload(false);
 let socket = io.connect(env.SERVICE_URL);
 
 socket.on("sync-notification", async data => {
-  return;
   const socketData = typeof data === "object" ? data : JSON.parse(data);
 
   if (!socketData.path && !socketData.node_id) {
@@ -131,13 +131,6 @@ socket.on("sync-notification", async data => {
       continue;
     }
 
-    // Extract the node path till documentLibrary
-    // const nodeDocLibraryPath =
-    //   socketData.path.substring(
-    //     0,
-    //     socketData.path.indexOf("documentLibrary/")
-    //   ) + "documentLibrary";
-
     // Convert the nodepath to a localpath
     const localPath = _path.getLocalPathFromNodePath({
       account,
@@ -151,15 +144,21 @@ socket.on("sync-notification", async data => {
     const watchers = await watcherModel.findAll({
       where: {
         account_id: account.id,
-        site_name: siteName
+        site_name: siteName,
+        site_id: socketData.site_uuid
       },
       order: [[Sequelize.fn("length", Sequelize.col("watch_folder")), "DESC"]]
     });
 
     let watcherData;
+    let socketComparePath = socketData.path;
+    if (socketData.is_file === true) {
+      socketComparePath = path.dirname(socketData.path);
+    }
     for (const iterator of watchers) {
-      if (socketData.path.includes(iterator.watch_folder)) {
+      if (`${socketComparePath}/`.includes(`${iterator.watch_folder}/`)) {
         watcherData = iterator;
+        break;
       }
     }
 

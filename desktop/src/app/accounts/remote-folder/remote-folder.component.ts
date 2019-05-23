@@ -20,8 +20,10 @@ export class RemoteFolderComponent implements OnInit {
   public sites = [];
   public selectedList: any[] = [];
   public preSelectedSiteIdList = [];
+  public preSelectedWatcherList = [];
   private latestItem: any;
   public folders: TreeNode[] = [];
+  public documentLibrary = "";
 
   constructor(
     private _router: Router,
@@ -42,8 +44,24 @@ export class RemoteFolderComponent implements OnInit {
     });
   }
 
+  clearAllSelectedFolders() {
+    const confirmation = confirm(
+      "This will clear all pre-selected departments/folders. Continue?"
+    );
+    if (confirmation) {
+      this.selectedList = [];
+      this.preSelectedSiteIdList = [];
+      this.preSelectedWatcherList = [];
+    }
+  }
+
   onSelectedChange({ node, isChecked }) {
     this.latestItem = node.value;
+
+    this.loadFolders({
+      site: node.value.site,
+      parentId: node.value.id
+    });
 
     // If the node was unchecked, remove it from the selectedList
     if (!isChecked) {
@@ -68,14 +86,10 @@ export class RemoteFolderComponent implements OnInit {
     }
 
     this.setFinishButtonState();
-
-    this.loadFolders({
-      site: node.value.site,
-      parentId: node.value.id
-    });
   }
 
   loadSites() {
+    this.isLoading = true;
     this._siteService.getSites(this.accountId).subscribe(response => {
       this.sites = (<any>response).list.entries;
 
@@ -93,6 +107,7 @@ export class RemoteFolderComponent implements OnInit {
           this.sites.forEach(item => {
             siteList.push({
               name: item.entry.title,
+              checkboxVisible: false,
               showChildren: true,
               value: {
                 id: item.entry.guid,
@@ -102,7 +117,8 @@ export class RemoteFolderComponent implements OnInit {
                   siteTitle: item.entry.title
                 },
                 parentId: item.entry.guid,
-                watchPath: `/Company Home/Sites/${item.entry.id}`
+                watchPath: `/Company Home/Sites/${item.entry.id}`,
+                documentLibrary: item.entry.guid
               },
               children: []
             });
@@ -110,23 +126,35 @@ export class RemoteFolderComponent implements OnInit {
 
           this.folders = siteList;
 
-          result.map(item => {
-            this.preSelectedSiteIdList.push(item.watch_node);
+          result.map(resultItem => {
+            this.preSelectedSiteIdList.push(resultItem.watch_node);
+
+            // This is to change the folder color in case if the node or any of its decendends was preselected.
+            if (!this.preSelectedWatcherList[resultItem.site_id]) {
+              this.preSelectedWatcherList[resultItem.site_id] = [];
+            }
+            this.preSelectedWatcherList[resultItem.site_id].push(
+              resultItem.watch_folder
+            );
 
             this.selectedList.push({
-              id: item.watch_node,
+              id: resultItem.watch_node,
               site: {
-                id: item.site_id,
-                siteId: item.site_name
+                id: resultItem.site_id,
+                siteId: resultItem.site_name
               },
-              parentId: item.parent_node,
-              watchPath: item.watch_folder
+              parentId: resultItem.parent_node,
+              watchPath: resultItem.watch_folder,
+              documentLibrary: resultItem.document_library_node
             });
 
             if (this.selectedList && this.selectedList.length > 0) {
               this.disableFinish = false;
             }
           });
+
+          this.isLoading = false;
+          console.log("selectedList Count", this.selectedList.length);
         });
     });
   }
@@ -134,21 +162,21 @@ export class RemoteFolderComponent implements OnInit {
   loadFolders({ site, parentId }) {
     this._nodeService.getNodes(this.accountId, parentId).subscribe(response => {
       for (const item of (<any>response).list.entries) {
+        if (item.entry.name === "documentLibrary") {
+          this.documentLibrary = item.entry.id;
+        }
         this.recursiveFolderSearch({
           folders: this.folders,
           site,
           parentId,
-          item,
-          documentLibrary: ""
+          item
         });
       }
     });
   }
 
-  recursiveFolderSearch({ folders, site, parentId, item, documentLibrary }) {
+  recursiveFolderSearch({ folders, site, parentId, item }) {
     folders.map(folderItem => {
-      documentLibrary = folderItem.value.documentLibrary || "";
-
       if (folderItem.value.id === this.latestItem.id) {
         // Check whether the item already exists in the children array, bail out if it does.
         const itemExists = folderItem.children.map(el => {
@@ -162,19 +190,16 @@ export class RemoteFolderComponent implements OnInit {
           return;
         }
 
-        if (item.entry.name === "documentLibrary") {
-          documentLibrary = item.entry.id;
-        }
-
         folderItem.children.push({
           name: item.entry.name,
+          checkboxVisible: true,
           showChildren: true,
           value: {
             id: item.entry.id,
             site,
             parentId: item.entry.parentId,
             watchPath: `${item.entry.path.name}/${item.entry.name}`,
-            documentLibrary
+            documentLibrary: this.documentLibrary
           },
           children: []
         });
@@ -183,8 +208,7 @@ export class RemoteFolderComponent implements OnInit {
           folders: folderItem.children,
           site,
           parentId,
-          item,
-          documentLibrary
+          item
         });
       }
     });
@@ -203,6 +227,7 @@ export class RemoteFolderComponent implements OnInit {
   }
 
   finalize() {
+    this.isLoading = true;
     this._accountService
       .updateWatchNode(this.accountId, this.selectedList)
       .subscribe(
