@@ -1,7 +1,6 @@
 import { Component, OnInit, Input, Output, EventEmitter } from "@angular/core";
 import {} from "@angular/core";
 import { TreeNode } from "./tree-node";
-import { of } from "rxjs";
 
 @Component({
   selector: "app-tree",

@@ -10,7 +10,7 @@
     "ng": "ng",
     "client": "ng serve --open",
     "server": "./node_modules/nodemon/bin/nodemon.js server/server.js",
-    "build": "ng build --prod --build-optimizer --source-map",
+    "build": "ng build --prod --source-map",
     "bs-sourcemaps": "bugsnag-sourcemaps upload --api-key 3613b87fd26a90eadb81aa07e847d6bf --app-version 1.2.3 --minified-url '*' --source-map ./dist/main.bb7ed74999e35dc806e2.js.map --minified-file ./dist/main.bb7ed74999e35dc806e2.js --overwrite --upload-sources",
     "el": "npm run build && electron .",
     "rebuild": "npm install sqlite3 && electron-rebuild -f -w sqlite3",
@@ -69,11 +69,12 @@
     "nsis": {
       "oneClick": false,
       "perMachine": true,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "runAfterFinish": true,
-      "installerIcon": "./build/icon.ico"
+      "installerIcon": "./build/icon.ico",
+      "include": "build/installer.nsh"
     },
     "dmg": {
       "icon": "build/icon.icns",
