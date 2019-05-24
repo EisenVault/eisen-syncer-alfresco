@@ -46,6 +46,13 @@ exports.getOne = async (request, response) => {
 };
 
 exports.addAccount = async (request, response) => {
+  const accountId = request.body.account_id || 0;
+  const account = await accountModel.findByPk(accountId);
+
+  if (account) {
+    return response.status(201).json(account.dataValues);
+  }
+
   accountModel
     .create({
       instance_url: request.body.instance_url.replace(/\/+$/, ""),

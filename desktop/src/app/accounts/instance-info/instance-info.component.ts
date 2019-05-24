@@ -49,6 +49,7 @@ export class InstanceInfoComponent implements OnInit {
     this.errors = {};
     this._accountService
       .addAccount({
+        account_id: this.accountId || 0,
         instance_url: this.instance_url,
         username: this.username,
         password: this.password,

@@ -219,7 +219,6 @@ export class RemoteFolderComponent implements OnInit {
         queryParams: { accountId: this.accountId }
       });
     }
-
     this._router.navigate(["account-new"], {
       queryParams: { accountId: this.accountId }
     });

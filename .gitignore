@@ -8,6 +8,8 @@
 /desktop/__release-builds/
 /desktop/__installers/
 /desktop/server/logs/
+/desktop/server/database/syncer.db
+!/desktop/build/installer.nsh
 
 
 # dependencies
