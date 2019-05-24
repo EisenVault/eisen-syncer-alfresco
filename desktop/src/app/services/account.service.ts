@@ -34,6 +34,7 @@ export class AccountService {
     return this._http.post<Account>(
       environment.apiUrl + "/accounts",
       {
+        account_id: params.account_id,
         instance_url: params.instance_url,
         username: params.username,
         password: params.password,
