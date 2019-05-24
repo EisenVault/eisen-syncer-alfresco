@@ -15,7 +15,7 @@ export class InstanceInfoComponent implements OnInit {
   public instance_url = "https://";
   public username = "";
   public password = "";
-  public sync_path = "";
+  public sync_path = "...";
   public sync_frequency = 2;
   public sync_enabled = false;
   public file = "";
