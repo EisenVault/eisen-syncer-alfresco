@@ -458,6 +458,11 @@ exports.upload = async params => {
   if (fs.existsSync(filePath) && statSync.isDirectory()) {
     let directoryName = path.basename(params.filePath);
     let relativePath = path.dirname(filePath).split("documentLibrary")[1];
+
+    if (!relativePath) {
+      return;
+    }
+
     relativePath = relativePath.replace(/^\/|\/$/g, "");
 
     options = {
@@ -570,15 +575,15 @@ exports.upload = async params => {
             }
           }
 
-          await watcherModel.create({
-            account_id: account.id,
-            site_name: siteName,
-            site_id: siteId,
-            document_library_node: documentLibrary,
-            parent_node: response.entry.parentId,
-            watch_node: response.entry.id,
-            watch_folder: `${response.entry.path.name}/${response.entry.name}`
-          });
+          // await watcherModel.create({
+          //   account_id: account.id,
+          //   site_name: siteName,
+          //   site_id: siteId,
+          //   document_library_node: documentLibrary,
+          //   parent_node: response.entry.parentId,
+          //   watch_node: response.entry.id,
+          //   watch_folder: `${response.entry.path.name}/${response.entry.name}`
+          // });
         } catch (error) {}
 
         // Add an event log

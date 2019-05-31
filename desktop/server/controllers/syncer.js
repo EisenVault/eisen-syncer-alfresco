@@ -8,7 +8,6 @@ const Sequelize = require("sequelize");
 
 // Download nodes and its children from a remote instance
 exports.download = async (request, response) => {
-
   logger.info("DOWNLOAD API START");
 
   const { dataValues: account } = await accountModel.findByPk(
@@ -17,10 +16,10 @@ exports.download = async (request, response) => {
 
   if (
     !account ||
-    account.sync_enabled === false ||
-    account.download_in_progress === true
+    account.sync_enabled === false
+    // || account.download_in_progress === true
   ) {
-    logger.info("Download Bailed");
+    logger.info("Account syncing disabled. Download Bailed");
     return false;
   }
 
@@ -68,7 +67,6 @@ exports.download = async (request, response) => {
 
 // Upload a file to an instance
 exports.upload = async (request, response) => {
-
   logger.info("UPLOAD API START");
 
   let accountData = await accountModel.findByPk(request.body.account_id);
@@ -76,10 +74,10 @@ exports.upload = async (request, response) => {
 
   if (
     !account ||
-    account.sync_enabled == 0 ||
-    account.upload_in_progress === true
+    account.sync_enabled == 0
+    // || account.upload_in_progress === true
   ) {
-    logger.info("Upload Bailed");
+    logger.info("Account syncing disabled. Upload Bailed");
     return false;
   }
 
