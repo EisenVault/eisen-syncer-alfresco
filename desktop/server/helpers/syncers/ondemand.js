@@ -26,7 +26,7 @@ exports.recursiveDownload = async params => {
   let skipCount = params.skipCount || 0;
 
   if (account.sync_enabled === false) {
-    logger.info("Sync Disabled");
+    logger.info("Sync Disabled. Download bailed.");
     return;
   }
 
@@ -51,7 +51,12 @@ exports.recursiveDownload = async params => {
     watcher.watch_node === sourceNodeId &&
     children.list.entries.length === 0
   ) {
-    console.log("Finished iterating all nodes and its children");
+    console.log(
+      `Finished iterating all nodes and its children for account id: ${
+        account.id
+      } and ${watcher.watch_folder}`
+    );
+
     return;
   }
 
@@ -169,6 +174,8 @@ exports._processDownload = async params => {
 
   let fileRenamed = false; // If a node is renamed on server, we will not run this delete node check immediately
   const currentPath = path.join(relevantPath, node.name);
+
+  logger.info(`\n Processing #${account.id} (for download) ${currentPath} \n`);
 
   // Check if the node is present in the database
   let recordData = await nodeModel.findOne({

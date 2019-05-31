@@ -64,6 +64,8 @@ exports.runUpload = async (isRecursive = false) => {
 
     const filePath = worker.file_path;
 
+    logger.info(`\n Processing #${account.id} (for upload) ${filePath} \n`);
+
     for (const item of watchers) {
       const { dataValues: watcher } = item;
 
