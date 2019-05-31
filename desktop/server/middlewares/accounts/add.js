@@ -3,6 +3,7 @@ const validator = require("validator");
 const _ = require("lodash");
 const http = require("request-promise-native");
 const { accountModel } = require("../../models/account");
+const _path = require("../../helpers/path");
 
 module.exports = async (request, response, next) => {
   let errors = [];
@@ -45,7 +46,7 @@ module.exports = async (request, response, next) => {
 
   // Sync path should be unique per account. That means no two same sync path can be added to two different accounts
   let whereStatement = {
-    sync_path: request.body.sync_path
+    sync_path: _path.toUnix(request.body.sync_path)
   };
   // If account id is specified, include it in the where clause
   if (request.body.account_id) {
