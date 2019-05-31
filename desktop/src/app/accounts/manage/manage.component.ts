@@ -53,6 +53,9 @@ export class ManageComponent implements OnInit {
       }
     });
 
+    // When the app loads, lets try and sync the files from and to server.
+    this._runSyncEnabledAccounts(true);
+
     setTimeout(() => {
       this._getAccounts();
 
@@ -99,14 +102,14 @@ export class ManageComponent implements OnInit {
     }, 5000);
   }
 
-  _runSyncEnabledAccounts() {
+  _runSyncEnabledAccounts(forceSync = false) {
     // Remove all accounts from loader...
     this.enabledSyncAccounts = [];
     this._accountService.getAccounts("sync_enabled=1").subscribe(
       (accounts: IAccounts[]) => {
         for (const account of accounts) {
           // Process sync
-          this._processSync(account);
+          this._processSync(account, forceSync);
         } // End forloop
       },
       error => {

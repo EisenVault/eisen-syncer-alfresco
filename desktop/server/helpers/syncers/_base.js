@@ -149,17 +149,17 @@ exports.createItemOnLocal = async params => {
     watchFolder = path.dirname(socketData.path);
   }
 
-  try {
-    await watcherModel.create({
-      account_id: account.id,
-      site_name: socketData.site_id,
-      site_id: socketData.site_uuid,
-      document_library_node: socketData.document_library_uuid,
-      parent_node: socketData.parent_id,
-      watch_node: watchNode,
-      watch_folder: watchFolder
-    });
-  } catch (error) {}
+  // try {
+  //   await watcherModel.create({
+  //     account_id: account.id,
+  //     site_name: socketData.site_id,
+  //     site_id: socketData.site_uuid,
+  //     document_library_node: socketData.document_library_uuid,
+  //     parent_node: socketData.parent_id,
+  //     watch_node: watchNode,
+  //     watch_folder: watchFolder
+  //   });
+  // } catch (error) {}
 
   try {
     if (node.isFolder === true) {
