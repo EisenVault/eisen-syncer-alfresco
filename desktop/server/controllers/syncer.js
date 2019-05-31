@@ -37,8 +37,6 @@ exports.download = async (request, response) => {
     });
 
     for (const { dataValues: watcher } of watchFolders) {
-      console.log("watcher", watcher.watch_folder);
-
       await ondemand.recursiveDownload({
         account,
         watcher,

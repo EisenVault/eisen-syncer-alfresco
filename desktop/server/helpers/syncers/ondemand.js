@@ -48,7 +48,7 @@ exports.recursiveDownload = async params => {
 
   // Finished iterating all nodes and its children
   if (
-    watcher.document_library_node === sourceNodeId &&
+    watcher.watch_node === sourceNodeId &&
     children.list.entries.length === 0
   ) {
     console.log(
